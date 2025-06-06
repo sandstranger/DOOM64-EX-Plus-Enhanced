@@ -1005,7 +1005,7 @@ CVAR_EXTERNAL(m_nospawnsound);
 CVAR_EXTERNAL(m_obituaries);
 CVAR_EXTERNAL(m_brutal);
 CVAR_EXTERNAL(m_extendedcast);
-CVAR_EXTERNAL(m_reloadingweapons);
+CVAR_EXTERNAL(m_reworkedweaponsanimations);
 
 enum {
 	misc_header1,
@@ -1122,7 +1122,7 @@ menudefault_t MiscDefault[] = {
 	{ &m_obituaries, 0 },
 	{ &m_brutal, 0 },
 	{ &m_extendedcast, 0 },
-	{ &m_reloadingweapons, 0 },
+	{ &m_reworkedweaponsanimations, 0 },
 	{ &compat_mobjpass, 1 },
 	{ NULL, -1 }
 };
@@ -1256,7 +1256,7 @@ void M_MiscChoice(int choice) {
 		break;
 
 	case misc_reloadingweapons:
-		M_SetOptionValue(choice, 0, 1, 1, &m_reloadingweapons);
+		M_SetOptionValue(choice, 0, 1, 1, &m_reworkedweaponsanimations);
 		break;
 
 	case misc_comp_pass:
@@ -1307,7 +1307,7 @@ void M_DrawMisc(void) {
 	DRAWMISCITEM(misc_obituaries, m_obituaries.value, autoruntype);
 	DRAWMISCITEM(misc_brutal, m_brutal.value, autoruntype);
 	DRAWMISCITEM(misc_extendedcast, m_extendedcast.value, autoruntype);
-	DRAWMISCITEM(misc_reloadingweapons, m_reloadingweapons.value, autoruntype);
+	DRAWMISCITEM(misc_reloadingweapons, m_reworkedweaponsanimations.value, autoruntype);
 	DRAWMISCITEM(misc_comp_pass, !compat_mobjpass.value, msgNames);
 	DRAWMISCITEM(misc_disablesecretmessages, hud_disablesecretmessages.value, disablesecretmessages);
 

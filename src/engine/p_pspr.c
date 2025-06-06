@@ -57,7 +57,7 @@
 
 CVAR_EXTERNAL(v_accessibility);
 
-CVAR(m_reloadingweapons, 0);
+CVAR(m_reworkedweaponsanimations, 0);
 
 weaponinfo_t    weaponinfo[NUMWEAPONS] = {
 	{ am_noammo,    S_SAWUP, S_SAWDOWN, S_SAWA, S_SAW1, S_NULL },    // chainsaw
@@ -1141,7 +1141,7 @@ void A_WeaponReadycheckanimationrework(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_shotgun) {
 
-		if (m_reloadingweapons.value == 1)
+		if (m_reworkedweaponsanimations.value == 1)
 		{
 			P_SetPsprite(player, ps_weapon, S_SGUNREWORKA);
 		}
@@ -1150,7 +1150,7 @@ void A_WeaponReadycheckanimationrework(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_supershotgun) {
 
-		if (m_reloadingweapons.value == 1)
+		if (m_reworkedweaponsanimations.value == 1)
 		{
 			P_SetPsprite(player, ps_weapon, S_SSGREWORKA);
 		}
@@ -1159,7 +1159,7 @@ void A_WeaponReadycheckanimationrework(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_fist) {
 
-		if (m_reloadingweapons.value == 1)
+		if (m_reworkedweaponsanimations.value == 1)
 		{
 			P_SetPsprite(player, ps_weapon, S_PUNCHREWORKA);
 		}
@@ -1177,7 +1177,7 @@ void A_Lowercheckanimationrework(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_shotgun) {
 
-		if (m_reloadingweapons.value == 1)
+		if (m_reworkedweaponsanimations.value == 1)
 		{
 			P_SetPsprite(player, ps_weapon, S_SGUNDOWNREWORKA);
 		}
@@ -1186,7 +1186,7 @@ void A_Lowercheckanimationrework(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_supershotgun) {
 
-		if (m_reloadingweapons.value == 1)
+		if (m_reworkedweaponsanimations.value == 1)
 		{
 			P_SetPsprite(player, ps_weapon, S_SSGDOWNREWORKA);
 		}
@@ -1195,7 +1195,7 @@ void A_Lowercheckanimationrework(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_fist) {
 
-		if (m_reloadingweapons.value == 1)
+		if (m_reworkedweaponsanimations.value == 1)
 		{
 			P_SetPsprite(player, ps_weapon, S_PUNCHDOWNREWORKA);
 		}
@@ -1212,7 +1212,7 @@ void A_Raisecheckanimationrework(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_shotgun) {
 
-		if (m_reloadingweapons.value == 1)
+		if (m_reworkedweaponsanimations.value == 1)
 		{
 			P_SetPsprite(player, ps_weapon, S_SGUNUPREWORKA);
 		}
@@ -1221,7 +1221,7 @@ void A_Raisecheckanimationrework(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_supershotgun) {
 
-		if (m_reloadingweapons.value == 1)
+		if (m_reworkedweaponsanimations.value == 1)
 		{
 			P_SetPsprite(player, ps_weapon, S_SSGUPREWORKA);
 		}
@@ -1230,7 +1230,7 @@ void A_Raisecheckanimationrework(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_fist) {
 
-		if (m_reloadingweapons.value == 1)
+		if (m_reworkedweaponsanimations.value == 1)
 		{
 			P_SetPsprite(player, ps_weapon, S_PUNCHUPREWORKA);
 		}
@@ -1247,7 +1247,7 @@ void A_Firecheckanimationrework(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_shotgun) {
 
-		if (m_reloadingweapons.value == 1)
+		if (m_reworkedweaponsanimations.value == 1)
 		{
 			P_SetPsprite(player, ps_weapon, S_SGUN0REWORK);
 		}
@@ -1256,7 +1256,7 @@ void A_Firecheckanimationrework(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_supershotgun) {
 
-		if (m_reloadingweapons.value == 1)
+		if (m_reworkedweaponsanimations.value == 1)
 		{
 			P_SetPsprite(player, ps_weapon, S_SSG0REWORK);
 		}
@@ -1265,7 +1265,7 @@ void A_Firecheckanimationrework(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_fist) {
 
-		if (m_reloadingweapons.value == 1)
+		if (m_reworkedweaponsanimations.value == 1)
 		{
 			P_SetPsprite(player, ps_weapon, S_PUNCH0REWORK);
 		}
@@ -1282,7 +1282,7 @@ void A_Flashcheckanimationrework(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_shotgun) {
 
-		if (m_reloadingweapons.value == 1)
+		if (m_reworkedweaponsanimations.value == 1)
 		{
 			P_SetPsprite(player, ps_flash, S_SGUNFLASHREWORKA);
 		}
@@ -1291,7 +1291,7 @@ void A_Flashcheckanimationrework(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_supershotgun) {
 
-		if (m_reloadingweapons.value == 1)
+		if (m_reworkedweaponsanimations.value == 1)
 		{
 			P_SetPsprite(player, ps_flash, S_SSGFLASHREWORKA);
 		}
@@ -1309,7 +1309,7 @@ void A_WeaponReadycheckanimationvanilla(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_shotgun) {
 
-		if (m_reloadingweapons.value == 0)
+		if (m_reworkedweaponsanimations.value == 0)
 		{
 			P_SetPsprite(player, ps_weapon, S_SGUNA);
 		}
@@ -1318,7 +1318,7 @@ void A_WeaponReadycheckanimationvanilla(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_supershotgun) {
 
-		if (m_reloadingweapons.value == 0)
+		if (m_reworkedweaponsanimations.value == 0)
 		{
 			P_SetPsprite(player, ps_weapon, S_SSGA);
 		}
@@ -1327,7 +1327,7 @@ void A_WeaponReadycheckanimationvanilla(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_fist) {
 
-		if (m_reloadingweapons.value == 0)
+		if (m_reworkedweaponsanimations.value == 0)
 		{
 			P_SetPsprite(player, ps_weapon, S_PUNCHA);
 		}
@@ -1345,7 +1345,7 @@ void A_Lowercheckanimationvanilla(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_shotgun) {
 
-		if (m_reloadingweapons.value == 0)
+		if (m_reworkedweaponsanimations.value == 0)
 		{
 			P_SetPsprite(player, ps_weapon, S_SGUNDOWNA);
 		}
@@ -1354,7 +1354,7 @@ void A_Lowercheckanimationvanilla(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_supershotgun) {
 
-		if (m_reloadingweapons.value == 0)
+		if (m_reworkedweaponsanimations.value == 0)
 		{
 			P_SetPsprite(player, ps_weapon, S_SSGDOWNA);
 		}
@@ -1363,7 +1363,7 @@ void A_Lowercheckanimationvanilla(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_fist) {
 
-		if (m_reloadingweapons.value == 0)
+		if (m_reworkedweaponsanimations.value == 0)
 		{
 			P_SetPsprite(player, ps_weapon, S_PUNCHDOWNA);
 		}
@@ -1380,7 +1380,7 @@ void A_Raisecheckanimationvanilla(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_shotgun) {
 
-		if (m_reloadingweapons.value == 0)
+		if (m_reworkedweaponsanimations.value == 0)
 		{
 			P_SetPsprite(player, ps_weapon, S_SGUNUPA);
 		}
@@ -1389,7 +1389,7 @@ void A_Raisecheckanimationvanilla(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_supershotgun) {
 
-		if (m_reloadingweapons.value == 0)
+		if (m_reworkedweaponsanimations.value == 0)
 		{
 			P_SetPsprite(player, ps_weapon, S_SSGUPA);
 		}
@@ -1398,7 +1398,7 @@ void A_Raisecheckanimationvanilla(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_fist) {
 
-		if (m_reloadingweapons.value == 0)
+		if (m_reworkedweaponsanimations.value == 0)
 		{
 			P_SetPsprite(player, ps_weapon, S_PUNCHUPA);
 		}
@@ -1415,7 +1415,7 @@ void A_Firecheckanimationvanilla(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_shotgun) {
 
-		if (m_reloadingweapons.value == 0)
+		if (m_reworkedweaponsanimations.value == 0)
 		{
 			P_SetPsprite(player, ps_weapon, S_SGUN0);
 		}
@@ -1424,7 +1424,7 @@ void A_Firecheckanimationvanilla(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_supershotgun) {
 
-		if (m_reloadingweapons.value == 0)
+		if (m_reworkedweaponsanimations.value == 0)
 		{
 			P_SetPsprite(player, ps_weapon, S_SSG0);
 		}
@@ -1433,7 +1433,7 @@ void A_Firecheckanimationvanilla(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_fist) {
 
-		if (m_reloadingweapons.value == 0)
+		if (m_reworkedweaponsanimations.value == 0)
 		{
 			P_SetPsprite(player, ps_weapon, S_PUNCH0);
 		}
@@ -1450,7 +1450,7 @@ void A_Flashcheckanimationvanilla(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_shotgun) {
 
-		if (m_reloadingweapons.value == 0)
+		if (m_reworkedweaponsanimations.value == 0)
 		{
 			P_SetPsprite(player, ps_flash, S_SGUNFLASHA);
 		}
@@ -1459,7 +1459,7 @@ void A_Flashcheckanimationvanilla(player_t* player, pspdef_t* psp) {
 
 	if (player->readyweapon == wp_supershotgun) {
 
-		if (m_reloadingweapons.value == 0)
+		if (m_reworkedweaponsanimations.value == 0)
 		{
 			P_SetPsprite(player, ps_flash, S_SSGFLASHA);
 		}
