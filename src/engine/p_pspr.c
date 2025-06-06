@@ -57,12 +57,14 @@
 
 CVAR_EXTERNAL(v_accessibility);
 
+CVAR(m_reloadingweapons, 0);
+
 weaponinfo_t    weaponinfo[NUMWEAPONS] = {
 	{ am_noammo,    S_SAWUP, S_SAWDOWN, S_SAWA, S_SAW1, S_NULL },    // chainsaw
-	{ am_noammo,    S_PUNCHUP, S_PUNCHDOWN, S_PUNCH, S_PUNCH1, S_NULL },    // fist
+	{ am_noammo,    S_PUNCHUPA, S_PUNCHDOWNA, S_PUNCHA, S_PUNCH0, S_NULL },    // fist
 	{ am_clip,      S_PISTOLUP, S_PISTOLDOWN, S_PISTOL, S_PISTOL1, S_PISTOLFLASH },    // pistol
-	{ am_shell,     S_SGUNUP, S_SGUNDOWN, S_SGUN, S_SGUN1, S_SGUNFLASH },    // shotgun
-	{ am_shell,     S_SSGUP, S_SSGDOWN, S_SSG, S_SSG1, S_SSGFLASH },    // super shotgun
+	{ am_shell,     S_SGUNUPA, S_SGUNDOWNA, S_SGUNA, S_SGUN0, S_SGUNFLASHA },    // shotgun
+	{ am_shell,     S_SSGUPA, S_SSGDOWNA, S_SSGA, S_SSG0, S_SSGFLASHA },    // super shotgun
 	{ am_clip,      S_CHAINGUP, S_CHAINGDOWN, S_CHAING, S_CHAING1, S_CHAINGLIGHT1 },    // chaingun
 	{ am_misl,      S_ROCKETLUP, S_ROCKETLDOWN, S_ROCKETL, S_ROCKETL1, S_ROCKETLLIGHT1 },    // rocket launcher
 	{ am_cell,      S_PLASMAGUP1, S_PLASMAGDOWN, S_PLASMAG, S_PLASMAG1, S_NULL },    // plasma gun
@@ -781,10 +783,10 @@ void A_BFGsound(player_t* player, pspdef_t* psp) {
 }
 
 //
-// A_LoadShotgun2
+// A_OpenShotgun2
 //
 
-void A_LoadShotgun2(player_t* player, pspdef_t* psp) {
+void A_OpenShotgun2(player_t* player, pspdef_t* psp) {
 	S_StartSound(player->mo, sfx_sht2load1);
 }
 
@@ -1128,4 +1130,356 @@ void P_MovePsprites(player_t* player) {
 
 	player->psprites[ps_flash].sx = player->psprites[ps_weapon].sx;
 	player->psprites[ps_flash].sy = player->psprites[ps_weapon].sy;
+}
+
+//
+// A_WeaponReadycheckanimationrework
+// check if the option is enabled if enabled, changes vanilla weapons animations to reworked weapons animations
+//
+
+void A_WeaponReadycheckanimationrework(player_t* player, pspdef_t* psp) {
+
+	if (player->readyweapon == wp_shotgun) {
+
+		if (m_reloadingweapons.value == 1)
+		{
+			P_SetPsprite(player, ps_weapon, S_SGUNREWORKA);
+		}
+	
+	}
+
+	if (player->readyweapon == wp_supershotgun) {
+
+		if (m_reloadingweapons.value == 1)
+		{
+			P_SetPsprite(player, ps_weapon, S_SSGREWORKA);
+		}
+
+	}
+
+	if (player->readyweapon == wp_fist) {
+
+		if (m_reloadingweapons.value == 1)
+		{
+			P_SetPsprite(player, ps_weapon, S_PUNCHREWORKA);
+		}
+
+	}
+	
+}
+
+
+//
+// A_Lowercheckanimationrework
+// check if the option is enabled if enabled, changes vanilla weapons animations to reworked weapons animations
+//
+void A_Lowercheckanimationrework(player_t* player, pspdef_t* psp) {
+
+	if (player->readyweapon == wp_shotgun) {
+
+		if (m_reloadingweapons.value == 1)
+		{
+			P_SetPsprite(player, ps_weapon, S_SGUNDOWNREWORKA);
+		}
+
+	}
+
+	if (player->readyweapon == wp_supershotgun) {
+
+		if (m_reloadingweapons.value == 1)
+		{
+			P_SetPsprite(player, ps_weapon, S_SSGDOWNREWORKA);
+		}
+
+	}
+
+	if (player->readyweapon == wp_fist) {
+
+		if (m_reloadingweapons.value == 1)
+		{
+			P_SetPsprite(player, ps_weapon, S_PUNCHDOWNREWORKA);
+		}
+
+	}
+
+}
+
+//
+// A_Raisecheckanimationrework
+// check if the option is enabled if enabled, changes vanilla weapons animations to reworked weapons animations
+//
+void A_Raisecheckanimationrework(player_t* player, pspdef_t* psp) {
+
+	if (player->readyweapon == wp_shotgun) {
+
+		if (m_reloadingweapons.value == 1)
+		{
+			P_SetPsprite(player, ps_weapon, S_SGUNUPREWORKA);
+		}
+
+	}
+
+	if (player->readyweapon == wp_supershotgun) {
+
+		if (m_reloadingweapons.value == 1)
+		{
+			P_SetPsprite(player, ps_weapon, S_SSGUPREWORKA);
+		}
+
+	}
+
+	if (player->readyweapon == wp_fist) {
+
+		if (m_reloadingweapons.value == 1)
+		{
+			P_SetPsprite(player, ps_weapon, S_PUNCHUPREWORKA);
+		}
+
+	}
+
+}
+
+//
+// A_Firecheckanimationrework
+// check if the option is enabled if enabled, changes vanilla weapons animations to reworked weapons animations
+//
+void A_Firecheckanimationrework(player_t* player, pspdef_t* psp) {
+
+	if (player->readyweapon == wp_shotgun) {
+
+		if (m_reloadingweapons.value == 1)
+		{
+			P_SetPsprite(player, ps_weapon, S_SGUN0REWORK);
+		}
+
+	}
+
+	if (player->readyweapon == wp_supershotgun) {
+
+		if (m_reloadingweapons.value == 1)
+		{
+			P_SetPsprite(player, ps_weapon, S_SSG0REWORK);
+		}
+
+	}
+
+	if (player->readyweapon == wp_fist) {
+
+		if (m_reloadingweapons.value == 1)
+		{
+			P_SetPsprite(player, ps_weapon, S_PUNCH0REWORK);
+		}
+
+	}
+
+}
+
+//
+// A_Flashcheckanimationrework
+// check if the option is enabled if enabled, changes vanilla weapons animations to reworked weapons animations
+//
+void A_Flashcheckanimationrework(player_t* player, pspdef_t* psp) {
+
+	if (player->readyweapon == wp_shotgun) {
+
+		if (m_reloadingweapons.value == 1)
+		{
+			P_SetPsprite(player, ps_flash, S_SGUNFLASHREWORKA);
+		}
+
+	}
+
+	if (player->readyweapon == wp_supershotgun) {
+
+		if (m_reloadingweapons.value == 1)
+		{
+			P_SetPsprite(player, ps_flash, S_SSGFLASHREWORKA);
+		}
+
+	}
+
+}
+
+//
+// A_WeaponReadycheckanimationvanilla
+// check if option is disabled if disabled, changes reworked weapon animations to vanilla weapon animations
+//
+
+void A_WeaponReadycheckanimationvanilla(player_t* player, pspdef_t* psp) {
+
+	if (player->readyweapon == wp_shotgun) {
+
+		if (m_reloadingweapons.value == 0)
+		{
+			P_SetPsprite(player, ps_weapon, S_SGUNA);
+		}
+
+	}
+
+	if (player->readyweapon == wp_supershotgun) {
+
+		if (m_reloadingweapons.value == 0)
+		{
+			P_SetPsprite(player, ps_weapon, S_SSGA);
+		}
+
+	}
+
+	if (player->readyweapon == wp_fist) {
+
+		if (m_reloadingweapons.value == 0)
+		{
+			P_SetPsprite(player, ps_weapon, S_PUNCHA);
+		}
+
+	}
+
+}
+
+
+//
+// A_Lowercheckanimationvanilla
+// check if option is disabled if disabled, changes reworked weapon animations to vanilla weapon animations
+//
+void A_Lowercheckanimationvanilla(player_t* player, pspdef_t* psp) {
+
+	if (player->readyweapon == wp_shotgun) {
+
+		if (m_reloadingweapons.value == 0)
+		{
+			P_SetPsprite(player, ps_weapon, S_SGUNDOWNA);
+		}
+
+	}
+
+	if (player->readyweapon == wp_supershotgun) {
+
+		if (m_reloadingweapons.value == 0)
+		{
+			P_SetPsprite(player, ps_weapon, S_SSGDOWNA);
+		}
+
+	}
+
+	if (player->readyweapon == wp_fist) {
+
+		if (m_reloadingweapons.value == 0)
+		{
+			P_SetPsprite(player, ps_weapon, S_PUNCHDOWNA);
+		}
+
+	}
+
+}
+
+//
+// A_Raisecheckanimationvanilla
+// check if option is disabled if disabled, changes reworked weapon animations to vanilla weapon animations
+//
+void A_Raisecheckanimationvanilla(player_t* player, pspdef_t* psp) {
+
+	if (player->readyweapon == wp_shotgun) {
+
+		if (m_reloadingweapons.value == 0)
+		{
+			P_SetPsprite(player, ps_weapon, S_SGUNUPA);
+		}
+
+	}
+
+	if (player->readyweapon == wp_supershotgun) {
+
+		if (m_reloadingweapons.value == 0)
+		{
+			P_SetPsprite(player, ps_weapon, S_SSGUPA);
+		}
+
+	}
+
+	if (player->readyweapon == wp_fist) {
+
+		if (m_reloadingweapons.value == 0)
+		{
+			P_SetPsprite(player, ps_weapon, S_PUNCHUPA);
+		}
+
+	}
+
+}
+
+//
+// A_Firecheckanimationvanilla
+// check if option is disabled if disabled, changes reworked weapon animations to vanilla weapon animations
+//
+void A_Firecheckanimationvanilla(player_t* player, pspdef_t* psp) {
+
+	if (player->readyweapon == wp_shotgun) {
+
+		if (m_reloadingweapons.value == 0)
+		{
+			P_SetPsprite(player, ps_weapon, S_SGUN0);
+		}
+
+	}
+
+	if (player->readyweapon == wp_supershotgun) {
+
+		if (m_reloadingweapons.value == 0)
+		{
+			P_SetPsprite(player, ps_weapon, S_SSG0);
+		}
+
+	}
+
+	if (player->readyweapon == wp_fist) {
+
+		if (m_reloadingweapons.value == 0)
+		{
+			P_SetPsprite(player, ps_weapon, S_PUNCH0);
+		}
+
+	}
+
+}
+
+//
+// A_Flashcheckanimationvanilla
+// check if option is disabled if disabled, changes reworked weapon animations to vanilla weapon animations
+//
+void A_Flashcheckanimationvanilla(player_t* player, pspdef_t* psp) {
+
+	if (player->readyweapon == wp_shotgun) {
+
+		if (m_reloadingweapons.value == 0)
+		{
+			P_SetPsprite(player, ps_flash, S_SGUNFLASHA);
+		}
+
+	}
+
+	if (player->readyweapon == wp_supershotgun) {
+
+		if (m_reloadingweapons.value == 0)
+		{
+			P_SetPsprite(player, ps_flash, S_SSGFLASHA);
+		}
+
+	}
+
+}
+
+//
+// A_LoadShotgun2
+//
+
+void A_LoadShotgun2(player_t* player, pspdef_t* psp) {
+	S_StartSound(player->mo, sfx_sht2load3);
+}
+
+//
+// A_Fistwhiff
+//
+
+void A_Fistwhiff(player_t* player, pspdef_t* psp) {
+	S_StartSound(player->mo, sfx_fistwhiff);
 }

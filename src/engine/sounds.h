@@ -122,6 +122,8 @@ typedef enum {
 	sfx_sgcock,     //sgcock
 	sfx_bdmissile,  //projectile
 	sfx_noway,      //oof2??
+	sfx_sht2load3,
+	sfx_fistwhiff,
 	sfx_skelsit,
 	sfx_skeldth,
 	sfx_spisit,

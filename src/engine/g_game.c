@@ -177,6 +177,7 @@ CVAR_EXTERNAL(m_extendedcast);
 CVAR_EXTERNAL(i_joytwinstick);
 CVAR_EXTERNAL(i_joysensx);
 CVAR_EXTERNAL(i_joysensy);
+CVAR_EXTERNAL(m_reloadingweapons);
 
 //
 // G_RegisterCvars
@@ -200,6 +201,7 @@ void G_RegisterCvars(void) {
 	CON_CvarRegister(&m_obituaries);
 	CON_CvarRegister(&compat_mobjpass);
 	CON_CvarRegister(&m_extendedcast);
+	CON_CvarRegister(&m_reloadingweapons);
 }
 
 //

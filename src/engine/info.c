@@ -62,7 +62,8 @@ char* sprnames[NUMSPRITES + 1] = {  //0x5FA30
 	"S018", "S019", "S020", "S021", "S022", "S023", "S024", "S028",
 	"S029", "S031", "S032", "S027", "S036", "S037", "S038", "S040",
 	"S041", "S026", "S002", "S030", "CPOS", "SKEL", "ARCR", "POW1",
-	"SPID", "VFIR", "VILE", "TEST", "BLUG", "BLUP", NULL
+	"SPID", "VFIR", "VILE", "TEST", "BLUG", "BLUP", "SH1R", "SH2R",
+	"PUNR", NULL
 };
 
 // Doesn't work with g++, needs actionf_p1
@@ -152,6 +153,18 @@ void A_VileChase();
 void A_VileStart();
 void A_VileTarget();
 void A_VileAttack();
+void A_WeaponReadycheckanimationrework();
+void A_Firecheckanimationrework();
+void A_Lowercheckanimationrework();
+void A_Raisecheckanimationrework();
+void A_Flashcheckanimationrework();
+void A_WeaponReadycheckanimationvanilla();
+void A_Firecheckanimationvanilla();
+void A_Lowercheckanimationvanilla();
+void A_Raisecheckanimationvanilla();
+void A_Flashcheckanimationvanilla();
+void A_OpenShotgun2();
+void A_Fistwhiff();
 
 #pragma warning(push)
 #pragma warning(disable:4113)
@@ -979,14 +992,31 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_SAW2*/              { SPR_SAWG, 3, 2, {A_Saw}, S_SAW3 },
 	/*S_SAW3*/              { SPR_SAWG, 3, 0, {A_ReFire}, S_SAWA },
 
-	/*S_PUNCH*/             { SPR_PUNG, 0, 1, {A_WeaponReady}, S_PUNCH },
-	/*S_PUNCHDOWN*/         { SPR_PUNG, 0, 1, {A_Lower}, S_PUNCHDOWN },
-	/*S_PUNCHUP*/           { SPR_PUNG, 0, 1, {A_Raise}, S_PUNCHUP },
+	/*S_PUNCHA*/             { SPR_PUNG, 0, 0, {A_WeaponReadycheckanimationrework}, S_PUNCHB },
+	/*S_PUNCHB*/             { SPR_PUNG, 0, 1, {A_WeaponReady}, S_PUNCHA },
+	/*S_PUNCHDOWNA*/         { SPR_PUNG, 0, 0, {A_Lowercheckanimationrework}, S_PUNCHDOWNB },
+	/*S_PUNCHDOWNB*/         { SPR_PUNG, 0, 1, {A_Lower}, S_PUNCHDOWNA },
+	/*S_PUNCHUPA*/           { SPR_PUNG, 0, 0, {A_Raisecheckanimationrework}, S_PUNCHUPB },
+	/*S_PUNCHUPB*/           { SPR_PUNG, 0, 1, {A_Raise}, S_PUNCHUPA },
+	/*S_PUNCH0*/            { SPR_PUNG, 1, 0, {A_Firecheckanimationrework}, S_PUNCH1 },
 	/*S_PUNCH1*/            { SPR_PUNG, 1, 4, {NULL}, S_PUNCH2 },
 	/*S_PUNCH2*/            { SPR_PUNG, 2, 4, {A_Punch}, S_PUNCH3 },
 	/*S_PUNCH3*/            { SPR_PUNG, 3, 5, {NULL}, S_PUNCH4 },
 	/*S_PUNCH4*/            { SPR_PUNG, 2, 4, {NULL}, S_PUNCH5 },
-	/*S_PUNCH5*/            { SPR_PUNG, 1, 5, {A_ReFire}, S_PUNCH },
+	/*S_PUNCH5*/            { SPR_PUNG, 1, 5, {A_ReFire}, S_PUNCHA },
+
+	/*S_PUNCHREWORKA*/{ SPR_PUNR, 0, 0, {A_WeaponReadycheckanimationvanilla}, S_PUNCHREWORKB },
+	/*S_PUNCHREWORKB*/{ SPR_PUNR, 0, 1, {A_WeaponReady}, S_PUNCHREWORKA },
+	/*S_PUNCHDOWNREWORKA*/{ SPR_PUNR, 0, 0, {A_Lowercheckanimationvanilla}, S_PUNCHDOWNREWORKB },
+	/*S_PUNCHDOWNREWORKB*/{ SPR_PUNR, 0, 1, {A_Lower}, S_PUNCHDOWNREWORKA },
+	/*S_PUNCHUPREWORKA*/{ SPR_PUNR, 0, 0, {A_Raisecheckanimationvanilla}, S_PUNCHUPREWORKB },
+	/*S_PUNCHUPREWORKB*/{ SPR_PUNR, 0, 1, {A_Raise}, S_PUNCHUPREWORKA },
+	/*S_PUNCH0REWORK*/{ SPR_PUNR, 1, 0, {A_Firecheckanimationvanilla}, S_PUNCH1REWORK },
+	/*S_PUNCH1REWORK*/{ SPR_PUNR, 1, 4, {A_Fistwhiff}, S_PUNCH2REWORK },
+	/*S_PUNCH2REWORK*/{ SPR_PUNR, 4, 5, {A_Punch}, S_PUNCH3REWORK },
+	/*S_PUNCH3REWORK*/{ SPR_PUNR, 3, 4, {NULL}, S_PUNCH4REWORK },
+	/*S_PUNCH4REWORK*/{ SPR_PUNR, 2, 4, {NULL}, S_PUNCH5REWORK },
+	/*S_PUNCH5REWORK*/{ SPR_PUNR, 0, 5, {A_ReFire}, S_PUNCHREWORKA },
 
 	/*S_PISTOL*/            { SPR_PISG, 0, 1, {A_WeaponReady}, S_PISTOL },
 	/*S_PISTOLDOWN*/        { SPR_PISG, 0, 1, {A_Lower}, S_PISTOLDOWN },
@@ -998,20 +1028,50 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_PISTOL5*/           { SPR_PISG, 0, 1, {A_ReFire}, S_PISTOL },
 	/*S_PISTOLFLASH*/       { SPR_PISG, 32771, 3, {NULL}, S_NULL },
 
-	/*S_SGUN*/              { SPR_SHT1, 0, 1, {A_WeaponReady}, S_SGUN },
-	/*S_SGUNDOWN*/          { SPR_SHT1, 0, 1, {A_Lower}, S_SGUNDOWN },
-	/*S_SGUNUP*/            { SPR_SHT1, 0, 1, {A_Raise}, S_SGUNUP },
+	/*S_SGUNA*/             { SPR_SHT1, 0, 0, {A_WeaponReadycheckanimationrework}, S_SGUNB },
+	/*S_SGUNB*/             { SPR_SHT1, 0, 1, {A_WeaponReady}, S_SGUNA },
+	/*S_SGUNDOWNA*/         { SPR_SHT1, 0, 0, {A_Lowercheckanimationrework}, S_SGUNDOWNB },
+	/*S_SGUNDOWNB*/         { SPR_SHT1, 0, 1, {A_Lower}, S_SGUNDOWNA },
+	/*S_SGUNUPA*/           { SPR_SHT1, 0, 0, {A_Raisecheckanimationrework}, S_SGUNUPB },
+	/*S_SGUNUPB*/           { SPR_SHT1, 0, 1, {A_Raise}, S_SGUNUPA },
+	/*S_SGUN0*/             { SPR_SHT1, 0, 0, {A_Firecheckanimationrework}, S_SGUN1 },
 	/*S_SGUN1*/             { SPR_SHT1, 0, 2, {NULL}, S_SGUN2 },
 	/*S_SGUN2*/             { SPR_SHT1, 0, 4, {A_FireShotgun}, S_SGUN3 },
 	/*S_SGUN3*/             { SPR_SHT1, 1, 18, {NULL}, S_SGUN4 },
 	/*S_SGUN4*/             { SPR_SHT1, 2, 5, {NULL}, S_SGUN5 },
 	/*S_SGUN5*/             { SPR_SHT1, 0, 3, {NULL}, S_SGUN6 },
-	/*S_SGUN6*/             { SPR_SHT1, 0, 7, {A_ReFire}, S_SGUN },
-	/*S_SGUNFLASH*/         { SPR_SHT1, 32771, 4, {NULL}, S_NULL },
+	/*S_SGUN6*/             { SPR_SHT1, 0, 7, {A_ReFire}, S_SGUNA },
+	/*S_SGUNFLASHA*/         { SPR_SHT1, 32771, 0, {A_Flashcheckanimationrework}, S_SGUNFLASHB },
+	/*S_SGUNFLASHB*/         { SPR_SHT1, 32771, 4, {NULL}, S_NULL },
 
-	/*S_SSG*/               { SPR_SHT2, 0, 1, {A_WeaponReady}, S_SSG },
-	/*S_SSGDOWN*/           { SPR_SHT2, 0, 1, {A_Lower}, S_SSGDOWN },
-	/*S_SSGUP*/             { SPR_SHT2, 0, 1, {A_Raise}, S_SSGUP },
+	/*S_SGUNREWORKA*/{ SPR_SH1R, 0, 0, {A_WeaponReadycheckanimationvanilla}, S_SGUNREWORKB },
+	/*S_SGUNREWORKB*/{ SPR_SH1R, 0, 1, {A_WeaponReady}, S_SGUNREWORKA },
+	/*S_SGUNDOWNREWORKA*/{ SPR_SH1R, 0, 0, {A_Lowercheckanimationvanilla}, S_SGUNDOWNREWORKB },
+	/*S_SGUNDOWNREWORKB*/{ SPR_SH1R, 0, 1, {A_Lower}, S_SGUNDOWNREWORKA },
+	/*S_SGUNUPREWORKA*/{ SPR_SH1R, 0, 0, {A_Raisecheckanimationvanilla}, S_SGUNUPREWORKB },
+	/*S_SGUNUPREWORKB*/{ SPR_SH1R, 0, 1, {A_Raise}, S_SGUNUPREWORKA },
+	/*S_SGUN0REWORK*/{ SPR_SH1R, 1, 0, {A_Firecheckanimationvanilla}, S_SGUN1REWORK },
+	/*S_SGUN1REWORK*/{ SPR_SH1R, 1, 4, {A_FireShotgun}, S_SGUN2REWORK },
+	/*S_SGUN2REWORK*/{ SPR_SH1R, 2, 4, {NULL}, S_SGUN3REWORK },
+	/*S_SGUN3REWORK*/{ SPR_SH1R, 0, 2, {NULL}, S_SGUN4REWORK },
+	/*S_SGUN4REWORK*/{ SPR_SH1R, 3, 4, {NULL}, S_SGUN5REWORK },
+	/*S_SGUN5REWORK*/{ SPR_SH1R, 4, 3, {NULL}, S_SGUN6REWORK },
+	/*S_SGUN6REWORK*/{ SPR_SH1R, 5, 3, {NULL}, S_SGUN7REWORK },
+	/*S_SGUN7REWORK*/{ SPR_SH1R, 6, 3, {NULL}, S_SGUN8REWORK },
+	/*S_SGUN8REWORK*/{ SPR_SH1R, 5, 3, {NULL}, S_SGUN9REWORK },
+	/*S_SGUN9REWORK*/{ SPR_SH1R, 4, 3, {NULL}, S_SGUN10REWORK },
+	/*S_SGUN10REWORK*/{ SPR_SH1R, 3, 3, {NULL}, S_SGUN11REWORK },
+	/*S_SGUN11REWORK*/{ SPR_SH1R, 0, 7, {A_ReFire}, S_SGUNREWORKA },
+	/*S_SGUNFLASHREWORKA*/{ SPR_SH1R, 32775, 0, {A_Flashcheckanimationvanilla}, S_SGUNFLASHREWORKB },
+	/*S_SGUNFLASHREWORKB*/{ SPR_SH1R, 32775, 4, {NULL}, S_NULL },
+
+	/*S_SSGA*/               { SPR_SHT2, 0, 0, {A_WeaponReadycheckanimationrework}, S_SSGB },
+	/*S_SSGB*/               { SPR_SHT2, 0, 1, {A_WeaponReady}, S_SSGA },
+	/*S_SSGDOWNA*/           { SPR_SHT2, 0, 0, {A_Lowercheckanimationrework}, S_SSGDOWNB },
+	/*S_SSGDOWNB*/           { SPR_SHT2, 0, 1, {A_Lower}, S_SSGDOWNA },
+	/*S_SSGUPA*/             { SPR_SHT2, 0, 0, {A_Raisecheckanimationrework}, S_SSGUPB },
+	/*S_SSGUPB*/             { SPR_SHT2, 0, 1, {A_Raise}, S_SSGUPA },
+	/*S_SSG0*/              { SPR_SHT2, 0, 0, {A_Firecheckanimationrework}, S_SSG1 },
 	/*S_SSG1*/              { SPR_SHT2, 0, 1, {NULL}, S_SSG2 },
 	/*S_SSG2*/              { SPR_SHT2, 0, 4, {A_FireShotgun2}, S_SSG3 },
 	/*S_SSG3*/              { SPR_SHT2, 1, 7, {NULL}, S_SSG4 },
@@ -1019,10 +1079,33 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_SSG5*/              { SPR_SHT2, 1, 5, {NULL}, S_SSG6 },
 	/*S_SSG6*/              { SPR_SHT2, 1, 5, {NULL}, S_SSG7 },
 	/*S_SSG7*/              { SPR_SHT2, 1, 5, {NULL}, S_SSG8 },
-	/*S_SSG8*/              { SPR_SHT2, 1, 5, {A_LoadShotgun2}, S_SSG9 },
+	/*S_SSG8*/              { SPR_SHT2, 1, 5, {A_OpenShotgun2}, S_SSG9 },
 	/*S_SSG9*/              { SPR_SHT2, 2, 4, {A_CloseShotgun2}, S_SSG10 },
-	/*S_SSG10*/             { SPR_SHT2, 0, 5, {A_ReFire}, S_SSG },
-	/*S_SSGFLASH*/          { SPR_SHT2, 32771, 4, {NULL}, S_NULL },
+	/*S_SSG10*/             { SPR_SHT2, 0, 5, {A_ReFire}, S_SSGA },
+	/*S_SSGFLASHA*/         { SPR_SHT2, 32771, 0, {A_Flashcheckanimationrework}, S_SSGFLASHB },
+	/*S_SSGFLASHB*/         { SPR_SHT2, 32771, 4, {NULL}, S_NULL },
+
+	/*S_SSGREWORKA*/{ SPR_SH2R, 0, 0, {A_WeaponReadycheckanimationvanilla}, S_SSGREWORKB },
+	/*S_SSGREWORKB*/{ SPR_SH2R, 0, 1, {A_WeaponReady}, S_SSGREWORKA },
+	/*S_SSGDOWNREWORKA*/{ SPR_SH2R, 0, 0, {A_Lowercheckanimationvanilla}, S_SSGDOWNREWORKB },
+	/*S_SSGDOWNREWORKB*/{ SPR_SH2R, 0, 1, {A_Lower}, S_SSGDOWNREWORKA },
+	/*S_SSGUPREWORKA*/{ SPR_SH2R, 0, 0, {A_Raisecheckanimationvanilla}, S_SSGUPREWORKB },
+	/*S_SSGUPREWORKB*/{ SPR_SH2R, 0, 1, {A_Raise}, S_SSGUPREWORKA },
+	/*S_SSG0REWORK*/{ SPR_SH2R, 0, 0, {A_Firecheckanimationvanilla}, S_SSG1REWORK },
+	/*S_SSG1REWORK*/{ SPR_SH2R, 0, 1, {NULL}, S_SSG2REWORK },
+	/*S_SSG2REWORK*/{ SPR_SH2R, 0, 0, {A_FireShotgun2}, S_SSG3REWORK },
+	/*S_SSG3REWORK*/{ SPR_SH2R, 1, 4, {NULL}, S_SSG4REWORK },
+	/*S_SSG4REWORK*/{ SPR_SH2R, 2, 3, {NULL}, S_SSG5REWORK },
+	/*S_SSG5REWORK*/{ SPR_SH2R, 3, 4, {NULL}, S_SSG6REWORK },
+	/*S_SSG6REWORK*/{ SPR_SH2R, 4, 5, {A_CheckReload}, S_SSG7REWORK },
+	/*S_SSG7REWORK*/{ SPR_SH2R, 5, 5, {A_OpenShotgun2}, S_SSG8REWORK },
+	/*S_SSG8REWORK*/{ SPR_SH2R, 6, 5, {NULL}, S_SSG9REWORK },
+	/*S_SSG9REWORK*/{ SPR_SH2R, 7, 5, {A_LoadShotgun2}, S_SSG10REWORK },
+	/*S_SSG10REWORK*/{ SPR_SH2R, 8, 5, {NULL}, S_SSG11REWORK },
+	/*S_SSG11REWORK*/{ SPR_SH2R, 9, 4, {A_CloseShotgun2}, S_SSG12REWORK },
+	/*S_SSG12REWORK*/{ SPR_SH2R, 10, 5, {A_ReFire}, S_SSGREWORKA },
+	/*S_SSGFLASHREWORKA*/{ SPR_SH2R, 32791, 0, {A_Flashcheckanimationvanilla}, S_SSGFLASHREWORKB },
+	/*S_SSGFLASHREWORKB*/{ SPR_SH2R, 32791, 4, {NULL}, S_NULL },
 
 	/*S_CHAING*/            { SPR_CHGG, 0, 1, {A_WeaponReady}, S_CHAING },
 	/*S_CHAINGDOWN*/        { SPR_CHGG, 0, 1, {A_Lower}, S_CHAINGDOWN },
