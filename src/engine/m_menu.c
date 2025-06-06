@@ -1031,7 +1031,7 @@ enum {
 	misc_obituaries,
 	misc_brutal,
 	misc_extendedcast,
-	misc_reloadingweapons,
+	misc_reworkedweaponsanimations,
 	misc_header6,
 	misc_comp_pass,
 	misc_disablesecretmessages,
@@ -1255,7 +1255,7 @@ void M_MiscChoice(int choice) {
 		M_SetOptionValue(choice, 0, 1, 1, &m_extendedcast);
 		break;
 
-	case misc_reloadingweapons:
+	case misc_reworkedweaponsanimations:
 		M_SetOptionValue(choice, 0, 1, 1, &m_reworkedweaponsanimations);
 		break;
 
@@ -1307,7 +1307,7 @@ void M_DrawMisc(void) {
 	DRAWMISCITEM(misc_obituaries, m_obituaries.value, autoruntype);
 	DRAWMISCITEM(misc_brutal, m_brutal.value, autoruntype);
 	DRAWMISCITEM(misc_extendedcast, m_extendedcast.value, autoruntype);
-	DRAWMISCITEM(misc_reloadingweapons, m_reworkedweaponsanimations.value, autoruntype);
+	DRAWMISCITEM(misc_reworkedweaponsanimations, m_reworkedweaponsanimations.value, autoruntype);
 	DRAWMISCITEM(misc_comp_pass, !compat_mobjpass.value, msgNames);
 	DRAWMISCITEM(misc_disablesecretmessages, hud_disablesecretmessages.value, disablesecretmessages);
 
