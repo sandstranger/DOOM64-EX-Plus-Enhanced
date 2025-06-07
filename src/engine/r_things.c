@@ -61,6 +61,8 @@ CVAR_EXTERNAL(i_interpolateframes);
 CVAR_EXTERNAL(v_accessibility);
 CVAR_EXTERNAL(r_rendersprites);
 
+CVAR(m_changethecolorofthenightmare, 0);
+
 static void AddSpriteDrawlist(drawlist_t* dl, visspritelist_t* vis, int texid);
 
 //
@@ -359,7 +361,57 @@ static boolean R_GenerateSpritePlane(visspritelist_t* vissprite, vtx_t* vertex) 
 
 	// [kex] nightmare things have a shade of dark green
 	if (thing->flags & MF_NIGHTMARE) {
+
+		if (m_changethecolorofthenightmare.value == 0)
+		{
+		// Green Nightmare Color
 		dglSetVertexColor(vertex, D_RGBA(64, 255, 0, thing->alpha), 4);
+		}
+		else if (m_changethecolorofthenightmare.value == 1)
+		{
+			// Red Nightmare Color
+			dglSetVertexColor(vertex, D_RGBA(255, 0, 0, thing->alpha), 4);
+		}
+		else if (m_changethecolorofthenightmare.value == 2)
+		{
+			// Yellow Nightmare Color
+			dglSetVertexColor(vertex, D_RGBA(255, 255, 0, thing->alpha), 4);
+		}
+		else if (m_changethecolorofthenightmare.value == 3)
+		{
+			// Blue Nightmare Color
+			dglSetVertexColor(vertex, D_RGBA(0, 0, 255, thing->alpha), 4);
+		}
+		else if (m_changethecolorofthenightmare.value == 4)
+		{
+			// Pink Nightmare Color
+			//dglSetVertexColor(vertex, D_RGBA(255, 128, 192, thing->alpha), 4);
+			dglSetVertexColor(vertex, D_RGBA(255, 0, 255, thing->alpha), 4);
+		}
+		else if (m_changethecolorofthenightmare.value == 5)
+		{
+			// Purple Nightmare Color
+			dglSetVertexColor(vertex, D_RGBA(128, 0, 255, thing->alpha), 4);
+			//dglSetVertexColor(vertex, D_RGBA(64, 0, 128, thing->alpha), 4);
+		}
+		else if (m_changethecolorofthenightmare.value == 6)
+		{
+			// Orange Nightmare Color
+			dglSetVertexColor(vertex, D_RGBA(255, 128, 0, thing->alpha), 4);
+			
+		}
+		else if (m_changethecolorofthenightmare.value == 7)
+		{
+			// Cyan Nightmare Color
+			dglSetVertexColor(vertex, D_RGBA(0, 255, 255, thing->alpha), 4);
+
+		}
+		else if (m_changethecolorofthenightmare.value == 8)
+		{
+			// Black Nightmare Color
+			dglSetVertexColor(vertex, D_RGBA(0, 0, 0, thing->alpha), 4);
+
+		}
 	}
 	else if ((thing->frame & FF_FULLBRIGHT)) {
 		dglSetVertexColor(vertex, D_RGBA(255, 255, 255, thing->alpha), 4);

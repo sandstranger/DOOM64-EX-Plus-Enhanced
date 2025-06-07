@@ -1112,6 +1112,7 @@ mobj_t* P_SpawnMapThing(mapthing_t* mthing) {
 	// [kex] check for nightmare flag
 	if (mthing->options & MTF_NIGHTMARE) {
 		mobj->health *= 2;
+		mobj->alpha = 127;
 		mobj->flags |= MF_NIGHTMARE;
 	}
 
@@ -1248,6 +1249,36 @@ void P_SpawnBloodPurple(fixed_t x, fixed_t y, fixed_t z, int damage) {
 		}
 		else if (damage < 9) {
 			P_SetMobjState(th, S_BLOOD108);
+		}
+	}
+}
+
+//
+// P_SpawnBloodNightmareColor
+// check if the thing has the nightmare flag and if the thing has the nightmare flag, change the blood color of nightmare color that was chosen in the options
+void P_SpawnBloodNightmareColor(fixed_t x, fixed_t y, fixed_t z, int damage) {
+	mobj_t* th;
+	int i = 0;
+
+	for (i = 0; i < 3; i++) {
+		x += ((P_Random() - P_Random()) << 12);
+		y += ((P_Random() - P_Random()) << 12);
+		z += ((P_Random() - P_Random()) << 11);
+
+		th = P_SpawnMobj(x, y, z, MT_BLOOD);
+		th->momz = FRACUNIT * 2;
+		th->tics -= (P_Random() & 1);
+		th->flags |= MF_NIGHTMARE;
+
+		if (th->tics < 1) {
+			th->tics = 1;
+		}
+
+		if (damage <= 12 && (damage >= 9)) {
+			P_SetMobjState(th, S_BLOOD2);
+		}
+		else if (damage < 9) {
+			P_SetMobjState(th, S_BLOOD3);
 		}
 	}
 }
