@@ -741,7 +741,7 @@ void A_Chase(mobj_t* actor) {
 	// do not attack twice in a row
 	if (actor->flags & MF_JUSTATTACKED) {
 		actor->flags &= ~MF_JUSTATTACKED;
-		if (gameskill != sk_nightmare && !fastparm) {
+		if (gameskill != sk_nightmare && gameskill != sk_ultranightmare && !fastparm) {
 			P_NewChaseDir(actor);
 		}
 		return;
@@ -759,7 +759,7 @@ void A_Chase(mobj_t* actor) {
 
 	// check for missile attack
 	if (actor->info->missilestate) {
-		if (gameskill < sk_nightmare && !fastparm && actor->movecount) {
+		if (gameskill < sk_nightmare && gameskill < sk_ultranightmare && !fastparm && actor->movecount) {
 			goto nomissile;
 		}
 
@@ -1968,7 +1968,7 @@ void A_SpidDeathEvent(mobj_t* actor)
 	exp->thinker.function.acp1 = (actionf_p1)T_MobjExplode;
 	exp->delaymax = 2;
 	exp->delay = 0;
-	exp->lifetime = 14;
+	exp->lifetime = 20;
 	P_SetTarget(&exp->mobj, actor);
 
 	if (actor->info->deathsound) {

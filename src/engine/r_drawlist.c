@@ -167,11 +167,11 @@ void DL_ProcessDrawList(int tag, boolean(*procfunc)(vtxlist_t*, int*)) {
 				// villsa 12152013 - change blend states for nightmare things
 				if ((checkNightmare ^ (flags & MF_NIGHTMARE))) {
 					if (!checkNightmare && (flags & MF_NIGHTMARE)) {
-						//dglBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR);
+						//dglBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR); // styd: disable hardcoded nightmare transparency
 						checkNightmare ^= 1;
 					}
 					else if (checkNightmare && !(flags & MF_NIGHTMARE)) {
-						dglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+						//dglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // styd: disable hardcoded nightmare transparency
 						checkNightmare ^= 1;
 					}
 				}

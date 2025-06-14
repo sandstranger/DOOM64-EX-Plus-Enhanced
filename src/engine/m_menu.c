@@ -642,6 +642,7 @@ enum {
 	toorough,
 	hurtme,
 	violence,
+	ultranightmare,
 	nightmare,
 	newg_end
 } newgame_e;
@@ -651,6 +652,7 @@ menuitem_t NewGameMenu[] = {
 	{1,"Bring It On!",M_ChooseSkill, 'r'},
 	{1,"I Own Doom!",M_ChooseSkill, 'i'},
 	{1,"Watch Me Die!",M_ChooseSkill, 'w'},
+	{1,"Ultra Nightmare!",M_ChooseSkill, 'u'},
 	{1,"Hardcore!",M_ChooseSkill, 'h'},
 };
 
@@ -1265,7 +1267,7 @@ void M_MiscChoice(int choice) {
 		break;
 
 	case misc_changethecolorofthenightmare:
-		M_SetOptionValue(choice, 0, 8, 1, &m_changethecolorofthenightmare);
+		M_SetOptionValue(choice, 0, 9, 1, &m_changethecolorofthenightmare);
 		break;
 
 	case misc_comp_pass:
@@ -1279,7 +1281,7 @@ void M_DrawMisc(void) {
 	static const char* mapdisplaytype[2] = { "Hide", "Show" };
 	static const char* objectdrawtype[3] = { "Arrows", "Sprites", "Both" };
 	static const char* disablesecretmessages[2] = { "Enabled", "Disabled" };
-	static const char* nightmarecolorstype[9] = { "Green", "Red", "Yellow", "Blue", "Pink", "Purple", "Orange", "Cyan", "Black" };
+	static const char* nightmarecolorstype[10] = { "Off", "Green", "Red", "Yellow", "Blue", "Pink", "Purple", "Orange", "Cyan", "Black" };
 	int y;
 
 	if (currentMenu->menupageoffset <= misc_menufade + 1 &&

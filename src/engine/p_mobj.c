@@ -621,7 +621,7 @@ mobj_t* P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type) {
 		mobj->blockflag |= BF_MOBJPASS;
 	}
 
-	if (gameskill != sk_nightmare) {
+	if (gameskill != sk_nightmare && gameskill != sk_ultranightmare) {
 		mobj->reactiontime = info->reactiontime;
 	}
 
@@ -917,7 +917,11 @@ int EV_SpawnMobjTemplate(line_t* line, boolean silent) {
 			S_StartSound(mobj, sfx_spawn);
 		}
 
-		if (mobj->type != MT_DEMON2) {
+		// styd: Fixes the transparency of nightmare things that appear with Thing Spawn, because with my new transparency code for nightmare things when appearing with Thing Spawn they lose their nightmare transparency
+		if (mobj->flags & MF_NIGHTMARE) {
+			mobj->alpha = 127;
+		}
+		else if (mobj->type != MT_DEMON2) {
 			mobj->alpha = 0;
 			P_CreateFadeThinker(mobj, line);
 		}
@@ -1019,6 +1023,9 @@ mobj_t* P_SpawnMapThing(mapthing_t* mthing) {
 	else if (gameskill == sk_nightmare) {
 		bit = 4;
 	}
+	else if (gameskill == sk_ultranightmare) {
+		bit = 5;
+	}
 	else {
 		bit = 1 << (gameskill - 1);
 	}
@@ -1072,6 +1079,164 @@ mobj_t* P_SpawnMapThing(mapthing_t* mthing) {
 	mobj->spawnpoint = *mthing;
 	mobj->tid = mthing->tid;
 
+	// styd: added a new Ultra Nightmare difficulty
+	if (gameskill == sk_ultranightmare) {
+
+		if (mobj->type == MT_POSSESSED1 && mthing->options & MTF_NIGHTMARE)
+		{
+			
+		}
+		else if (mobj->type == MT_POSSESSED1)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_POSSESSED2 && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_POSSESSED2)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_IMP1 && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_IMP1)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_IMP2 && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_IMP2)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_DEMON1 && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_DEMON1)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_DEMON2 && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_DEMON2)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_SKULL && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_SKULL)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_CACODEMON && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_CACODEMON)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_BRUISER2 && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_BRUISER2)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_BRUISER1 && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_BRUISER1)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_BABY && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_BABY)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_PAIN && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_PAIN)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_MANCUBUS && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_MANCUBUS)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_CYBORG && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_CYBORG)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_RESURRECTOR && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_RESURRECTOR)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_VILE && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_VILE)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_CHAINGUY && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_CHAINGUY)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_UNDEAD && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_UNDEAD)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+		else if (mobj->type == MT_SPIDER && mthing->options & MTF_NIGHTMARE)
+		{
+
+		}
+		else if (mobj->type == MT_SPIDER)
+		{
+			mthing->options |= MTF_NIGHTMARE;
+		}
+
+	}
+
 	if (mobj->flags & MF_SOLID &&
 		compatflags & COMPATF_MOBJPASS &&
 		!(mobj->flags & (MF_NOCLIP | MF_SPECIAL))) {
@@ -1112,8 +1277,8 @@ mobj_t* P_SpawnMapThing(mapthing_t* mthing) {
 	// [kex] check for nightmare flag
 	if (mthing->options & MTF_NIGHTMARE) {
 		mobj->health *= 2;
-		mobj->alpha = 127;
 		mobj->flags |= MF_NIGHTMARE;
+		mobj->alpha = 127; // styd: set transparency things to 127
 	}
 
 	if (mthing->options & MTF_SECRET)
@@ -1255,7 +1420,7 @@ void P_SpawnBloodPurple(fixed_t x, fixed_t y, fixed_t z, int damage) {
 
 //
 // P_SpawnBloodNightmareColor
-// check if the thing has the nightmare flag and if the thing has the nightmare flag, change the blood color of nightmare color that was chosen in the options
+// styd: check if the thing has the nightmare flag and if the thing has the nightmare flag, change the blood color of nightmare color that was chosen in the options
 void P_SpawnBloodNightmareColor(fixed_t x, fixed_t y, fixed_t z, int damage) {
 	mobj_t* th;
 	int i = 0;
@@ -1269,6 +1434,7 @@ void P_SpawnBloodNightmareColor(fixed_t x, fixed_t y, fixed_t z, int damage) {
 		th->momz = FRACUNIT * 2;
 		th->tics -= (P_Random() & 1);
 		th->flags |= MF_NIGHTMARE;
+		th->alpha = 127;
 
 		if (th->tics < 1) {
 			th->tics = 1;
@@ -1421,6 +1587,7 @@ mobj_t* P_SpawnMissile(mobj_t* source, mobj_t* dest, mobjtype_t type,
     if(source && source->flags & MF_NIGHTMARE) {
         th->flags |= MF_NIGHTMARE;
         speed *= 2;
+		th->alpha = 127;
     }
 
 	th->angle = an;
