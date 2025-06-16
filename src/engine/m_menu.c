@@ -1009,6 +1009,7 @@ CVAR_EXTERNAL(m_brutal);
 CVAR_EXTERNAL(m_extendedcast);
 CVAR_EXTERNAL(m_reworkedweaponsanimations);
 CVAR_EXTERNAL(m_changethecolorofthenightmare);
+CVAR_EXTERNAL(m_reworkedvanillasounds);
 
 enum {
 	misc_header1,
@@ -1036,6 +1037,7 @@ enum {
 	misc_extendedcast,
 	misc_reworkedweaponsanimations,
 	misc_changethecolorofthenightmare,
+	misc_reworkedvanillasounds,
 	misc_header6,
 	misc_comp_pass,
 	misc_disablesecretmessages,
@@ -1070,6 +1072,7 @@ menuitem_t MiscMenu[] = {
 	{2,"New Cast Roll:",M_MiscChoice },
 	{2,"Anim Smooth:",M_MiscChoice },
 	{2,"Nightmare Color:",M_MiscChoice },
+	{2,"Extra Sounds:",M_MiscChoice },
 	{-1,"N64 Compatibility",0 },
 	{2,"Tall Actors:",M_MiscChoice,'i'},
 	{2,"Secret Messages:",M_MiscChoice,'x'},
@@ -1103,6 +1106,7 @@ char* MiscHints[misc_end] = {
 	"enable new monsters in the cast of characters sequence",
 	"enable or disable reworked weapons animations",
 	"change the color of monsters in nightmare mode",
+	"change sounds to vanilla or reworked vanilla sounds",
 	NULL,
 	"emulate infinite height bug for all solid actors",
 	"disable the secret message text",
@@ -1130,6 +1134,7 @@ menudefault_t MiscDefault[] = {
 	{ &m_extendedcast, 0 },
 	{ &m_reworkedweaponsanimations, 0 },
 	{ &m_changethecolorofthenightmare, 0 },
+	{ &m_reworkedvanillasounds, 0 },
 	{ &compat_mobjpass, 1 },
 	{ NULL, -1 }
 };
@@ -1270,6 +1275,10 @@ void M_MiscChoice(int choice) {
 		M_SetOptionValue(choice, 0, 9, 1, &m_changethecolorofthenightmare);
 		break;
 
+	case misc_reworkedvanillasounds:
+		M_SetOptionValue(choice, 0, 1, 1, &m_reworkedvanillasounds);
+		break;
+
 	case misc_comp_pass:
 		M_SetOptionValue(choice, 0, 1, 1, &compat_mobjpass);
 		break;
@@ -1282,6 +1291,7 @@ void M_DrawMisc(void) {
 	static const char* objectdrawtype[3] = { "Arrows", "Sprites", "Both" };
 	static const char* disablesecretmessages[2] = { "Enabled", "Disabled" };
 	static const char* nightmarecolorstype[10] = { "Off", "Green", "Red", "Yellow", "Blue", "Pink", "Purple", "Orange", "Cyan", "Black" };
+	static const char* reworkedvanillasoundstype[2] = { "Vanilla", "Reworked" };
 	int y;
 
 	if (currentMenu->menupageoffset <= misc_menufade + 1 &&
@@ -1321,6 +1331,7 @@ void M_DrawMisc(void) {
 	DRAWMISCITEM(misc_extendedcast, m_extendedcast.value, autoruntype);
 	DRAWMISCITEM(misc_reworkedweaponsanimations, m_reworkedweaponsanimations.value, autoruntype);
 	DRAWMISCITEM(misc_changethecolorofthenightmare, m_changethecolorofthenightmare.value, nightmarecolorstype);
+	DRAWMISCITEM(misc_reworkedvanillasounds, m_reworkedvanillasounds.value, reworkedvanillasoundstype);
 	DRAWMISCITEM(misc_comp_pass, !compat_mobjpass.value, msgNames);
 	DRAWMISCITEM(misc_disablesecretmessages, hud_disablesecretmessages.value, disablesecretmessages);
 

@@ -1147,8 +1147,7 @@ void A_WeaponReadycheckanimationrework(player_t* player, pspdef_t* psp) {
 		}
 	
 	}
-
-	if (player->readyweapon == wp_supershotgun) {
+	else if (player->readyweapon == wp_supershotgun) {
 
 		if (m_reworkedweaponsanimations.value == 1)
 		{
@@ -1156,8 +1155,7 @@ void A_WeaponReadycheckanimationrework(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_fist) {
+	else if (player->readyweapon == wp_fist) {
 
 		if (m_reworkedweaponsanimations.value == 1)
 		{
@@ -1183,8 +1181,7 @@ void A_Lowercheckanimationrework(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_supershotgun) {
+	else if (player->readyweapon == wp_supershotgun) {
 
 		if (m_reworkedweaponsanimations.value == 1)
 		{
@@ -1192,8 +1189,7 @@ void A_Lowercheckanimationrework(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_fist) {
+	else if (player->readyweapon == wp_fist) {
 
 		if (m_reworkedweaponsanimations.value == 1)
 		{
@@ -1218,8 +1214,7 @@ void A_Raisecheckanimationrework(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_supershotgun) {
+	else if (player->readyweapon == wp_supershotgun) {
 
 		if (m_reworkedweaponsanimations.value == 1)
 		{
@@ -1227,8 +1222,7 @@ void A_Raisecheckanimationrework(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_fist) {
+	else if (player->readyweapon == wp_fist) {
 
 		if (m_reworkedweaponsanimations.value == 1)
 		{
@@ -1253,8 +1247,7 @@ void A_Firecheckanimationrework(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_supershotgun) {
+	else if (player->readyweapon == wp_supershotgun) {
 
 		if (m_reworkedweaponsanimations.value == 1)
 		{
@@ -1262,8 +1255,7 @@ void A_Firecheckanimationrework(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_fist) {
+	else if (player->readyweapon == wp_fist) {
 
 		if (m_reworkedweaponsanimations.value == 1)
 		{
@@ -1288,8 +1280,7 @@ void A_Flashcheckanimationrework(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_supershotgun) {
+	else if (player->readyweapon == wp_supershotgun) {
 
 		if (m_reworkedweaponsanimations.value == 1)
 		{
@@ -1315,8 +1306,7 @@ void A_WeaponReadycheckanimationvanilla(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_supershotgun) {
+	else if (player->readyweapon == wp_supershotgun) {
 
 		if (m_reworkedweaponsanimations.value == 0)
 		{
@@ -1324,8 +1314,7 @@ void A_WeaponReadycheckanimationvanilla(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_fist) {
+	else if (player->readyweapon == wp_fist) {
 
 		if (m_reworkedweaponsanimations.value == 0)
 		{
@@ -1351,8 +1340,7 @@ void A_Lowercheckanimationvanilla(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_supershotgun) {
+	else if (player->readyweapon == wp_supershotgun) {
 
 		if (m_reworkedweaponsanimations.value == 0)
 		{
@@ -1360,8 +1348,7 @@ void A_Lowercheckanimationvanilla(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_fist) {
+	else if (player->readyweapon == wp_fist) {
 
 		if (m_reworkedweaponsanimations.value == 0)
 		{
@@ -1386,8 +1373,7 @@ void A_Raisecheckanimationvanilla(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_supershotgun) {
+	else if (player->readyweapon == wp_supershotgun) {
 
 		if (m_reworkedweaponsanimations.value == 0)
 		{
@@ -1395,8 +1381,7 @@ void A_Raisecheckanimationvanilla(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_fist) {
+	else if (player->readyweapon == wp_fist) {
 
 		if (m_reworkedweaponsanimations.value == 0)
 		{
@@ -1421,8 +1406,7 @@ void A_Firecheckanimationvanilla(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_supershotgun) {
+	else if (player->readyweapon == wp_supershotgun) {
 
 		if (m_reworkedweaponsanimations.value == 0)
 		{
@@ -1430,8 +1414,7 @@ void A_Firecheckanimationvanilla(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_fist) {
+	else if (player->readyweapon == wp_fist) {
 
 		if (m_reworkedweaponsanimations.value == 0)
 		{
@@ -1456,8 +1439,7 @@ void A_Flashcheckanimationvanilla(player_t* player, pspdef_t* psp) {
 		}
 
 	}
-
-	if (player->readyweapon == wp_supershotgun) {
+	else if (player->readyweapon == wp_supershotgun) {
 
 		if (m_reworkedweaponsanimations.value == 0)
 		{
