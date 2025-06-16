@@ -1,3 +1,7 @@
+# Doom 64 EX+ Enhanced
+
+Doom 64 EX+ Enhanced is a fork of the Doom 64 EX+ engine, Its main goal is to show what the Doom 64 engine would have looked like if it hadn't been limited by the N64 console, and also aims to improve the vanilla experience, by adding new features to the engine, adding new features for modding, adding missing monsters from Doom 2, adding monsters cut from Doom 64 like the Hellhound and the red cyberdemon with dual rocket launchers that were cut during the game's development, adding more new custom monsters to the engine, adding new animations, reworked vanilla weapons for an improved vanilla experience, and all this while keeping the vanilla gameplay unchanged.
+
 # Doom 64 EX+
 
 Doom 64 EX+ is a community-driven continuation of Samuel "Kaiser" Villarreal's original Doom 64 EX project. The primary goal of Doom 64 EX+ is to faithfully recreate the classic Nintendo 64 experience while incorporating modern features, extensive modding capabilities, and performance enhancements.
@@ -20,11 +24,11 @@ Doom 64 EX+ is a community-driven continuation of Samuel "Kaiser" Villarreal's o
     * **SDL3 Integration:** As one of the first *Doom* source ports to standardize on SDL3, it leverages the latest in cross-platform library support.
     * **Simplified Internals:** The KEX-related code has been largely removed to align the project more closely with the structure of other popular *Doom* source ports, simplifying development and code portability.
 
-## A Note on Modding
+### A Note on Modding
 
 For modders looking to adapt existing work or create new content for Doom 64 EX+, please be aware of the following changes from older versions of EX:
 
-* Map markers now use `DM_START` and `DM_END` and `DS_START` and `DS_END` (in line with the remaster).Add commentMore actions
+* Map markers now use `DM_START` and `DM_END` and `DS_START` and `DS_END` (in line with the remaster).
 * The old `G_START` and `G_END` graphic lump markers are no longer used. Instead, graphic assets are identified as follows:
     * The **first** graphic marker in a WAD **must** be named `SYMBOLS`.
     * The **last** graphic marker in a WAD **must** be named `MOUNTC`.
