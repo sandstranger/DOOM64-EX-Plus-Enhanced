@@ -320,7 +320,9 @@ int M_FileExists(char* filename) {
 void M_SaveDefaults(void) {
 	FILE* fh;
 
-	fh = fopen(G_GetConfigFileName(), "wt");
+	char* filename = G_GetConfigFileName();
+		fh = fopen(filename, "wt");
+	free(filename);
 	if (fh) {
 		G_OutputBindings(fh);
 		fclose(fh);
