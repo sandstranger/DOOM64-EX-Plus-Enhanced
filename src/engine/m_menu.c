@@ -3931,7 +3931,7 @@ static boolean M_SetThumbnail(int which) {
 	//
 	char* filename = P_GetSaveGameName(which);
 	boolean ret = P_QuickReadSaveHeader(filename, thumbnail_date, (int*)data,
-		& thumbnail_skill, &thumbnail_map);
+		&thumbnail_skill, &thumbnail_map);
 	free(filename);
 	Z_Free(data);
 
