@@ -24,7 +24,12 @@
 #define __DGL_H__
 
 #include <math.h>
+#ifdef __OpenBSD__
 #include <SDL3/SDL_opengl.h>
+#else
+#include <SDL3/SDL_opengl.h>
+#endif
+//#include <SDL3/SDL_opengl.h>
 
 #include "gl_main.h"
 #include "i_system.h"

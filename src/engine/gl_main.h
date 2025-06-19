@@ -23,7 +23,12 @@
 #ifndef __GL_MAIN_H__
 #define __GL_MAIN_H__
 
+#ifdef __OpenBSD__
 #include <SDL3/SDL_opengl.h>
+#else
+#include <SDL3/SDL_opengl.h>
+#endif
+//#include <SDL3/SDL_opengl.h>
 #include "doomtype.h"
 
 typedef GLuint        dtexture;

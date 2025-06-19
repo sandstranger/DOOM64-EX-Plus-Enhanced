@@ -55,7 +55,12 @@
 #include "sc_main.h"
 #include "p_setup.h"
 
+#ifdef __OpenBSD__
 #include <SDL3/SDL.h>
+#else
+#include <SDL3/SDL.h>
+#endif
+//#include <SDL3/SDL.h>
 
 short globalint = 0;
 static byte tryopentype[3];

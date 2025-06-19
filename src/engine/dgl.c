@@ -24,7 +24,12 @@
 //
 //-----------------------------------------------------------------------------
 
+#ifdef __OpenBSD__
 #include <SDL3/SDL_opengl.h>
+#else
+#include <SDL3/SDL_opengl.h>
+#endif
+//#include <SDL3/SDL_opengl.h>
 
 #ifdef __APPLE__
 #include <math.h>

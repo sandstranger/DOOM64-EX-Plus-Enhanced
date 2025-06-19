@@ -23,7 +23,12 @@
 #ifndef __I_SWAP_H__
 #define __I_SWAP_H__
 
+#ifdef __OpenBSD__
 #include <SDL3/SDL_endian.h>
+#else
+#include <SDL3/SDL_endian.h>
+#endif
+//#include <SDL3/SDL_endian.h>
 
 #include "doomtype.h"
 

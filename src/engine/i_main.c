@@ -39,7 +39,14 @@
 #include "doomstat.h"
 #include "d_main.h"
 
+#ifdef __OpenBSD__
+#include <SDL3/SDL_main.h>
 #include <SDL3/SDL.h>
+#else
+#include <SDL3/SDL_main.h>
+#include <SDL3/SDL.h>
+#endif
+//#include <SDL3/SDL.h>
 
 #include "i_video.h"
 #include "m_misc.h"
