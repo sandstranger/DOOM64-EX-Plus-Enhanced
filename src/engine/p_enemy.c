@@ -1809,6 +1809,9 @@ void A_Pain(mobj_t* actor) {
 		if (actor->type == MT_IMP1) {
 			S_StartSound(actor, sfx_imppain);
 		}
+		else if (actor->type == MT_IMP2) {
+			S_StartSound(actor, sfx_imppain);
+		}
 		else if (actor->type == MT_CACODEMON) {
 			S_StartSound(actor, sfx_headpain);
 		}
