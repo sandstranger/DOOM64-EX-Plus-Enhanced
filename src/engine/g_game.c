@@ -180,6 +180,7 @@ CVAR_EXTERNAL(i_joysensy);
 CVAR_EXTERNAL(m_reworkedweaponsanimations);
 CVAR_EXTERNAL(m_changethecolorofthenightmare);
 CVAR_EXTERNAL(m_reworkedvanillasounds);
+CVAR_EXTERNAL(m_reworkedmonsters);
 
 //
 // G_RegisterCvars
@@ -206,6 +207,7 @@ void G_RegisterCvars(void) {
 	CON_CvarRegister(&m_reworkedweaponsanimations);
 	CON_CvarRegister(&m_changethecolorofthenightmare);
 	CON_CvarRegister(&m_reworkedvanillasounds);
+	CON_CvarRegister(&m_reworkedmonsters);
 }
 
 //

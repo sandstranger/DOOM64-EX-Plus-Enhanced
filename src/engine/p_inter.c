@@ -1144,7 +1144,10 @@ void P_DamageMobj(mobj_t* target, mobj_t* inflictor, mobj_t* source, int damage)
 	}
 
 	target->reactiontime = 0; /* we're awake now...	 */
-	if (!target->threshold && source && (source->flags & MF_SHOOTABLE) && !(target->flags & MF_NOINFIGHTING))
+	// styd: fixes the bug where Arch Vile attacks himself when taking splash damage from his fire attack
+	if ((!target->threshold || target->type == MT_VILE)
+		&& source && (source->flags & MF_SHOOTABLE) && !(target->flags & MF_NOINFIGHTING)
+		&& source->type != MT_VILE)
 	{	/* if not intent on another player, chase after this one */
 		target->target = source;
 		target->threshold = BASETHRESHOLD;

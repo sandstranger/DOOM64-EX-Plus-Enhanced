@@ -188,7 +188,7 @@ void P_DropWeapon(player_t* player) {
 boolean P_CheckAmmo(player_t* player) {
 	ammotype_t ammo;
 	int count;
-
+	
 	ammo = weaponinfo[player->readyweapon].ammo;
 
 	// Minimal amount for one shot varies.
@@ -1080,7 +1080,6 @@ void A_FireLaser(player_t* player, pspdef_t* psp) {
 	P_SetMobjState(player->mo, S_PLAY_ATK2);
 	P_SetPsprite(player, ps_flash, weaponinfo[player->readyweapon].flashstate);
 }
-
 
 //
 // P_SetupPsprites
