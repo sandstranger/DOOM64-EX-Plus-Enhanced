@@ -52,6 +52,7 @@ void G_PlayerReborn(int player);
 mobj_t* P_SpawnMapThing(mapthing_t* mthing);
 void P_CreateFadeThinker(mobj_t* mobj, line_t* line);
 void P_CreateFadeOutThinker(mobj_t* mobj, line_t* line);
+void P_CreateFadeThinkerNightmare(mobj_t* mobj, line_t* line);
 
 CVAR(m_nospawnsound, 0);
 CVAR(m_brutal, 0);
@@ -882,6 +883,25 @@ void P_CreateFadeOutThinker(mobj_t* mobj, line_t* line) {
 }
 
 //
+// P_CreateFadeThinkerNightmare
+// styd: to fix the transparency of the nightmare when the things spawns with Thing Spawn 
+
+void P_CreateFadeThinkerNightmare(mobj_t* mobj, line_t* line) {
+	int flags = 0;
+
+	if (mobj->flags & MF_SHOOTABLE) {
+		flags |= MF_SHOOTABLE;
+		mobj->flags &= ~MF_SHOOTABLE;
+	}
+	if (mobj->flags & MF_SPECIAL) {
+		flags |= MF_SPECIAL;
+		mobj->flags &= ~MF_SPECIAL;
+	}
+
+	P_FadeMobj(mobj, 8, 127, flags);
+}
+
+//
 // EV_SpawnMobjTemplate
 //
 
@@ -919,7 +939,8 @@ int EV_SpawnMobjTemplate(line_t* line, boolean silent) {
 
 		// styd: Fixes the transparency of nightmare things that appear with Thing Spawn, because with my new transparency code for nightmare things when appearing with Thing Spawn they lose their nightmare transparency
 		if (mobj->flags & MF_NIGHTMARE) {
-			mobj->alpha = 127;
+			mobj->alpha = 0;
+			P_CreateFadeThinkerNightmare(mobj, line);
 		}
 		else if (mobj->type != MT_DEMON2) {
 			mobj->alpha = 0;
@@ -1278,6 +1299,7 @@ mobj_t* P_SpawnMapThing(mapthing_t* mthing) {
 	if (mthing->options & MTF_NIGHTMARE) {
 		mobj->health *= 2;
 		mobj->flags |= MF_NIGHTMARE;
+		mobj->flags |= MF_SHADOW; // styd: add the MF_SHADOW flag on the nightmare things, this is just a test to see what it does to the transparency or maybe it does nothing ?
 		mobj->alpha = 127; // styd: set transparency things to 127
 	}
 
@@ -1434,6 +1456,7 @@ void P_SpawnBloodNightmareColor(fixed_t x, fixed_t y, fixed_t z, int damage) {
 		th->momz = FRACUNIT * 2;
 		th->tics -= (P_Random() & 1);
 		th->flags |= MF_NIGHTMARE;
+		th->flags |= MF_SHADOW;
 		th->alpha = 127;
 
 		if (th->tics < 1) {
@@ -1586,6 +1609,7 @@ mobj_t* P_SpawnMissile(mobj_t* source, mobj_t* dest, mobjtype_t type,
 	// [kex] nightmare missiles move faster
     if(source && source->flags & MF_NIGHTMARE) {
         th->flags |= MF_NIGHTMARE;
+		th->flags |= MF_SHADOW;
         speed *= 2;
 		th->alpha = 127;
     }

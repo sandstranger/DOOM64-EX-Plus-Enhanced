@@ -48,6 +48,7 @@
 
 CVAR(m_reworkedvanillasounds, 0);
 CVAR(m_reworkedmonsters, 0);
+CVAR(m_limitpain, 1);
 
 typedef enum {
 	DI_EAST,
@@ -1319,6 +1320,12 @@ void A_RectMissile(mobj_t* actor) {
 	x = FixedMul(68 * FRACUNIT, finecosine[an]);
 	y = FixedMul(68 * FRACUNIT, finesine[an]);
 	mo = P_SpawnMobj(actor->x + x, actor->y + y, actor->z + 68 * FRACUNIT, MT_PROJ_RECT);
+	// styd: Fixed when the mother demon has the nightmare flag it's fire projectiles and tracers projectiles are now in nightmare mode
+	if (actor->flags & MF_NIGHTMARE) {
+		mo->flags |= MF_NIGHTMARE;
+		mo->flags |= MF_SHADOW;
+		mo->alpha = 127;
+	}
 	P_SetTarget(&mo->target, actor);
 	P_SetTarget(&mo->tracer, actor->target);
 	mo->threshold = 5;
@@ -1334,6 +1341,12 @@ void A_RectMissile(mobj_t* actor) {
 	x = FixedMul(50 * FRACUNIT, finecosine[an]);
 	y = FixedMul(50 * FRACUNIT, finesine[an]);
 	mo = P_SpawnMobj(actor->x + x, actor->y + y, actor->z + 139 * FRACUNIT, MT_PROJ_RECT);
+	// styd: Fixed when the mother demon has the nightmare flag it's fire projectiles and tracers projectiles are now in nightmare mode
+	if (actor->flags & MF_NIGHTMARE) {
+		mo->flags |= MF_NIGHTMARE;
+		mo->flags |= MF_SHADOW;
+		mo->alpha = 127;
+	}
 	P_SetTarget(&mo->target, actor);
 	P_SetTarget(&mo->tracer, actor->target);
 	mo->threshold = 1;
@@ -1349,6 +1362,12 @@ void A_RectMissile(mobj_t* actor) {
 	x = FixedMul(68 * FRACUNIT, finecosine[an]);
 	y = FixedMul(68 * FRACUNIT, finesine[an]);
 	mo = P_SpawnMobj(actor->x + x, actor->y + y, actor->z + 68 * FRACUNIT, MT_PROJ_RECT);
+	// styd: Fixed when the mother demon has the nightmare flag it's fire projectiles and tracers projectiles are now in nightmare mode
+	if (actor->flags & MF_NIGHTMARE) {
+		mo->flags |= MF_NIGHTMARE;
+		mo->flags |= MF_SHADOW;
+		mo->alpha = 127;
+	}
 	P_SetTarget(&mo->target, actor);
 	P_SetTarget(&mo->tracer, actor->target);
 	mo->threshold = 5;
@@ -1364,6 +1383,12 @@ void A_RectMissile(mobj_t* actor) {
 	x = FixedMul(50 * FRACUNIT, finecosine[an]);
 	y = FixedMul(50 * FRACUNIT, finesine[an]);
 	mo = P_SpawnMobj(actor->x + x, actor->y + y, actor->z + 139 * FRACUNIT, MT_PROJ_RECT);
+	// styd: Fixed when the mother demon has the nightmare flag it's fire projectiles and tracers projectiles are now in nightmare mode
+	if (actor->flags & MF_NIGHTMARE) {
+		mo->flags |= MF_NIGHTMARE;
+		mo->flags |= MF_SHADOW;
+		mo->alpha = 127;
+	}
 	P_SetTarget(&mo->target, actor);
 	P_SetTarget(&mo->tracer, actor->target);
 	mo->threshold = 1;
@@ -1401,7 +1426,14 @@ void A_RectGroundFire(mobj_t* actor) {
 
 	A_FaceTarget(actor);
 
+
 	mo = P_SpawnMobj(actor->x, actor->y, actor->z, MT_PROJ_RECTFIRE);
+	// styd: Fixed when the mother demon has the nightmare flag it's fire projectiles and tracers projectiles are now in nightmare mode
+	if (actor->flags & MF_NIGHTMARE) {
+		mo->flags |= MF_NIGHTMARE;
+		mo->flags |= MF_SHADOW;
+		mo->alpha = 127;
+	}
 	P_SetTarget(&mo->target, actor);
 	an = actor->angle + R_PointToAngle2(actor->x, actor->y, mo->target->x, mo->target->y);
 
@@ -1412,6 +1444,12 @@ void A_RectGroundFire(mobj_t* actor) {
 	mo->angle = an;
 
 	mo = P_SpawnMobj(actor->x, actor->y, actor->z, MT_PROJ_RECTFIRE);
+	// styd: Fixed when the mother demon has the nightmare flag it's fire projectiles and tracers projectiles are now in nightmare mode
+	if (actor->flags & MF_NIGHTMARE) {
+		mo->flags |= MF_NIGHTMARE;
+		mo->flags |= MF_SHADOW;
+		mo->alpha = 127;
+	}
 	P_SetTarget(&mo->target, actor);
 	mo->angle = an - ANG45;
 	mo->angle >>= ANGLETOFINESHIFT;
@@ -1420,6 +1458,12 @@ void A_RectGroundFire(mobj_t* actor) {
 	mo->angle = an - ANG45;
 
 	mo = P_SpawnMobj(actor->x, actor->y, actor->z, MT_PROJ_RECTFIRE);
+	// styd: Fixed when the mother demon has the nightmare flag it's fire projectiles and tracers projectiles are now in nightmare mode
+	if (actor->flags & MF_NIGHTMARE) {
+		mo->flags |= MF_NIGHTMARE;
+		mo->flags |= MF_SHADOW;
+		mo->alpha = 127;
+	}
 	P_SetTarget(&mo->target, actor);
 	mo->angle = an + ANG45;
 	mo->angle >>= ANGLETOFINESHIFT;
@@ -1442,6 +1486,12 @@ void A_MoveGroundFire(mobj_t* fire) {
 	}
 
 	mo = P_SpawnMobj(fire->x, fire->y, fire->floorz, MT_PROP_FIRE);
+	// styd: Fixed when the mother demon has the nightmare flag it's fire projectiles and tracers projectiles are now in nightmare mode
+	if (fire->flags & MF_NIGHTMARE) {
+		mo->flags |= MF_NIGHTMARE;
+		mo->flags |= MF_SHADOW;
+		mo->alpha = 127;
+	}
 	P_FadeMobj(mo, -8, 0, 0);
 }
 
@@ -1637,8 +1687,11 @@ void A_PainShootSkull(mobj_t* actor, angle_t angle) {
 	}
 
 	// if there are all ready 17 skulls on the level, don't spit another one
-	if (count >= 17) {
-		return;
+	// styd: Adds an option to enable or disable the limit on the number of lost souls spit by pain elemental
+	if (m_limitpain.value == 1) {
+	    if (count >= 17) {
+		    return;
+	    }
 	}
 
 	an = angle >> ANGLETOFINESHIFT;
@@ -1650,6 +1703,14 @@ void A_PainShootSkull(mobj_t* actor, angle_t angle) {
 	z = actor->z + 16 * FRACUNIT;
 
 	newmobj = P_SpawnMobj(x, y, z, MT_SKULL);
+
+	// styd: Fixes when the Pain Elemental has the Nightmare flag and when it spits out Lost Souls, the Lost Souls are now in Nightmare Mode
+	if (actor->flags & MF_NIGHTMARE) {
+		newmobj->health *= 2;
+		newmobj->flags |= MF_NIGHTMARE;
+		newmobj->flags |= MF_SHADOW;
+		newmobj->alpha = 127;
+	}
 
 	// Check for movements
 
@@ -1732,7 +1793,7 @@ void A_Scream(mobj_t* actor) {
 		if (actor->type == MT_SKULL) {
 
 			if (actor->info->deathsound) {
-				S_StartSound(actor, sfx_skulldie);
+				sound = sfx_skulldie;
 			}
 
 		}

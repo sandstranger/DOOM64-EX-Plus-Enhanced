@@ -1011,6 +1011,7 @@ CVAR_EXTERNAL(m_reworkedweaponsanimations);
 CVAR_EXTERNAL(m_changethecolorofthenightmare);
 CVAR_EXTERNAL(m_reworkedvanillasounds);
 CVAR_EXTERNAL(m_reworkedmonsters);
+CVAR_EXTERNAL(m_limitpain);
 
 enum {
 	misc_header1,
@@ -1041,6 +1042,7 @@ enum {
 	misc_reworkedvanillasounds,
 	misc_reworkedmonsters,
 	misc_header6,
+	misc_limitpain,
 	misc_comp_pass,
 	misc_disablesecretmessages,
 	misc_default,
@@ -1077,6 +1079,7 @@ menuitem_t MiscMenu[] = {
 	{2,"Extra Sounds:",M_MiscChoice },
 	{2,"Extra Monsters:",M_MiscChoice },
 	{-1,"N64 Compatibility",0 },
+	{2,"Limit Lost Souls:",M_MiscChoice,'l'},
 	{2,"Tall Actors:",M_MiscChoice,'i'},
 	{2,"Secret Messages:",M_MiscChoice,'x'},
 	{-2,"Default",M_DoDefaults,'d'},
@@ -1112,6 +1115,7 @@ char* MiscHints[misc_end] = {
 	"change sounds to vanilla or reworked vanilla sounds",
 	"enable reworked vanilla monster sprites on some monsters",
 	NULL,
+	"limit max amount of lost souls spit by pain elemental to 17",
 	"emulate infinite height bug for all solid actors",
 	"disable the secret message text",
 	NULL,
@@ -1140,6 +1144,7 @@ menudefault_t MiscDefault[] = {
 	{ &m_changethecolorofthenightmare, 0 },
 	{ &m_reworkedvanillasounds, 0 },
 	{ &m_reworkedmonsters, 0 },
+	{ &m_limitpain, 1 },
 	{ &compat_mobjpass, 1 },
 	{ NULL, -1 }
 };
@@ -1288,6 +1293,10 @@ void M_MiscChoice(int choice) {
 		M_SetOptionValue(choice, 0, 1, 1, &m_reworkedmonsters);
 		break;
 
+	case misc_limitpain:
+		M_SetOptionValue(choice, 0, 1, 1, &m_limitpain);
+		break;
+
 	case misc_comp_pass:
 		M_SetOptionValue(choice, 0, 1, 1, &compat_mobjpass);
 		break;
@@ -1342,6 +1351,7 @@ void M_DrawMisc(void) {
 	DRAWMISCITEM(misc_changethecolorofthenightmare, m_changethecolorofthenightmare.value, nightmarecolorstype);
 	DRAWMISCITEM(misc_reworkedvanillasounds, m_reworkedvanillasounds.value, enchancedvanillatype);
 	DRAWMISCITEM(misc_reworkedmonsters, m_reworkedmonsters.value, enchancedvanillatype);
+	DRAWMISCITEM(misc_limitpain, m_limitpain.value, msgNames);
 	DRAWMISCITEM(misc_comp_pass, !compat_mobjpass.value, msgNames);
 	DRAWMISCITEM(misc_disablesecretmessages, hud_disablesecretmessages.value, disablesecretmessages);
 
