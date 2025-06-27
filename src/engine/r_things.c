@@ -62,6 +62,12 @@ CVAR_EXTERNAL(v_accessibility);
 CVAR_EXTERNAL(r_rendersprites);
 
 CVAR(m_changethecolorofthenightmare, 1);
+CVAR(m_reworkedzombieman, 0);
+CVAR(m_reworkedzombieshotgun, 0);
+CVAR(m_reworkedimp, 0);
+CVAR(m_reworkedpinkyandspectre, 0);
+CVAR(m_reworkedBaronofHell, 0);
+CVAR(m_reworkedHellKnight, 0);
 
 static void AddSpriteDrawlist(drawlist_t* dl, visspritelist_t* vis, int texid);
 
@@ -241,7 +247,117 @@ void R_AddSprites(subsector_t* sub) {
 		if (thing->flags & MF_NOSECTOR) {
 			continue;
 		}
+		
+		// styd: added an option to change some vanilla monsters sprites to reworked vanilla monsters sprites
+		if (m_reworkedzombieman.value == 1) {
+			// reworked vanilla monsters sprites
+			if (thing->type == MT_POSSESSED1) {
+				thing->sprite = SPR_POS1;
+			}
+		}
+		else if (m_reworkedzombieman.value == 0) {
+			// vanilla monsters sprites
+			if (thing->type == MT_POSSESSED1) {
+				thing->sprite = SPR_POSS;
+			}
+		}
 
+		if (m_reworkedzombieshotgun.value == 1) {
+			// reworked vanilla monsters sprites
+			if (thing->type == MT_POSSESSED2) {
+				thing->info->palette = 0;
+				thing->sprite = SPR_POS2;
+			}
+		}
+		else if (m_reworkedzombieshotgun.value == 0) {
+			// vanilla monsters sprites
+			if (thing->type == MT_POSSESSED2) {
+				thing->info->palette = 1;
+				thing->sprite = SPR_POSS;
+			}
+		}
+
+		if (m_reworkedimp.value == 2) {
+			// reworked vanilla monsters sprites
+			// imp with a mouth
+			if (thing->type == MT_IMP2) {
+				thing->info->palette = 1;
+				thing->sprite = SPR_TROM;
+			}
+			else if (thing->type == MT_IMP1) {
+				thing->sprite = SPR_TROM;
+			}
+		}
+		else if (m_reworkedimp.value == 1) {
+			// reworked vanilla monsters sprites
+			if (thing->type == MT_IMP2) {
+				thing->info->palette = 0;
+				thing->sprite = SPR_TRO2;
+			}
+			else if (thing->type == MT_IMP1) {
+				thing->sprite = SPR_TRO1;
+			}
+		}
+		else if (m_reworkedimp.value == 0) {
+			// vanilla monsters sprites
+			if (thing->type == MT_IMP2) {
+				thing->info->palette = 1;
+				thing->sprite = SPR_TROO;
+			}
+			else if (thing->type == MT_IMP1) {
+				thing->sprite = SPR_TROO;
+			}
+		}
+
+		if (m_reworkedpinkyandspectre.value == 1) {
+			// reworked vanilla monsters sprites
+			if (thing->type == MT_DEMON2) {
+				thing->info->palette = 0;
+				thing->sprite = SPR_SAR2;
+			}
+			else if (thing->type == MT_DEMON1) {
+				thing->sprite = SPR_SAR1;
+			}
+		}
+		else if (m_reworkedpinkyandspectre.value == 0) {
+			// vanilla monsters sprites
+			if (thing->type == MT_DEMON2) {
+				thing->info->palette = 1;
+				thing->sprite = SPR_SARG;
+			}
+			else if (thing->type == MT_DEMON1) {
+				thing->sprite = SPR_SARG;
+			}
+		}
+
+		if (m_reworkedBaronofHell.value == 1) {
+			// reworked vanilla monsters sprites
+			if (thing->type == MT_BRUISER1) {
+				thing->info->palette = 0;
+				thing->sprite = SPR_BOS1;
+			}
+		}
+		else if (m_reworkedBaronofHell.value == 0) {
+			// vanilla monsters sprites
+			if (thing->type == MT_BRUISER1) {
+				thing->info->palette = 1;
+				thing->sprite = SPR_BOSS;
+			}
+		}
+
+		if (m_reworkedHellKnight.value == 1) {
+			// reworked vanilla monsters sprites
+			if (thing->type == MT_BRUISER2) {
+				thing->sprite = SPR_BOS2;
+			}
+		}
+		else if (m_reworkedHellKnight.value == 0) {
+			// vanilla monsters sprites
+			if (thing->type == MT_BRUISER2) {
+				thing->sprite = SPR_BOSS;
+			}
+		}
+		
 		if (vissprite - visspritelist >= MAX_SPRITES) {
 			CON_Warnf("R_AddSprites: Sprite overflow");
 			return;

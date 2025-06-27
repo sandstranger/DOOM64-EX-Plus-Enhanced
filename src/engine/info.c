@@ -63,7 +63,8 @@ char* sprnames[NUMSPRITES + 1] = {  //0x5FA30
 	"S029", "S031", "S032", "S027", "S036", "S037", "S038", "S040",
 	"S041", "S026", "S002", "S030", "CPOS", "SKEL", "ARCR", "POW1",
 	"SPID", "VFIR", "VILE", "TEST", "BLUG", "BLUP", "SH1R", "SH2R",
-	"PUNR", "POS2", "SAR2", "TRO2", "BOS1", "BOS2", NULL
+	"PUNR", "POS1", "POS2", "SAR1", "SAR2", "TRO1", "TRO2", "TROM", 
+	"BOS1", "BOS2", NULL
 };
 
 // Doesn't work with g++, needs actionf_p1
@@ -165,32 +166,6 @@ void A_Raisecheckanimationvanilla();
 void A_Flashcheckanimationvanilla();
 void A_OpenShotgun2();
 void A_Fistwhiff();
-void A_LookCheckreworkedvanillamonstersprites();
-void A_ChaseCheckreworkedvanillamonstersprites();
-void A_PainCheckreworkedvanillamonstersprites();
-void A_MeleeCheckreworkedvanillamonstersprites();
-void A_AttackCheckreworkedvanillamonstersprites();
-void A_DieCheckreworkedvanillamonstersprites();
-void A_XdieCheckreworkedvanillamonstersprites();
-void A_RaiseCheckreworkedvanillamonstersprites();
-void A_LookCheckvanillamonstersprites();
-void A_ChaseCheckvanillamonstersprites();
-void A_PainCheckvanillamonstersprites();
-void A_MeleeCheckvanillamonstersprites();
-void A_AttackCheckvanillamonstersprites();
-void A_DieCheckvanillamonstersprites();
-void A_XdieCheckvanillamonstersprites();
-void A_RaiseCheckvanillamonstersprites();
-void A_ChaseCheckspectrereworkedvanillamonstersprites();
-void A_PainCheckspectrereworkedvanillamonstersprites();
-void A_MeleeCheckspectrereworkedvanillamonstersprites();
-void A_DieCheckspectrereworkedvanillamonstersprites();
-void A_RaiseCheckspectrereworkedvanillamonstersprites();
-void A_ChaseCheckspectrevanillamonstersprites();
-void A_PainCheckspectrevanillamonstersprites();
-void A_MeleeCheckspectrevanillamonstersprites();
-void A_DieCheckspectrevanillamonstersprites();
-void A_RaiseCheckspectrevanillamonstersprites();
 
 #pragma warning(push)
 #pragma warning(disable:4113)
@@ -242,10 +217,9 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_PBOT_PATK5*/        { SPR_PLAY, 4, 4, {A_PlayAttack}, S_PBOT_PATK6 },
 	/*S_PBOT_PATK6*/        { SPR_PLAY, 32773, 4, {A_PlayAttack}, S_PBOT_RUN1 },
 
-	/*S_SARG_STND0*/        { SPR_SARG, 1, 0, {A_LookCheckreworkedvanillamonstersprites}, S_SARG_STND },
+	
 	/*S_SARG_STND*/         { SPR_SARG, 1, 8, {A_Look}, S_SARG_STND2 },
-	/*S_SARG_STND2*/        { SPR_SARG, 3, 8, {A_Look}, S_SARG_STND0 },
-	/*S_SARG_RUNA*/         { SPR_SARG, 0, 0, {A_ChaseCheckreworkedvanillamonstersprites}, S_SARG_RUN1 },
+	/*S_SARG_STND2*/        { SPR_SARG, 3, 8, {A_Look}, S_SARG_STND },
 	/*S_SARG_RUN1*/         { SPR_SARG, 0, 2, {A_Chase}, S_SARG_RUN2 },
 	/*S_SARG_RUN2*/         { SPR_SARG, 0, 2, {A_Chase}, S_SARG_RUN3 },
 	/*S_SARG_RUN3*/         { SPR_SARG, 1, 2, {A_Chase}, S_SARG_RUN4 },
@@ -253,82 +227,29 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_SARG_RUN5*/         { SPR_SARG, 2, 2, {A_Chase}, S_SARG_RUN6 },
 	/*S_SARG_RUN6*/         { SPR_SARG, 2, 2, {A_Chase}, S_SARG_RUN7 },
 	/*S_SARG_RUN7*/         { SPR_SARG, 3, 2, {A_Chase}, S_SARG_RUN8 },
-	/*S_SARG_RUN8*/         { SPR_SARG, 3, 2, {A_Chase}, S_SARG_RUNA },
-	/*S_SARG_ATKA*/         { SPR_SARG, 4, 0, {A_MeleeCheckreworkedvanillamonstersprites}, S_SARG_ATK1 },
+	/*S_SARG_RUN8*/         { SPR_SARG, 3, 2, {A_Chase}, S_SARG_RUN1 },
 	/*S_SARG_ATK1*/         { SPR_SARG, 4, 8, {A_FaceTarget}, S_SARG_ATK2 },
 	/*S_SARG_ATK2*/         { SPR_SARG, 5, 8, {A_FaceTarget}, S_SARG_ATK3 },
-	/*S_SARG_ATK3*/         { SPR_SARG, 6, 8, {A_SargAttack}, S_SARG_RUNA },
-	/*S_SARG_PAINA*/        { SPR_SARG, 7, 0, {A_PainCheckreworkedvanillamonstersprites}, S_SARG_PAIN1 },
+	/*S_SARG_ATK3*/         { SPR_SARG, 6, 8, {A_SargAttack}, S_SARG_RUN1 },
 	/*S_SARG_PAIN1*/        { SPR_SARG, 7, 2, {NULL}, S_SARG_PAIN2 },
-	/*S_SARG_PAIN2*/        { SPR_SARG, 7, 2, {A_Pain}, S_SARG_RUNA },
-	/*S_SARG_DIEA*/         { SPR_SARG, 8, 0, {A_DieCheckreworkedvanillamonstersprites}, S_SARG_DIE1 },
+	/*S_SARG_PAIN2*/        { SPR_SARG, 7, 2, {A_Pain}, S_SARG_RUN1 },
 	/*S_SARG_DIE1*/         { SPR_SARG, 8, 8, {NULL}, S_SARG_DIE2 },
 	/*S_SARG_DIE2*/         { SPR_SARG, 9, 8, {A_Scream}, S_SARG_DIE3 },
 	/*S_SARG_DIE3*/         { SPR_SARG, 10, 4, {NULL}, S_SARG_DIE4 },
 	/*S_SARG_DIE4*/         { SPR_SARG, 11, 4, {A_Fall}, S_SARG_DIE5 },
 	/*S_SARG_DIE5*/         { SPR_SARG, 12, 4, {A_OnDeathTrigger}, S_SARG_DIE6 },
 	/*S_SARG_DIE6*/         { SPR_SARG, 13, -1, {NULL}, S_NULL },
-	/*S_SARG_RUNB*/         { SPR_SARG, 0, 0, {A_ChaseCheckspectrereworkedvanillamonstersprites}, S_SARG_RUN0 },
-	/*S_SARG_RUN0*/         { SPR_SARG, 0, 1, {A_FadeOut}, S_SARG_RUNA },
-	/*S_SARG_ATKB*/         { SPR_SARG, 4, 0, {A_MeleeCheckspectrereworkedvanillamonstersprites}, S_SARG_ATK0 },
-	/*S_SARG_ATK0*/         { SPR_SARG, 4, 1, {A_FadeOut}, S_SARG_ATKA },
-	/*S_SARG_PAINB*/        { SPR_SARG, 7, 0, {A_PainCheckspectrereworkedvanillamonstersprites}, S_SARG_PAIN0 },
-	/*S_SARG_PAIN0*/        { SPR_SARG, 7, 1, {A_FadeOut}, S_SARG_PAINA },
-	/*S_SARG_DIEB*/         { SPR_SARG, 8, 0, {A_DieCheckspectrereworkedvanillamonstersprites}, S_SARG_DIE0 },
-	/*S_SARG_DIE0*/         { SPR_SARG, 8, 1, {A_FadeIn}, S_SARG_DIEA },
-	/*S_SARG_RAISEB*/       { SPR_SARG, 13, 0, {A_RaiseCheckspectrereworkedvanillamonstersprites}, S_SARG_RAISE0 },
+	/*S_SARG_RUN0*/         { SPR_SARG, 0, 1, {A_FadeOut}, S_SARG_RUN1 },
+	/*S_SARG_ATK0*/         { SPR_SARG, 4, 1, {A_FadeOut}, S_SARG_ATK1 },
+	/*S_SARG_PAIN0*/        { SPR_SARG, 7, 1, {A_FadeOut}, S_SARG_PAIN1 },
+	/*S_SARG_DIE0*/         { SPR_SARG, 8, 1, {A_FadeIn}, S_SARG_DIE1 },
 	/*S_SARG_RAISE0*/       { SPR_SARG, 13, 1, {A_FadeOut}, S_SARG_RAISE1 },
-	/*S_SARG_RAISEA*/       { SPR_SARG, 13, 0, {A_RaiseCheckreworkedvanillamonstersprites}, S_SARG_RAISE1 },
 	/*S_SARG_RAISE1*/       { SPR_SARG, 13, 5, {NULL}, S_SARG_RAISE2 },
 	/*S_SARG_RAISE2*/       { SPR_SARG, 12, 5, {NULL}, S_SARG_RAISE3 },
 	/*S_SARG_RAISE3*/       { SPR_SARG, 11, 5, {NULL}, S_SARG_RAISE4 },
 	/*S_SARG_RAISE4*/       { SPR_SARG, 10, 5, {NULL}, S_SARG_RAISE5 },
 	/*S_SARG_RAISE5*/       { SPR_SARG, 9, 5, {NULL}, S_SARG_RAISE6 },
-	/*S_SARG_RAISE6*/       { SPR_SARG, 8, 5, {NULL}, S_SARG_RUNA },
-
-	/*S_SARG_STND0REWORK*/        { SPR_SAR2, 1, 0, {A_LookCheckvanillamonstersprites}, S_SARG_STNDREWORK },
-	/*S_SARG_STNDREWORK*/         { SPR_SAR2, 1, 8, {A_Look}, S_SARG_STND2REWORK },
-	/*S_SARG_STND2REWORK*/        { SPR_SAR2, 3, 8, {A_Look}, S_SARG_STND0REWORK },
-	/*S_SARG_RUNAREWORK*/         { SPR_SAR2, 0, 0, {A_ChaseCheckvanillamonstersprites}, S_SARG_RUN1REWORK },
-	/*S_SARG_RUN1REWORK*/         { SPR_SAR2, 0, 2, {A_Chase}, S_SARG_RUN2REWORK },
-	/*S_SARG_RUN2REWORK*/         { SPR_SAR2, 0, 2, {A_Chase}, S_SARG_RUN3REWORK },
-	/*S_SARG_RUN3REWORK*/         { SPR_SAR2, 1, 2, {A_Chase}, S_SARG_RUN4REWORK },
-	/*S_SARG_RUN4REWORK*/         { SPR_SAR2, 1, 2, {A_Chase}, S_SARG_RUN5REWORK },
-	/*S_SARG_RUN5REWORK*/         { SPR_SAR2, 2, 2, {A_Chase}, S_SARG_RUN6REWORK },
-	/*S_SARG_RUN6REWORK*/         { SPR_SAR2, 2, 2, {A_Chase}, S_SARG_RUN7REWORK },
-	/*S_SARG_RUN7REWORK*/         { SPR_SAR2, 3, 2, {A_Chase}, S_SARG_RUN8REWORK },
-	/*S_SARG_RUN8REWORK*/         { SPR_SAR2, 3, 2, {A_Chase}, S_SARG_RUNAREWORK },
-	/*S_SARG_ATKAREWORK*/         { SPR_SAR2, 4, 0, {A_MeleeCheckvanillamonstersprites}, S_SARG_ATK1REWORK },
-	/*S_SARG_ATK1REWORK*/         { SPR_SAR2, 4, 8, {A_FaceTarget}, S_SARG_ATK2REWORK },
-	/*S_SARG_ATK2REWORK*/         { SPR_SAR2, 5, 8, {A_FaceTarget}, S_SARG_ATK3REWORK },
-	/*S_SARG_ATK3REWORK*/         { SPR_SAR2, 6, 8, {A_SargAttack}, S_SARG_RUNAREWORK },
-	/*S_SARG_PAINAREWORK*/        { SPR_SAR2, 7, 0, {A_PainCheckvanillamonstersprites}, S_SARG_PAIN1REWORK },
-	/*S_SARG_PAIN1REWORK*/        { SPR_SAR2, 7, 2, {NULL}, S_SARG_PAIN2REWORK },
-	/*S_SARG_PAIN2REWORK*/        { SPR_SAR2, 7, 2, {A_Pain}, S_SARG_RUNAREWORK },
-	/*S_SARG_DIEAREWORK*/         { SPR_SAR2, 8, 0, {A_DieCheckvanillamonstersprites}, S_SARG_DIE1REWORK },
-	/*S_SARG_DIE1REWORK*/         { SPR_SAR2, 8, 8, {NULL}, S_SARG_DIE2REWORK },
-	/*S_SARG_DIE2REWORK*/         { SPR_SAR2, 9, 8, {A_Scream}, S_SARG_DIE3REWORK },
-	/*S_SARG_DIE3REWORK*/         { SPR_SAR2, 10, 4, {NULL}, S_SARG_DIE4REWORK },
-	/*S_SARG_DIE4REWORK*/         { SPR_SAR2, 11, 4, {A_Fall}, S_SARG_DIE5REWORK },
-	/*S_SARG_DIE5REWORK*/         { SPR_SAR2, 12, 4, {A_OnDeathTrigger}, S_SARG_DIE6REWORK },
-	/*S_SARG_DIE6REWORK*/         { SPR_SAR2, 13, -1, {NULL}, S_NULL },
-	/*S_SARG_RUNBREWORK*/         { SPR_SAR2, 0, 0, {A_ChaseCheckspectrevanillamonstersprites}, S_SARG_RUN0REWORK },
-	/*S_SARG_RUN0REWORK*/         { SPR_SAR2, 0, 1, {A_FadeOut}, S_SARG_RUNAREWORK },
-	/*S_SARG_ATKBREWORK*/         { SPR_SAR2, 4, 0, {A_MeleeCheckspectrevanillamonstersprites}, S_SARG_ATK0REWORK },
-	/*S_SARG_ATK0REWORK*/         { SPR_SAR2, 4, 1, {A_FadeOut}, S_SARG_ATKAREWORK },
-	/*S_SARG_PAINBREWORK*/        { SPR_SAR2, 7, 0, {A_PainCheckspectrevanillamonstersprites}, S_SARG_PAIN0REWORK },
-	/*S_SARG_PAIN0REWORK*/        { SPR_SAR2, 7, 1, {A_FadeOut}, S_SARG_PAINAREWORK },
-	/*S_SARG_DIEBREWORK*/         { SPR_SAR2, 8, 0, {A_DieCheckspectrevanillamonstersprites}, S_SARG_DIE0REWORK },
-	/*S_SARG_DIE0REWORK*/         { SPR_SAR2, 8, 1, {A_FadeIn}, S_SARG_DIEAREWORK },
-	/*S_SARG_RAISEBREWORK*/       { SPR_SAR2, 13, 0, {A_RaiseCheckspectrevanillamonstersprites}, S_SARG_RAISE0REWORK },
-	/*S_SARG_RAISE0REWORK*/       { SPR_SAR2, 13, 1, {A_FadeOut}, S_SARG_RAISE1REWORK },
-	/*S_SARG_RAISEAREWORK*/       { SPR_SAR2, 13, 0, {A_RaiseCheckvanillamonstersprites}, S_SARG_RAISE1REWORK },
-	/*S_SARG_RAISE1REWORK*/       { SPR_SAR2, 13, 5, {NULL}, S_SARG_RAISE2REWORK },
-	/*S_SARG_RAISE2REWORK*/       { SPR_SAR2, 12, 5, {NULL}, S_SARG_RAISE3REWORK },
-	/*S_SARG_RAISE3REWORK*/       { SPR_SAR2, 11, 5, {NULL}, S_SARG_RAISE4REWORK },
-	/*S_SARG_RAISE4REWORK*/       { SPR_SAR2, 10, 5, {NULL}, S_SARG_RAISE5REWORK },
-	/*S_SARG_RAISE5REWORK*/       { SPR_SAR2, 9, 5, {NULL}, S_SARG_RAISE6REWORK },
-	/*S_SARG_RAISE6REWORK*/       { SPR_SAR2, 8, 5, {NULL}, S_SARG_RUNAREWORK },
+	/*S_SARG_RAISE6*/       { SPR_SARG, 8, 5, {NULL}, S_SARG_RUN1 },
 
 	/*S_FATT_STND*/         { SPR_FATT, 0, 15, {A_Look}, S_FATT_STND2 },
 	/*S_FATT_STND2*/        { SPR_FATT, 1, 15, {A_Look}, S_FATT_STND },
@@ -401,10 +322,8 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_POSS1_RAISE4*/		{ SPR_POSS, 8, 5, {NULL}, S_POSS1_RAISE5 },
 	/*S_POSS1_RAISE5*/		{ SPR_POSS, 7, 5, {NULL}, S_POSS1_RUN1 },
 
-	/*S_POSS2_STND0*/       { SPR_POSS, 0, 0, {A_LookCheckreworkedvanillamonstersprites}, S_POSS2_STND },
 	/*S_POSS2_STND*/        { SPR_POSS, 0, 10, {A_Look}, S_POSS2_STND2 },
-	/*S_POSS2_STND2*/       { SPR_POSS, 1, 10, {A_Look}, S_POSS2_STND0 },
-	/*S_POSS2_RUN0*/        { SPR_POSS, 0, 0, {A_ChaseCheckreworkedvanillamonstersprites}, S_POSS2_RUN1 },
+	/*S_POSS2_STND2*/       { SPR_POSS, 1, 10, {A_Look}, S_POSS2_STND },
 	/*S_POSS2_RUN1*/        { SPR_POSS, 0, 3, {A_Chase}, S_POSS2_RUN2 },
 	/*S_POSS2_RUN2*/        { SPR_POSS, 0, 3, {A_Chase}, S_POSS2_RUN3 },
 	/*S_POSS2_RUN3*/        { SPR_POSS, 1, 3, {A_Chase}, S_POSS2_RUN4 },
@@ -412,21 +331,17 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_POSS2_RUN5*/        { SPR_POSS, 2, 3, {A_Chase}, S_POSS2_RUN6 },
 	/*S_POSS2_RUN6*/        { SPR_POSS, 2, 3, {A_Chase}, S_POSS2_RUN7 },
 	/*S_POSS2_RUN7*/        { SPR_POSS, 3, 3, {A_Chase}, S_POSS2_RUN8 },
-	/*S_POSS2_RUN8*/        { SPR_POSS, 3, 3, {A_Chase}, S_POSS2_RUN0 },
-	/*S_POSS2_ATK0*/        { SPR_POSS, 4, 0, {A_AttackCheckreworkedvanillamonstersprites}, S_POSS2_ATK1 },
+	/*S_POSS2_RUN8*/        { SPR_POSS, 3, 3, {A_Chase}, S_POSS2_RUN1 },
 	/*S_POSS2_ATK1*/        { SPR_POSS, 4, 10, {A_FaceTarget}, S_POSS2_ATK2 },
 	/*S_POSS2_ATK2*/        { SPR_POSS, 5, 10, {A_SPosAttack}, S_POSS2_ATK3 },
-	/*S_POSS2_ATK3*/        { SPR_POSS, 4, 10, {NULL}, S_POSS2_RUN0 },
-	/*S_POSS2_PAIN0*/        { SPR_POSS, 6, 0, {A_PainCheckreworkedvanillamonstersprites}, S_POSS2_PAIN },
+	/*S_POSS2_ATK3*/        { SPR_POSS, 4, 10, {NULL}, S_POSS2_RUN1 },
 	/*S_POSS2_PAIN*/        { SPR_POSS, 6, 3, {NULL}, S_POSS2_PAIN2 },
-	/*S_POSS2_PAIN2*/       { SPR_POSS, 6, 3, {A_Pain}, S_POSS2_RUN0 },
-	/*S_POSS2_DIE0*/        { SPR_POSS, 7, 0, {A_DieCheckreworkedvanillamonstersprites}, S_POSS2_DIE1 },
+	/*S_POSS2_PAIN2*/       { SPR_POSS, 6, 3, {A_Pain}, S_POSS2_RUN1 },
 	/*S_POSS2_DIE1*/        { SPR_POSS, 7, 5, {NULL}, S_POSS2_DIE2 },
 	/*S_POSS2_DIE2*/        { SPR_POSS, 8, 5, {A_Scream}, S_POSS2_DIE3 },
 	/*S_POSS2_DIE3*/        { SPR_POSS, 9, 5, {A_Fall}, S_POSS2_DIE4 },
 	/*S_POSS2_DIE4*/        { SPR_POSS, 10, 5, {A_OnDeathTrigger}, S_POSS2_DIE5 },
 	/*S_POSS2_DIE5*/        { SPR_POSS, 11, -1, {NULL}, S_NULL },
-	/*S_POSS2_XDIE0*/       { SPR_POSS, 12, 0, {A_XdieCheckreworkedvanillamonstersprites}, S_POSS2_XDIE1 },
 	/*S_POSS2_XDIE1*/       { SPR_POSS, 12, 5, {NULL}, S_POSS2_XDIE2 },
 	/*S_POSS2_XDIE2*/       { SPR_POSS, 13, 5, {A_XScream}, S_POSS2_XDIE3 },
 	/*S_POSS2_XDIE3*/       { SPR_POSS, 14, 5, {A_Fall}, S_POSS2_XDIE4 },
@@ -436,59 +351,15 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_POSS2_XDIE7*/       { SPR_POSS, 18, 5, {NULL}, S_POSS2_XDIE8 },
 	/*S_POSS2_XDIE8*/       { SPR_POSS, 19, 5, {A_OnDeathTrigger}, S_POSS2_XDIE9 },
 	/*S_POSS2_XDIE9*/       { SPR_POSS, 20, -1, {NULL}, S_NULL },
-	/*S_POSS2_RAISE0*/      { SPR_POSS, 11, 0, {A_RaiseCheckreworkedvanillamonstersprites}, S_POSS2_RAISE1 },
 	/*S_POSS2_RAISE1*/		{ SPR_POSS, 11, 5, {NULL}, S_POSS2_RAISE2 },
 	/*S_POSS2_RAISE2*/		{ SPR_POSS, 10, 5, {NULL}, S_POSS2_RAISE3 },
 	/*S_POSS2_RAISE3*/		{ SPR_POSS, 9, 5, {NULL}, S_POSS2_RAISE4 },
 	/*S_POSS2_RAISE4*/		{ SPR_POSS, 8, 5, {NULL}, S_POSS2_RAISE5 },
-	/*S_POSS2_RAISE5*/		{ SPR_POSS, 7, 5, {NULL}, S_POSS2_RUN0 },
+	/*S_POSS2_RAISE5*/		{ SPR_POSS, 7, 5, {NULL}, S_POSS2_RUN1 },
 
-	/*S_POSS2_STND0REWORK*/ { SPR_POS2, 0, 0, {A_LookCheckvanillamonstersprites}, S_POSS2_STNDREWORK },
-	/*S_POSS2_STNDREWORK*/  { SPR_POS2, 0, 10, {A_Look}, S_POSS2_STND2REWORK },
-	/*S_POSS2_STND2REWORK*/ { SPR_POS2, 1, 10, {A_Look}, S_POSS2_STND0REWORK },
-	/*S_POSS2_RUN0REWORK*/  { SPR_POS2, 0, 0, {A_ChaseCheckvanillamonstersprites}, S_POSS2_RUN1REWORK },
-	/*S_POSS2_RUN1REWORK*/  { SPR_POS2, 0, 3, {A_Chase}, S_POSS2_RUN2REWORK },
-	/*S_POSS2_RUN2REWORK*/  { SPR_POS2, 0, 3, {A_Chase}, S_POSS2_RUN3REWORK },
-	/*S_POSS2_RUN3REWORK*/  { SPR_POS2, 1, 3, {A_Chase}, S_POSS2_RUN4REWORK },
-	/*S_POSS2_RUN4REWORK*/  { SPR_POS2, 1, 3, {A_Chase}, S_POSS2_RUN5REWORK },
-	/*S_POSS2_RUN5REWORK*/  { SPR_POS2, 2, 3, {A_Chase}, S_POSS2_RUN6REWORK },
-	/*S_POSS2_RUN6REWORK*/  { SPR_POS2, 2, 3, {A_Chase}, S_POSS2_RUN7REWORK },
-	/*S_POSS2_RUN7REWORK*/  { SPR_POS2, 3, 3, {A_Chase}, S_POSS2_RUN8REWORK },
-	/*S_POSS2_RUN8REWORK*/  { SPR_POS2, 3, 3, {A_Chase}, S_POSS2_RUN0REWORK },
-	/*S_POSS2_ATK0REWORK*/  { SPR_POS2, 4, 0, {A_AttackCheckvanillamonstersprites}, S_POSS2_ATK1REWORK },
-	/*S_POSS2_ATK1REWORK*/  { SPR_POS2, 4, 10, {A_FaceTarget}, S_POSS2_ATK2REWORK },
-	/*S_POSS2_ATK2REWORK*/  { SPR_POS2, 5, 10, {A_SPosAttack}, S_POSS2_ATK3REWORK },
-	/*S_POSS2_ATK3REWORK*/  { SPR_POS2, 4, 10, {NULL}, S_POSS2_RUN0REWORK },
-	/*S_POSS2_PAIN0REWORK*/ { SPR_POS2, 6, 0, {A_PainCheckvanillamonstersprites}, S_POSS2_PAINREWORK },
-	/*S_POSS2_PAINREWORK*/  { SPR_POS2, 6, 3, {NULL}, S_POSS2_PAIN2REWORK },
-	/*S_POSS2_PAIN2REWORK*/ { SPR_POS2, 6, 3, {A_Pain}, S_POSS2_RUN0REWORK },
-	/*S_POSS2_DIE0REWORK*/  { SPR_POS2, 7, 0, {A_DieCheckvanillamonstersprites}, S_POSS2_DIE1REWORK },
-	/*S_POSS2_DIE1REWORK*/  { SPR_POS2, 7, 5, {NULL}, S_POSS2_DIE2REWORK },
-	/*S_POSS2_DIE2REWORK*/  { SPR_POS2, 8, 5, {A_Scream}, S_POSS2_DIE3REWORK },
-	/*S_POSS2_DIE3REWORK*/  { SPR_POS2, 9, 5, {A_Fall}, S_POSS2_DIE4REWORK },
-	/*S_POSS2_DIE4REWORK*/  { SPR_POS2, 10, 5, {A_OnDeathTrigger}, S_POSS2_DIE5REWORK },
-	/*S_POSS2_DIE5REWORK*/  { SPR_POS2, 11, -1, {NULL}, S_NULL },
-	/*S_POSS2_XDIE0REWORK*/ { SPR_POS2, 12, 0, {A_XdieCheckvanillamonstersprites}, S_POSS2_XDIE1REWORK },
-	/*S_POSS2_XDIE1REWORK*/ { SPR_POS2, 12, 5, {NULL}, S_POSS2_XDIE2REWORK },
-	/*S_POSS2_XDIE2REWORK*/ { SPR_POS2, 13, 5, {A_XScream}, S_POSS2_XDIE3REWORK },
-	/*S_POSS2_XDIE3REWORK*/ { SPR_POS2, 14, 5, {A_Fall}, S_POSS2_XDIE4REWORK },
-	/*S_POSS2_XDIE4REWORK*/ { SPR_POS2, 15, 5, {NULL}, S_POSS2_XDIE5REWORK },
-	/*S_POSS2_XDIE5REWORK*/ { SPR_POS2, 16, 5, {NULL}, S_POSS2_XDIE6REWORK },
-	/*S_POSS2_XDIE6REWORK*/ { SPR_POS2, 17, 5, {NULL}, S_POSS2_XDIE7REWORK },
-	/*S_POSS2_XDIE7REWORK*/ { SPR_POS2, 18, 5, {NULL}, S_POSS2_XDIE8REWORK },
-	/*S_POSS2_XDIE8REWORK*/ { SPR_POS2, 19, 5, {A_OnDeathTrigger}, S_POSS2_XDIE9REWORK },
-	/*S_POSS2_XDIE9REWORK*/ { SPR_POS2, 20, -1, {NULL}, S_NULL },
-	/*S_POSS2_RAISE0REWORK*/{ SPR_POS2, 11, 0, {A_RaiseCheckvanillamonstersprites}, S_POSS2_RAISE1REWORK },
-	/*S_POSS2_RAISE1REWORK*/{ SPR_POS2, 11, 5, {NULL}, S_POSS2_RAISE2REWORK },
-	/*S_POSS2_RAISE2REWORK*/{ SPR_POS2, 10, 5, {NULL}, S_POSS2_RAISE3REWORK },
-	/*S_POSS2_RAISE3REWORK*/{ SPR_POS2, 9, 5, {NULL}, S_POSS2_RAISE4REWORK },
-	/*S_POSS2_RAISE4REWORK*/{ SPR_POS2, 8, 5, {NULL}, S_POSS2_RAISE5REWORK },
-	/*S_POSS2_RAISE5REWORK*/{ SPR_POS2, 7, 5, {NULL}, S_POSS2_RUN0REWORK },
-
-	/*S_TROO_STND0*/        { SPR_TROO, 0, 0, {A_LookCheckreworkedvanillamonstersprites}, S_TROO_STND },
+	
 	/*S_TROO_STND*/         { SPR_TROO, 0, 10, {A_Look}, S_TROO_STND2 },
-	/*S_TROO_STND2*/        { SPR_TROO, 1, 10, {A_Look}, S_TROO_STND0 },
-	/*S_TROO_RUN0*/         { SPR_TROO, 0, 0, {A_ChaseCheckreworkedvanillamonstersprites}, S_TROO_RUN1 },
+	/*S_TROO_STND2*/        { SPR_TROO, 1, 10, {A_Look}, S_TROO_STND },
 	/*S_TROO_RUN1*/         { SPR_TROO, 0, 3, {A_Chase}, S_TROO_RUN2 },
 	/*S_TROO_RUN2*/         { SPR_TROO, 0, 3, {A_Chase}, S_TROO_RUN3 },
 	/*S_TROO_RUN3*/         { SPR_TROO, 1, 3, {A_Chase}, S_TROO_RUN4 },
@@ -496,25 +367,20 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_TROO_RUN5*/         { SPR_TROO, 2, 3, {A_Chase}, S_TROO_RUN6 },
 	/*S_TROO_RUN6*/         { SPR_TROO, 2, 3, {A_Chase}, S_TROO_RUN7 },
 	/*S_TROO_RUN7*/         { SPR_TROO, 3, 3, {A_Chase}, S_TROO_RUN8 },
-	/*S_TROO_RUN8*/         { SPR_TROO, 3, 3, {A_Chase}, S_TROO_RUN0 },
-	/*S_TROO_MELEE0*/       { SPR_TROO, 4, 0, {A_MeleeCheckreworkedvanillamonstersprites}, S_TROO_MELEE1 },
+	/*S_TROO_RUN8*/         { SPR_TROO, 3, 3, {A_Chase}, S_TROO_RUN1 },
 	/*S_TROO_MELEE1*/       { SPR_TROO, 4, 8, {A_FaceTarget}, S_TROO_MELEE2 },
 	/*S_TROO_MELEE2*/       { SPR_TROO, 5, 8, {A_FaceTarget}, S_TROO_MELEE3 },
-	/*S_TROO_MELEE3*/       { SPR_TROO, 6, 6, {A_TroopMelee}, S_TROO_RUN0 },
-	/*S_TROO_ATK0*/         { SPR_TROO, 8, 0, {A_AttackCheckreworkedvanillamonstersprites}, S_TROO_ATK1 },
+	/*S_TROO_MELEE3*/       { SPR_TROO, 6, 6, {A_TroopMelee}, S_TROO_RUN1 },
 	/*S_TROO_ATK1*/         { SPR_TROO, 8, 8, {A_FaceTarget}, S_TROO_ATK2 },
 	/*S_TROO_ATK2*/         { SPR_TROO, 9, 8, {A_FaceTarget}, S_TROO_ATK3 },
-	/*S_TROO_ATK3*/         { SPR_TROO, 10, 6, {A_TroopAttack}, S_TROO_RUN0 },
-	/*S_TROO_PAIN0*/        { SPR_TROO, 7, 0, {A_PainCheckreworkedvanillamonstersprites}, S_TROO_PAIN },
+	/*S_TROO_ATK3*/         { SPR_TROO, 10, 6, {A_TroopAttack}, S_TROO_RUN1 },
 	/*S_TROO_PAIN*/         { SPR_TROO, 7, 2, {NULL}, S_TROO_PAIN2 },
-	/*S_TROO_PAIN2*/        { SPR_TROO, 7, 2, {A_Pain}, S_TROO_RUN0 },
-	/*S_TROO_DIE0*/         { SPR_TROO, 11, 0, {A_DieCheckreworkedvanillamonstersprites}, S_TROO_DIE1 },
+	/*S_TROO_PAIN2*/        { SPR_TROO, 7, 2, {A_Pain}, S_TROO_RUN1 },
 	/*S_TROO_DIE1*/         { SPR_TROO, 11, 8, {NULL}, S_TROO_DIE2 },
 	/*S_TROO_DIE2*/         { SPR_TROO, 12, 8, {A_Scream}, S_TROO_DIE3 },
 	/*S_TROO_DIE3*/         { SPR_TROO, 13, 6, {A_Fall}, S_TROO_DIE4 },
 	/*S_TROO_DIE4*/         { SPR_TROO, 14, 6, {A_OnDeathTrigger}, S_TROO_DIE5 },
 	/*S_TROO_DIE5*/         { SPR_TROO, 15, -1, {NULL}, S_NULL },
-	/*S_TROO_XDIE0*/        { SPR_TROO, 16, 0, {A_XdieCheckreworkedvanillamonstersprites}, S_TROO_XDIE1 },
 	/*S_TROO_XDIE1*/        { SPR_TROO, 16, 5, {NULL}, S_TROO_XDIE2 },
 	/*S_TROO_XDIE2*/        { SPR_TROO, 17, 5, {A_XScream}, S_TROO_XDIE3 },
 	/*S_TROO_XDIE3*/        { SPR_TROO, 18, 5, {NULL}, S_TROO_XDIE4 },
@@ -523,57 +389,11 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_TROO_XDIE6*/        { SPR_TROO, 21, 5, {NULL}, S_TROO_XDIE7 },
 	/*S_TROO_XDIE7*/        { SPR_TROO, 22, 5, {A_OnDeathTrigger}, S_TROO_XDIE8 },
 	/*S_TROO_XDIE8*/        { SPR_TROO, 23, -1, {NULL}, S_NULL },
-	/*S_TROO_RAISE0*/       { SPR_TROO, 15, 0, {A_RaiseCheckreworkedvanillamonstersprites}, S_TROO_RAISE1 },
 	/*S_TROO_RAISE1*/		{ SPR_TROO, 15, 6, {NULL}, S_TROO_RAISE2 },
 	/*S_TROO_RAISE2*/		{ SPR_TROO, 14, 6, {NULL}, S_TROO_RAISE3 },
 	/*S_TROO_RAISE3*/		{ SPR_TROO, 13, 6, {NULL}, S_TROO_RAISE4 },
 	/*S_TROO_RAISE4*/		{ SPR_TROO, 12, 8, {NULL}, S_TROO_RAISE5 },
-	/*S_TROO_RAISE5*/		{ SPR_TROO, 11, 8, {NULL}, S_TROO_RUN0 },
-
-	/*S_TROO_STND0REWORK*/  { SPR_TRO2, 0, 0, {A_LookCheckvanillamonstersprites}, S_TROO_STNDREWORK },
-	/*S_TROO_STNDREWORK*/   { SPR_TRO2, 0, 10, {A_Look}, S_TROO_STND2REWORK },
-	/*S_TROO_STND2REWORK*/  { SPR_TRO2, 1, 10, {A_Look}, S_TROO_STND0REWORK },
-	/*S_TROO_RUN0REWORK*/   { SPR_TRO2, 0, 0, {A_ChaseCheckvanillamonstersprites}, S_TROO_RUN1REWORK },
-	/*S_TROO_RUN1REWORK*/   { SPR_TRO2, 0, 3, {A_Chase}, S_TROO_RUN2REWORK },
-	/*S_TROO_RUN2REWORK*/   { SPR_TRO2, 0, 3, {A_Chase}, S_TROO_RUN3REWORK },
-	/*S_TROO_RUN3REWORK*/   { SPR_TRO2, 1, 3, {A_Chase}, S_TROO_RUN4REWORK },
-	/*S_TROO_RUN4REWORK*/   { SPR_TRO2, 1, 3, {A_Chase}, S_TROO_RUN5REWORK },
-	/*S_TROO_RUN5REWORK*/   { SPR_TRO2, 2, 3, {A_Chase}, S_TROO_RUN6REWORK },
-	/*S_TROO_RUN6REWORK*/   { SPR_TRO2, 2, 3, {A_Chase}, S_TROO_RUN7REWORK },
-	/*S_TROO_RUN7REWORK*/   { SPR_TRO2, 3, 3, {A_Chase}, S_TROO_RUN8REWORK },
-	/*S_TROO_RUN8REWORK*/   { SPR_TRO2, 3, 3, {A_Chase}, S_TROO_RUN0REWORK },
-	/*S_TROO_MELEE0REWORK*/ { SPR_TRO2, 4, 0, {A_MeleeCheckvanillamonstersprites}, S_TROO_MELEE1REWORK },
-	/*S_TROO_MELEE1REWORK*/ { SPR_TRO2, 4, 8, {A_FaceTarget}, S_TROO_MELEE2REWORK },
-	/*S_TROO_MELEE2REWORK*/ { SPR_TRO2, 5, 8, {A_FaceTarget}, S_TROO_MELEE3REWORK },
-	/*S_TROO_MELEE3REWORK*/ { SPR_TRO2, 6, 6, {A_TroopMelee}, S_TROO_RUN0REWORK },
-	/*S_TROO_ATK0REWORK*/   { SPR_TRO2, 8, 0, {A_AttackCheckvanillamonstersprites}, S_TROO_ATK1REWORK },
-	/*S_TROO_ATK1REWORK*/   { SPR_TRO2, 8, 8, {A_FaceTarget}, S_TROO_ATK2REWORK },
-	/*S_TROO_ATK2REWORK*/   { SPR_TRO2, 9, 8, {A_FaceTarget}, S_TROO_ATK3REWORK },
-	/*S_TROO_ATK3REWORK*/   { SPR_TRO2, 10, 6, {A_TroopAttack}, S_TROO_RUN0REWORK },
-	/*S_TROO_PAIN0REWORK*/  { SPR_TRO2, 7, 0, {A_PainCheckvanillamonstersprites}, S_TROO_PAINREWORK },
-	/*S_TROO_PAINREWORK*/   { SPR_TRO2, 7, 2, {NULL}, S_TROO_PAIN2REWORK },
-	/*S_TROO_PAIN2REWORK*/  { SPR_TRO2, 7, 2, {A_Pain}, S_TROO_RUN0REWORK },
-	/*S_TROO_DIE0REWORK*/   { SPR_TRO2, 11, 0, {A_DieCheckvanillamonstersprites}, S_TROO_DIE1REWORK },
-	/*S_TROO_DIE1REWORK*/   { SPR_TRO2, 11, 8, {NULL}, S_TROO_DIE2REWORK },
-	/*S_TROO_DIE2REWORK*/   { SPR_TRO2, 12, 8, {A_Scream}, S_TROO_DIE3REWORK },
-	/*S_TROO_DIE3REWORK*/   { SPR_TRO2, 13, 6, {A_Fall}, S_TROO_DIE4REWORK },
-	/*S_TROO_DIE4REWORK*/   { SPR_TRO2, 14, 6, {A_OnDeathTrigger}, S_TROO_DIE5REWORK },
-	/*S_TROO_DIE5REWORK*/   { SPR_TRO2, 15, -1, {NULL}, S_NULL },
-	/*S_TROO_XDIE0REWORK*/  { SPR_TRO2, 16, 0, {A_XdieCheckvanillamonstersprites}, S_TROO_XDIE1REWORK },
-	/*S_TROO_XDIE1REWORK*/  { SPR_TRO2, 16, 5, {NULL}, S_TROO_XDIE2REWORK },
-	/*S_TROO_XDIE2REWORK*/  { SPR_TRO2, 17, 5, {A_XScream}, S_TROO_XDIE3REWORK },
-	/*S_TROO_XDIE3REWORK*/  { SPR_TRO2, 18, 5, {NULL}, S_TROO_XDIE4REWORK },
-	/*S_TROO_XDIE4REWORK*/  { SPR_TRO2, 19, 5, {A_Fall}, S_TROO_XDIE5REWORK },
-	/*S_TROO_XDIE5REWORK*/  { SPR_TRO2, 20, 5, {NULL}, S_TROO_XDIE6REWORK },
-	/*S_TROO_XDIE6REWORK*/  { SPR_TRO2, 21, 5, {NULL}, S_TROO_XDIE7REWORK },
-	/*S_TROO_XDIE7REWORK*/  { SPR_TRO2, 22, 5, {A_OnDeathTrigger}, S_TROO_XDIE8REWORK },
-	/*S_TROO_XDIE8REWORK*/  { SPR_TRO2, 23, -1, {NULL}, S_NULL },
-	/*S_TROO_RAISE0REWORK*/ { SPR_TRO2, 15, 0, {A_RaiseCheckvanillamonstersprites}, S_TROO_RAISE1REWORK },
-	/*S_TROO_RAISE1REWORK*/ { SPR_TRO2, 15, 6, {NULL}, S_TROO_RAISE2REWORK },
-	/*S_TROO_RAISE2REWORK*/ { SPR_TRO2, 14, 6, {NULL}, S_TROO_RAISE3REWORK },
-	/*S_TROO_RAISE3REWORK*/ { SPR_TRO2, 13, 6, {NULL}, S_TROO_RAISE4REWORK },
-	/*S_TROO_RAISE4REWORK*/ { SPR_TRO2, 12, 8, {NULL}, S_TROO_RAISE5REWORK },
-	/*S_TROO_RAISE5REWORK*/ { SPR_TRO2, 11, 8, {NULL}, S_TROO_RUN0REWORK },
+	/*S_TROO_RAISE5*/		{ SPR_TROO, 11, 8, {NULL}, S_TROO_RUN1 },
 
 	/*S_HEAD_STND*/         { SPR_HEAD, 0, 15, {A_Look}, S_HEAD_STND2 },
 	/*S_HEAD_STND2*/        { SPR_HEAD, 1, 15, {A_Look}, S_HEAD_STND3 },
@@ -607,10 +427,8 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_HEAD_RAISE5*/		{ SPR_HEAD, 8, 8, {NULL}, S_HEAD_RAISE6 },
 	/*S_HEAD_RAISE6*/		{ SPR_HEAD, 7, 8, {NULL}, S_HEAD_RUN1 },
 
-	/*S_BOSS1_STND0*/       { SPR_BOSS, 0, 0, {A_LookCheckreworkedvanillamonstersprites}, S_BOSS1_STND },
 	/*S_BOSS1_STND*/        { SPR_BOSS, 0, 10, {A_Look}, S_BOSS1_STND2 },
-	/*S_BOSS1_STND2*/       { SPR_BOSS, 1, 10, {A_Look}, S_BOSS1_STND0 },
-	/*S_BOSS1_RUN0*/        { SPR_BOSS, 0, 0, {A_ChaseCheckreworkedvanillamonstersprites}, S_BOSS1_RUN1 },
+	/*S_BOSS1_STND2*/       { SPR_BOSS, 1, 10, {A_Look}, S_BOSS1_STND },
 	/*S_BOSS1_RUN1*/        { SPR_BOSS, 0, 3, {A_Chase}, S_BOSS1_RUN2 },
 	/*S_BOSS1_RUN2*/        { SPR_BOSS, 0, 3, {A_Chase}, S_BOSS1_RUN3 },
 	/*S_BOSS1_RUN3*/        { SPR_BOSS, 1, 3, {A_Chase}, S_BOSS1_RUN4 },
@@ -618,67 +436,27 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_BOSS1_RUN5*/        { SPR_BOSS, 2, 3, {A_Chase}, S_BOSS1_RUN6 },
 	/*S_BOSS1_RUN6*/        { SPR_BOSS, 2, 3, {A_Chase}, S_BOSS1_RUN7 },
 	/*S_BOSS1_RUN7*/        { SPR_BOSS, 3, 3, {A_Chase}, S_BOSS1_RUN8 },
-	/*S_BOSS1_RUN8*/        { SPR_BOSS, 3, 3, {A_Chase}, S_BOSS1_RUN0 },
-	/*S_BOSS1_ATK0*/        { SPR_BOSS, 4, 0, {A_AttackCheckreworkedvanillamonstersprites}, S_BOSS1_ATK1 },
+	/*S_BOSS1_RUN8*/        { SPR_BOSS, 3, 3, {A_Chase}, S_BOSS1_RUN1 },
 	/*S_BOSS1_ATK1*/        { SPR_BOSS, 4, 8, {A_FaceTarget}, S_BOSS1_ATK2 },
 	/*S_BOSS1_ATK2*/        { SPR_BOSS, 5, 8, {A_FaceTarget}, S_BOSS1_ATK3 },
-	/*S_BOSS1_ATK3*/        { SPR_BOSS, 6, 8, {A_BruisAttack}, S_BOSS1_RUN0 },
-	/*S_BOSS1_PAIN0*/       { SPR_BOSS, 7, 0, {A_PainCheckreworkedvanillamonstersprites}, S_BOSS1_PAIN },
+	/*S_BOSS1_ATK3*/        { SPR_BOSS, 6, 8, {A_BruisAttack}, S_BOSS1_RUN1 },
 	/*S_BOSS1_PAIN*/        { SPR_BOSS, 7, 2, {NULL}, S_BOSS1_PAIN2 },
-	/*S_BOSS1_PAIN2*/       { SPR_BOSS, 7, 2, {A_Pain}, S_BOSS1_RUN0 },
-	/*S_BOSS1_DIE0*/        { SPR_BOSS, 8, 0, {A_DieCheckreworkedvanillamonstersprites}, S_BOSS1_DIE1 },
+	/*S_BOSS1_PAIN2*/       { SPR_BOSS, 7, 2, {A_Pain}, S_BOSS1_RUN1 },
 	/*S_BOSS1_DIE1*/        { SPR_BOSS, 8, 8, {NULL}, S_BOSS1_DIE2 },
 	/*S_BOSS1_DIE2*/        { SPR_BOSS, 9, 8, {A_Scream}, S_BOSS1_DIE3 },
 	/*S_BOSS1_DIE3*/        { SPR_BOSS, 10, 8, {NULL}, S_BOSS1_DIE4 },
 	/*S_BOSS1_DIE4*/        { SPR_BOSS, 11, 8, {A_Fall}, S_BOSS1_DIE5 },
 	/*S_BOSS1_DIE5*/        { SPR_BOSS, 12, 8, {A_OnDeathTrigger}, S_BOSS1_DIE6 },
 	/*S_BOSS1_DIE6*/        { SPR_BOSS, 13, -1, {NULL}, S_NULL },
-	/*S_BOSS1_RAISE0*/      { SPR_BOSS, 13, 0, {A_RaiseCheckreworkedvanillamonstersprites}, S_BOSS1_RAISE1 },
 	/*S_BOSS1_RAISE1*/		{ SPR_BOSS, 13, 8, {NULL}, S_BOSS1_RAISE2 },
 	/*S_BOSS1_RAISE2*/		{ SPR_BOSS, 12, 8, {NULL}, S_BOSS1_RAISE3 },
 	/*S_BOSS1_RAISE3*/		{ SPR_BOSS, 11, 8, {NULL}, S_BOSS1_RAISE4 },
 	/*S_BOSS1_RAISE4*/		{ SPR_BOSS, 10, 8, {NULL}, S_BOSS1_RAISE5 },
 	/*S_BOSS1_RAISE5*/		{ SPR_BOSS, 9, 8, {NULL}, S_BOSS1_RAISE6 },
-	/*S_BOSS1_RAISE6*/		{ SPR_BOSS, 8, 8, {NULL}, S_BOSS1_RUN0 },
+	/*S_BOSS1_RAISE6*/		{ SPR_BOSS, 8, 8, {NULL}, S_BOSS1_RUN1 },
 
-	/*S_BOSS1_STND0REWORK*/ { SPR_BOS1, 0, 0, {A_LookCheckvanillamonstersprites}, S_BOSS1_STNDREWORK },
-	/*S_BOSS1_STNDREWORK*/  { SPR_BOS1, 0, 10, {A_Look}, S_BOSS1_STND2REWORK },
-	/*S_BOSS1_STND2REWORK*/ { SPR_BOS1, 1, 10, {A_Look}, S_BOSS1_STND0REWORK },
-	/*S_BOSS1_RUN0REWORK*/  { SPR_BOS1, 0, 0, {A_ChaseCheckvanillamonstersprites}, S_BOSS1_RUN1REWORK },
-	/*S_BOSS1_RUN1REWORK*/  { SPR_BOS1, 0, 3, {A_Chase}, S_BOSS1_RUN2REWORK },
-	/*S_BOSS1_RUN2REWORK*/  { SPR_BOS1, 0, 3, {A_Chase}, S_BOSS1_RUN3REWORK },
-	/*S_BOSS1_RUN3REWORK*/  { SPR_BOS1, 1, 3, {A_Chase}, S_BOSS1_RUN4REWORK },
-	/*S_BOSS1_RUN4REWORK*/  { SPR_BOS1, 1, 3, {A_Chase}, S_BOSS1_RUN5REWORK },
-	/*S_BOSS1_RUN5REWORK*/  { SPR_BOS1, 2, 3, {A_Chase}, S_BOSS1_RUN6REWORK },
-	/*S_BOSS1_RUN6REWORK*/  { SPR_BOS1, 2, 3, {A_Chase}, S_BOSS1_RUN7REWORK },
-	/*S_BOSS1_RUN7REWORK*/  { SPR_BOS1, 3, 3, {A_Chase}, S_BOSS1_RUN8REWORK },
-	/*S_BOSS1_RUN8REWORK*/  { SPR_BOS1, 3, 3, {A_Chase}, S_BOSS1_RUN0REWORK },
-	/*S_BOSS1_ATK0REWORK*/  { SPR_BOS1, 4, 0, {A_AttackCheckvanillamonstersprites}, S_BOSS1_ATK1REWORK },
-	/*S_BOSS1_ATK1REWORK*/  { SPR_BOS1, 4, 8, {A_FaceTarget}, S_BOSS1_ATK2REWORK },
-	/*S_BOSS1_ATK2REWORK*/  { SPR_BOS1, 5, 8, {A_FaceTarget}, S_BOSS1_ATK3REWORK },
-	/*S_BOSS1_ATK3REWORK*/  { SPR_BOS1, 6, 8, {A_BruisAttack}, S_BOSS1_RUN0REWORK },
-	/*S_BOSS1_PAIN0REWORK*/ { SPR_BOS1, 7, 0, {A_PainCheckvanillamonstersprites}, S_BOSS1_PAINREWORK },
-	/*S_BOSS1_PAINREWORK*/  { SPR_BOS1, 7, 2, {NULL}, S_BOSS1_PAIN2REWORK },
-	/*S_BOSS1_PAIN2REWORK*/ { SPR_BOS1, 7, 2, {A_Pain}, S_BOSS1_RUN0REWORK },
-	/*S_BOSS1_DIE0REWORK*/  { SPR_BOS1, 8, 0, {A_DieCheckvanillamonstersprites}, S_BOSS1_DIE1REWORK },
-	/*S_BOSS1_DIE1REWORK*/  { SPR_BOS1, 8, 8, {NULL}, S_BOSS1_DIE2REWORK },
-	/*S_BOSS1_DIE2REWORK*/  { SPR_BOS1, 9, 8, {A_Scream}, S_BOSS1_DIE3REWORK },
-	/*S_BOSS1_DIE3REWORK*/  { SPR_BOS1, 10, 8, {NULL}, S_BOSS1_DIE4REWORK },
-	/*S_BOSS1_DIE4REWORK*/  { SPR_BOS1, 11, 8, {A_Fall}, S_BOSS1_DIE5REWORK },
-	/*S_BOSS1_DIE5REWORK*/  { SPR_BOS1, 12, 8, {A_OnDeathTrigger}, S_BOSS1_DIE6REWORK },
-	/*S_BOSS1_DIE6REWORK*/  { SPR_BOS1, 13, -1, {NULL}, S_NULL },
-	/*S_BOSS1_RAISE0REWORK*/{ SPR_BOS1, 13, 0, {A_RaiseCheckvanillamonstersprites}, S_BOSS1_RAISE1REWORK },
-	/*S_BOSS1_RAISE1REWORK*/{ SPR_BOS1, 13, 8, {NULL}, S_BOSS1_RAISE2REWORK },
-	/*S_BOSS1_RAISE2REWORK*/{ SPR_BOS1, 12, 8, {NULL}, S_BOSS1_RAISE3REWORK },
-	/*S_BOSS1_RAISE3REWORK*/{ SPR_BOS1, 11, 8, {NULL}, S_BOSS1_RAISE4REWORK },
-	/*S_BOSS1_RAISE4REWORK*/{ SPR_BOS1, 10, 8, {NULL}, S_BOSS1_RAISE5REWORK },
-	/*S_BOSS1_RAISE5REWORK*/{ SPR_BOS1, 9, 8, {NULL}, S_BOSS1_RAISE6REWORK },
-	/*S_BOSS1_RAISE6REWORK*/{ SPR_BOS1, 8, 8, {NULL}, S_BOSS1_RUN0REWORK },
-
-	/*S_BOSS2_STND0*/       { SPR_BOSS, 0, 0, {A_LookCheckreworkedvanillamonstersprites}, S_BOSS2_STND },
 	/*S_BOSS2_STND*/        { SPR_BOSS, 0, 10, {A_Look}, S_BOSS2_STND2 },
-	/*S_BOSS2_STND2*/       { SPR_BOSS, 1, 10, {A_Look}, S_BOSS2_STND0 },
-	/*S_BOSS2_RUN0*/        { SPR_BOSS, 0, 0, {A_ChaseCheckreworkedvanillamonstersprites}, S_BOSS2_RUN1 },
+	/*S_BOSS2_STND2*/       { SPR_BOSS, 1, 10, {A_Look}, S_BOSS2_STND },
 	/*S_BOSS2_RUN1*/        { SPR_BOSS, 0, 3, {A_Chase}, S_BOSS2_RUN2 },
 	/*S_BOSS2_RUN2*/        { SPR_BOSS, 0, 3, {A_Chase}, S_BOSS2_RUN3 },
 	/*S_BOSS2_RUN3*/        { SPR_BOSS, 1, 3, {A_Chase}, S_BOSS2_RUN4 },
@@ -686,62 +464,24 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_BOSS2_RUN5*/        { SPR_BOSS, 2, 3, {A_Chase}, S_BOSS2_RUN6 },
 	/*S_BOSS2_RUN6*/        { SPR_BOSS, 2, 3, {A_Chase}, S_BOSS2_RUN7 },
 	/*S_BOSS2_RUN7*/        { SPR_BOSS, 3, 3, {A_Chase}, S_BOSS2_RUN8 },
-	/*S_BOSS2_RUN8*/        { SPR_BOSS, 3, 3, {A_Chase}, S_BOSS2_RUN0 },
-	/*S_BOSS2_ATK0*/        { SPR_BOSS, 4, 0, {A_AttackCheckreworkedvanillamonstersprites}, S_BOSS2_ATK1 },
+	/*S_BOSS2_RUN8*/        { SPR_BOSS, 3, 3, {A_Chase}, S_BOSS2_RUN1 },
 	/*S_BOSS2_ATK1*/        { SPR_BOSS, 4, 8, {A_FaceTarget}, S_BOSS2_ATK2 },
 	/*S_BOSS2_ATK2*/        { SPR_BOSS, 5, 8, {A_FaceTarget}, S_BOSS2_ATK3 },
-	/*S_BOSS2_ATK3*/        { SPR_BOSS, 6, 8, {A_BruisAttack}, S_BOSS2_RUN0 },
-	/*S_BOSS2_PAIN0*/       { SPR_BOSS, 7, 0, {A_PainCheckreworkedvanillamonstersprites}, S_BOSS2_PAIN },
+	/*S_BOSS2_ATK3*/        { SPR_BOSS, 6, 8, {A_BruisAttack}, S_BOSS2_RUN1 },
 	/*S_BOSS2_PAIN*/        { SPR_BOSS, 7, 2, {NULL}, S_BOSS2_PAIN2 },
-	/*S_BOSS2_PAIN2*/       { SPR_BOSS, 7, 2, {A_Pain}, S_BOSS2_RUN0 },
-	/*S_BOSS2_DIE0*/        { SPR_BOSS, 8, 0, {A_DieCheckreworkedvanillamonstersprites}, S_BOSS2_DIE1 },
+	/*S_BOSS2_PAIN2*/       { SPR_BOSS, 7, 2, {A_Pain}, S_BOSS2_RUN1 },
 	/*S_BOSS2_DIE1*/        { SPR_BOSS, 8, 8, {NULL}, S_BOSS2_DIE2 },
 	/*S_BOSS2_DIE2*/        { SPR_BOSS, 9, 8, {A_Scream}, S_BOSS2_DIE3 },
 	/*S_BOSS2_DIE3*/        { SPR_BOSS, 10, 8, {NULL}, S_BOSS2_DIE4 },
 	/*S_BOSS2_DIE4*/        { SPR_BOSS, 11, 8, {A_Fall}, S_BOSS2_DIE5 },
 	/*S_BOSS2_DIE5*/        { SPR_BOSS, 12, 8, {A_OnDeathTrigger}, S_BOSS2_DIE6 },
 	/*S_BOSS2_DIE6*/        { SPR_BOSS, 13, -1, {NULL}, S_NULL },
-	/*S_BOSS2_RAISE0*/      { SPR_BOSS, 13, 0, {A_RaiseCheckreworkedvanillamonstersprites}, S_BOSS2_RAISE1 },
 	/*S_BOSS2_RAISE1*/		{ SPR_BOSS, 13, 8, {NULL}, S_BOSS2_RAISE2 },
 	/*S_BOSS2_RAISE2*/		{ SPR_BOSS, 12, 8, {NULL}, S_BOSS2_RAISE3 },
 	/*S_BOSS2_RAISE3*/		{ SPR_BOSS, 11, 8, {NULL}, S_BOSS2_RAISE4 },
 	/*S_BOSS2_RAISE4*/		{ SPR_BOSS, 10, 8, {NULL}, S_BOSS2_RAISE5 },
 	/*S_BOSS2_RAISE5*/		{ SPR_BOSS, 9, 8, {NULL}, S_BOSS2_RAISE6 },
-	/*S_BOSS2_RAISE6*/		{ SPR_BOSS, 8, 8, {NULL}, S_BOSS2_RUN0 },
-
-	/*S_BOSS2_STND0REWORK*/       { SPR_BOS2, 0, 0, {A_LookCheckvanillamonstersprites}, S_BOSS2_STNDREWORK },
-	/*S_BOSS2_STNDREWORK*/        { SPR_BOS2, 0, 10, {A_Look}, S_BOSS2_STND2REWORK },
-	/*S_BOSS2_STND2REWORK*/       { SPR_BOS2, 1, 10, {A_Look}, S_BOSS2_STND0REWORK },
-	/*S_BOSS2_RUN0REWORK*/        { SPR_BOS2, 0, 0, {A_ChaseCheckvanillamonstersprites}, S_BOSS2_RUN1REWORK },
-	/*S_BOSS2_RUN1REWORK*/        { SPR_BOS2, 0, 3, {A_Chase}, S_BOSS2_RUN2REWORK },
-	/*S_BOSS2_RUN2REWORK*/        { SPR_BOS2, 0, 3, {A_Chase}, S_BOSS2_RUN3REWORK },
-	/*S_BOSS2_RUN3REWORK*/        { SPR_BOS2, 1, 3, {A_Chase}, S_BOSS2_RUN4REWORK },
-	/*S_BOSS2_RUN4REWORK*/        { SPR_BOS2, 1, 3, {A_Chase}, S_BOSS2_RUN5REWORK },
-	/*S_BOSS2_RUN5REWORK*/        { SPR_BOS2, 2, 3, {A_Chase}, S_BOSS2_RUN6REWORK },
-	/*S_BOSS2_RUN6REWORK*/        { SPR_BOS2, 2, 3, {A_Chase}, S_BOSS2_RUN7REWORK },
-	/*S_BOSS2_RUN7REWORK*/        { SPR_BOS2, 3, 3, {A_Chase}, S_BOSS2_RUN8REWORK },
-	/*S_BOSS2_RUN8REWORK*/        { SPR_BOS2, 3, 3, {A_Chase}, S_BOSS2_RUN0REWORK },
-	/*S_BOSS2_ATK0REWORK*/        { SPR_BOS2, 4, 0, {A_AttackCheckvanillamonstersprites}, S_BOSS2_ATK1REWORK },
-	/*S_BOSS2_ATK1REWORK*/        { SPR_BOS2, 4, 8, {A_FaceTarget}, S_BOSS2_ATK2REWORK },
-	/*S_BOSS2_ATK2REWORK*/        { SPR_BOS2, 5, 8, {A_FaceTarget}, S_BOSS2_ATK3REWORK },
-	/*S_BOSS2_ATK3REWORK*/        { SPR_BOS2, 6, 8, {A_BruisAttack}, S_BOSS2_RUN0REWORK },
-	/*S_BOSS2_PAIN0REWORK*/       { SPR_BOS2, 7, 0, {A_PainCheckvanillamonstersprites}, S_BOSS2_PAINREWORK },
-	/*S_BOSS2_PAINREWORK*/        { SPR_BOS2, 7, 2, {NULL}, S_BOSS2_PAIN2REWORK },
-	/*S_BOSS2_PAIN2REWORK*/       { SPR_BOS2, 7, 2, {A_Pain}, S_BOSS2_RUN0REWORK },
-	/*S_BOSS2_DIE0REWORK*/        { SPR_BOS2, 8, 0, {A_DieCheckvanillamonstersprites}, S_BOSS2_DIE1REWORK },
-	/*S_BOSS2_DIE1REWORK*/        { SPR_BOS2, 8, 8, {NULL}, S_BOSS2_DIE2REWORK },
-	/*S_BOSS2_DIE2REWORK*/        { SPR_BOS2, 9, 8, {A_Scream}, S_BOSS2_DIE3REWORK },
-	/*S_BOSS2_DIE3REWORK*/        { SPR_BOS2, 10, 8, {NULL}, S_BOSS2_DIE4REWORK },
-	/*S_BOSS2_DIE4REWORK*/        { SPR_BOS2, 11, 8, {A_Fall}, S_BOSS2_DIE5REWORK },
-	/*S_BOSS2_DIE5REWORK*/        { SPR_BOS2, 12, 8, {A_OnDeathTrigger}, S_BOSS2_DIE6REWORK },
-	/*S_BOSS2_DIE6REWORK*/        { SPR_BOS2, 13, -1, {NULL}, S_NULL },
-	/*S_BOSS2_RAISE0REWORK*/      { SPR_BOS2, 13, 0, {A_RaiseCheckvanillamonstersprites}, S_BOSS2_RAISE1REWORK },
-	/*S_BOSS2_RAISE1REWORK*/      { SPR_BOS2, 13, 8, {NULL}, S_BOSS2_RAISE2REWORK },
-	/*S_BOSS2_RAISE2REWORK*/      { SPR_BOS2, 12, 8, {NULL}, S_BOSS2_RAISE3REWORK },
-	/*S_BOSS2_RAISE3REWORK*/      { SPR_BOS2, 11, 8, {NULL}, S_BOSS2_RAISE4REWORK },
-	/*S_BOSS2_RAISE4REWORK*/      { SPR_BOS2, 10, 8, {NULL}, S_BOSS2_RAISE5REWORK },
-	/*S_BOSS2_RAISE5REWORK*/      { SPR_BOS2, 9, 8, {NULL}, S_BOSS2_RAISE6REWORK },
-	/*S_BOSS2_RAISE6REWORK*/      { SPR_BOS2, 8, 8, {NULL}, S_BOSS2_RUN0REWORK },
+	/*S_BOSS2_RAISE6*/		{ SPR_BOSS, 8, 8, {NULL}, S_BOSS2_RUN1 },
 
 	/*S_SKUL_STND*/         { SPR_SKUL, 0, 5, {A_Look}, S_SKUL_STND2 },
 	/*S_SKUL_STND2*/        { SPR_SKUL, 1, 5, {A_Look}, S_SKUL_STND3 },
@@ -1843,18 +1583,18 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 	{
 		/*MT_DEMON1*/
 		3002,        //doomednum
-		S_SARG_STND0,        //spawnstate
+		S_SARG_STND,        //spawnstate
 		150,        //spawnhealth
-		S_SARG_RUNA,        //seestate
+		S_SARG_RUN1,        //seestate
 		sfx_sargsit,        //seesound
 		8,        //reactiontime
 		sfx_sargatk,        //attacksound
-		S_SARG_PAINA,        //painstate
+		S_SARG_PAIN1,        //painstate
 		180,        //painchance
 		sfx_dbpain2,        //painsound
-		S_SARG_ATKA,        //meleestate
+		S_SARG_ATK1,        //meleestate
 		S_NULL,        //missilestate
-		S_SARG_DIEA,        //deathstate
+		S_SARG_DIE1,        //deathstate
 		S_NULL,        //xdeathstate
 		sfx_sargdie,        //deathsound
 		12,        //speed
@@ -1866,24 +1606,24 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 		MF_SOLID | MF_SHOOTABLE | MF_GRAVITY | MF_COUNTKILL,        //flags
 		0,        //palette
 		255,        //alpha
-		S_SARG_RAISEA        //raisestate
+		S_SARG_RAISE1        //raisestate
 	},
 
 	{
 		/*MT_DEMON2*/
 		58,        //doomednum
-		S_SARG_STND0,        //spawnstate
+		S_SARG_STND,        //spawnstate
 		150,        //spawnhealth
-		S_SARG_RUNB,        //seestate
+		S_SARG_RUN0,        //seestate
 		sfx_sargsit,        //seesound
 		8,        //reactiontime
 		sfx_sargatk,        //attacksound
-		S_SARG_PAINB,        //painstate
+		S_SARG_PAIN0,        //painstate
 		180,        //painchance
 		sfx_dbpain2,        //painsound
-		S_SARG_ATKB,        //meleestate
+		S_SARG_ATK0,        //meleestate
 		S_NULL,        //missilestate
-		S_SARG_DIEB,        //deathstate
+		S_SARG_DIE0,        //deathstate
 		S_NULL,        //xdeathstate
 		sfx_sargdie,        //deathsound
 		12,        //speed
@@ -1895,7 +1635,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 		MF_SOLID | MF_SHOOTABLE | MF_GRAVITY | MF_COUNTKILL,        //flags
 		1,        //palette
 		255,        //alpha
-		S_SARG_RAISEB        //raisestate
+		S_SARG_RAISE0        //raisestate
 	},
 
 	{
@@ -1959,19 +1699,19 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 	{
 		/*MT_POSSESSED2*/
 		9,        //doomednum
-		S_POSS2_STND0,        //spawnstate
+		S_POSS2_STND,        //spawnstate
 		30,        //spawnhealth
-		S_POSS2_RUN0,        //seestate
+		S_POSS2_RUN1,        //seestate
 		sfx_possit2,        //seesound
 		8,        //reactiontime
 		sfx_None/*sfx_000*/,        //attacksound
-		S_POSS2_PAIN0,        //painstate
+		S_POSS2_PAIN,        //painstate
 		170,        //painchance
 		sfx_dbpain1,        //painsound
 		S_NULL,        //meleestate
-		S_POSS2_ATK0,        //missilestate
-		S_POSS2_DIE0,        //deathstate
-		S_POSS2_XDIE0,        //xdeathstate
+		S_POSS2_ATK1,        //missilestate
+		S_POSS2_DIE1,        //deathstate
+		S_POSS2_XDIE1,        //xdeathstate
 		sfx_posdie2,        //deathsound
 		8,        //speed
 		32 * FRACUNIT,        //radius
@@ -1982,25 +1722,25 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 		MF_SOLID | MF_SHOOTABLE | MF_GRAVITY | MF_COUNTKILL,        //flags
 		1,        //palette
 		255,        //alpha
-		S_POSS2_RAISE0        //raisestate
+		S_POSS2_RAISE1        //raisestate
 	},
 
 	{
 		/*MT_IMP1*/
 		3001,        //doomednum
-		S_TROO_STND0,        //spawnstate
+		S_TROO_STND,        //spawnstate
 		60,        //spawnhealth
-		S_TROO_RUN0,        //seestate
+		S_TROO_RUN1,        //seestate
 		sfx_impsit1,        //seesound
 		8,        //reactiontime
 		sfx_None/*sfx_000*/,        //attacksound
-		S_TROO_PAIN0,        //painstate
+		S_TROO_PAIN,        //painstate
 		200,        //painchance
 		sfx_dbpain1,        //painsound
-		S_TROO_MELEE0,        //meleestate
-		S_TROO_ATK0,        //missilestate
-		S_TROO_DIE0,        //deathstate
-		S_TROO_XDIE0,        //xdeathstate
+		S_TROO_MELEE1,        //meleestate
+		S_TROO_ATK1,        //missilestate
+		S_TROO_DIE1,        //deathstate
+		S_TROO_XDIE1,        //xdeathstate
 		sfx_impdth1,        //deathsound
 		8,        //speed
 		42 * FRACUNIT,        //radius
@@ -2011,25 +1751,25 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 		MF_SOLID | MF_SHOOTABLE | MF_GRAVITY | MF_COUNTKILL,        //flags
 		0,        //palette
 		255,        //alpha
-		S_TROO_RAISE0        //raisestate
+		S_TROO_RAISE1        //raisestate
 	},
 
 	{
 		/*MT_IMP2*/
 		3007,        //doomednum
-		S_TROO_STND0,        //spawnstate
+		S_TROO_STND,        //spawnstate
 		60,        //spawnhealth
-		S_TROO_RUN0,        //seestate
+		S_TROO_RUN1,        //seestate
 		sfx_impsit1,        //seesound
 		8,        //reactiontime
 		sfx_None/*sfx_000*/,        //attacksound
-		S_TROO_PAIN0,        //painstate
+		S_TROO_PAIN,        //painstate
 		128,        //painchance
 		sfx_dbpain1,        //painsound
-		S_TROO_MELEE0,        //meleestate
-		S_TROO_ATK0,        //missilestate
-		S_TROO_DIE0,        //deathstate
-		S_TROO_XDIE0,        //xdeathstate
+		S_TROO_MELEE1,        //meleestate
+		S_TROO_ATK1,        //missilestate
+		S_TROO_DIE1,        //deathstate
+		S_TROO_XDIE1,        //xdeathstate
 		sfx_impdth1,        //deathsound
 		16,        //speed
 		42 * FRACUNIT,        //radius
@@ -2040,7 +1780,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 		MF_SOLID | MF_SHOOTABLE | MF_GRAVITY | MF_COUNTKILL | MF_SHADOW,        //flags
 		1,        //palette
 		180,        //alpha
-		S_TROO_RAISE0        //raisestate
+		S_TROO_RAISE1        //raisestate
 	},
 
 	{
@@ -2075,18 +1815,18 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 	{
 		/*MT_BRUISER1*/
 		3003,        //doomednum
-		S_BOSS1_STND0,        //spawnstate
+		S_BOSS1_STND,        //spawnstate
 		1000,        //spawnhealth
-		S_BOSS1_RUN0,        //seestate
+		S_BOSS1_RUN1,        //seestate
 		sfx_bos1sit,        //seesound
 		8,        //reactiontime
 		sfx_None/*sfx_000*/,        //attacksound
-		S_BOSS1_PAIN0,        //painstate
+		S_BOSS1_PAIN,        //painstate
 		50,        //painchance
 		sfx_dbpain2,        //painsound
-		S_BOSS1_ATK0,        //meleestate
-		S_BOSS1_ATK0,        //missilestate
-		S_BOSS1_DIE0,        //deathstate
+		S_BOSS1_ATK1,        //meleestate
+		S_BOSS1_ATK1,        //missilestate
+		S_BOSS1_DIE1,        //deathstate
 		S_NULL,        //xdeathstate
 		sfx_bos1die,        //deathsound
 		8,        //speed
@@ -2098,24 +1838,24 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 		MF_SOLID | MF_SHOOTABLE | MF_GRAVITY | MF_COUNTKILL,        //flags
 		1,        //palette
 		255,        //alpha
-		S_BOSS1_RAISE0        //raisestate
+		S_BOSS1_RAISE1        //raisestate
 	},
 
 	{
 		/*MT_BRUISER2*/
 		69,        //doomednum
-		S_BOSS2_STND0,        //spawnstate
+		S_BOSS2_STND,        //spawnstate
 		500,        //spawnhealth
-		S_BOSS2_RUN0,        //seestate
+		S_BOSS2_RUN1,        //seestate
 		sfx_bos2sit,        //seesound
 		8,        //reactiontime
 		sfx_None/*sfx_000*/,        //attacksound
-		S_BOSS2_PAIN0,        //painstate
+		S_BOSS2_PAIN,        //painstate
 		50,        //painchance
 		sfx_dbpain2,        //painsound
-		S_BOSS2_ATK0,        //meleestate
-		S_BOSS2_ATK0,        //missilestate
-		S_BOSS2_DIE0,        //deathstate
+		S_BOSS2_ATK1,        //meleestate
+		S_BOSS2_ATK1,        //missilestate
+		S_BOSS2_DIE1,        //deathstate
 		S_NULL,        //xdeathstate
 		sfx_bos2die,        //deathsound
 		8,        //speed
@@ -2127,7 +1867,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 		MF_SOLID | MF_SHOOTABLE | MF_GRAVITY | MF_COUNTKILL,        //flags
 		0,        //palette
 		255,        //alpha
-		S_BOSS2_RAISE0        //raisestate
+		S_BOSS2_RAISE1        //raisestate
 	},
 
 	{

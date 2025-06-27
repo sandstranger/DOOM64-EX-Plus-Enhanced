@@ -1010,7 +1010,14 @@ CVAR_EXTERNAL(m_extendedcast);
 CVAR_EXTERNAL(m_reworkedweaponsanimations);
 CVAR_EXTERNAL(m_changethecolorofthenightmare);
 CVAR_EXTERNAL(m_reworkedvanillasounds);
-CVAR_EXTERNAL(m_reworkedmonsters);
+CVAR_EXTERNAL(m_reworkedzombieman);
+
+CVAR_EXTERNAL(m_reworkedzombieshotgun);
+CVAR_EXTERNAL(m_reworkedimp);
+CVAR_EXTERNAL(m_reworkedpinkyandspectre);
+CVAR_EXTERNAL(m_reworkedBaronofHell);
+CVAR_EXTERNAL(m_reworkedHellKnight);
+
 CVAR_EXTERNAL(m_limitpain);
 
 enum {
@@ -1040,7 +1047,12 @@ enum {
 	misc_reworkedweaponsanimations,
 	misc_changethecolorofthenightmare,
 	misc_reworkedvanillasounds,
-	misc_reworkedmonsters,
+	misc_reworkedzombieman,
+	misc_reworkedzombieshotgun,
+	misc_reworkedimp,
+	misc_reworkedpinkyandspectre,
+	misc_reworkedBaronofHell,
+	misc_reworkedHellKnight,
 	misc_header6,
 	misc_limitpain,
 	misc_comp_pass,
@@ -1077,7 +1089,12 @@ menuitem_t MiscMenu[] = {
 	{2,"Anim Smooth:",M_MiscChoice },
 	{2,"Nightmare Color:",M_MiscChoice },
 	{2,"Extra Sounds:",M_MiscChoice },
-	{2,"Extra Monsters:",M_MiscChoice },
+	{2,"Zombie Man:",M_MiscChoice },
+	{2,"Zombie Shotgun:",M_MiscChoice },
+	{2,"Imp:",M_MiscChoice },
+	{2,"Pinky Spectre:",M_MiscChoice },
+	{2,"Baron Of Hell:",M_MiscChoice },
+	{2,"Hell Knight:",M_MiscChoice },
 	{-1,"N64 Compatibility",0 },
 	{2,"Limit Lost Souls:",M_MiscChoice,'l'},
 	{2,"Tall Actors:",M_MiscChoice,'i'},
@@ -1113,7 +1130,12 @@ char* MiscHints[misc_end] = {
 	"enable or disable reworked weapons animations",
 	"change the color of monsters in nightmare mode",
 	"change sounds to vanilla or reworked vanilla sounds",
-	"enable reworked vanilla monster sprites on some monsters",
+	"enable reworked vanilla sprites for the zombie man",
+	"enable reworked vanilla sprites for the zombie shotgun",
+	"enable reworked vanilla sprites for the imp and imp nightmare",
+	"enable reworked vanilla sprites for the pinky and spectre",
+	"enable reworked vanilla sprites for the baron of hell",
+	"enable reworked vanilla sprites for the hell knight",
 	NULL,
 	"limit max amount of lost souls spit by pain elemental to 17",
 	"emulate infinite height bug for all solid actors",
@@ -1143,7 +1165,12 @@ menudefault_t MiscDefault[] = {
 	{ &m_reworkedweaponsanimations, 0 },
 	{ &m_changethecolorofthenightmare, 0 },
 	{ &m_reworkedvanillasounds, 0 },
-	{ &m_reworkedmonsters, 0 },
+	{ &m_reworkedzombieman, 0 },
+	{ &m_reworkedzombieshotgun, 0 },
+	{ &m_reworkedimp, 0 },
+	{ &m_reworkedpinkyandspectre, 0 },
+	{ &m_reworkedBaronofHell, 0 },
+	{ &m_reworkedHellKnight, 0 },
 	{ &m_limitpain, 1 },
 	{ &compat_mobjpass, 1 },
 	{ NULL, -1 }
@@ -1289,8 +1316,28 @@ void M_MiscChoice(int choice) {
 		M_SetOptionValue(choice, 0, 1, 1, &m_reworkedvanillasounds);
 		break;
 
-	case misc_reworkedmonsters:
-		M_SetOptionValue(choice, 0, 1, 1, &m_reworkedmonsters);
+	case misc_reworkedzombieman:
+		M_SetOptionValue(choice, 0, 1, 1, &m_reworkedzombieman);
+		break;
+
+	case misc_reworkedzombieshotgun:
+		M_SetOptionValue(choice, 0, 1, 1, &m_reworkedzombieshotgun);
+		break;
+
+	case misc_reworkedimp:
+		M_SetOptionValue(choice, 0, 2, 1, &m_reworkedimp);
+		break;
+
+	case misc_reworkedpinkyandspectre:
+		M_SetOptionValue(choice, 0, 1, 1, &m_reworkedpinkyandspectre);
+		break;
+
+	case misc_reworkedBaronofHell:
+		M_SetOptionValue(choice, 0, 1, 1, &m_reworkedBaronofHell);
+		break;
+
+	case misc_reworkedHellKnight:
+		M_SetOptionValue(choice, 0, 1, 1, &m_reworkedHellKnight);
 		break;
 
 	case misc_limitpain:
@@ -1309,7 +1356,8 @@ void M_DrawMisc(void) {
 	static const char* objectdrawtype[3] = { "Arrows", "Sprites", "Both" };
 	static const char* disablesecretmessages[2] = { "Enabled", "Disabled" };
 	static const char* nightmarecolorstype[10] = { "Off", "Green", "Red", "Yellow", "Blue", "Pink", "Purple", "Orange", "Cyan", "Black" };
-	static const char* enchancedvanillatype[2] = { "Vanilla", "Enchanced" };
+	static const char* enchancedvanillatype[2] = { "Vanilla", "Enhanced" };
+	static const char* enchancedvanillaimptype[3] = { "Vanilla", "Enhanced", "Mouth" };
 	int y;
 
 	if (currentMenu->menupageoffset <= misc_menufade + 1 &&
@@ -1350,7 +1398,12 @@ void M_DrawMisc(void) {
 	DRAWMISCITEM(misc_reworkedweaponsanimations, m_reworkedweaponsanimations.value, enchancedvanillatype);
 	DRAWMISCITEM(misc_changethecolorofthenightmare, m_changethecolorofthenightmare.value, nightmarecolorstype);
 	DRAWMISCITEM(misc_reworkedvanillasounds, m_reworkedvanillasounds.value, enchancedvanillatype);
-	DRAWMISCITEM(misc_reworkedmonsters, m_reworkedmonsters.value, enchancedvanillatype);
+	DRAWMISCITEM(misc_reworkedzombieman, m_reworkedzombieman.value, enchancedvanillatype);
+	DRAWMISCITEM(misc_reworkedzombieshotgun, m_reworkedzombieshotgun.value, enchancedvanillatype);
+	DRAWMISCITEM(misc_reworkedimp, m_reworkedimp.value, enchancedvanillaimptype);
+	DRAWMISCITEM(misc_reworkedpinkyandspectre, m_reworkedpinkyandspectre.value, enchancedvanillatype);
+	DRAWMISCITEM(misc_reworkedBaronofHell, m_reworkedBaronofHell.value, enchancedvanillatype);
+	DRAWMISCITEM(misc_reworkedHellKnight, m_reworkedHellKnight.value, enchancedvanillatype);
 	DRAWMISCITEM(misc_limitpain, m_limitpain.value, msgNames);
 	DRAWMISCITEM(misc_comp_pass, !compat_mobjpass.value, msgNames);
 	DRAWMISCITEM(misc_disablesecretmessages, hud_disablesecretmessages.value, disablesecretmessages);

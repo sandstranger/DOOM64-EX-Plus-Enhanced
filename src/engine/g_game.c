@@ -180,7 +180,12 @@ CVAR_EXTERNAL(i_joysensy);
 CVAR_EXTERNAL(m_reworkedweaponsanimations);
 CVAR_EXTERNAL(m_changethecolorofthenightmare);
 CVAR_EXTERNAL(m_reworkedvanillasounds);
-CVAR_EXTERNAL(m_reworkedmonsters);
+CVAR_EXTERNAL(m_reworkedzombieman);
+CVAR_EXTERNAL(m_reworkedzombieshotgun);
+CVAR_EXTERNAL(m_reworkedimp);
+CVAR_EXTERNAL(m_reworkedpinkyandspectre);
+CVAR_EXTERNAL(m_reworkedBaronofHell);
+CVAR_EXTERNAL(m_reworkedHellKnight);
 CVAR_EXTERNAL(m_limitpain);
 
 //
@@ -208,7 +213,12 @@ void G_RegisterCvars(void) {
 	CON_CvarRegister(&m_reworkedweaponsanimations);
 	CON_CvarRegister(&m_changethecolorofthenightmare);
 	CON_CvarRegister(&m_reworkedvanillasounds);
-	CON_CvarRegister(&m_reworkedmonsters);
+	CON_CvarRegister(&m_reworkedzombieman);
+	CON_CvarRegister(&m_reworkedzombieshotgun);
+	CON_CvarRegister(&m_reworkedimp);
+	CON_CvarRegister(&m_reworkedpinkyandspectre);
+	CON_CvarRegister(&m_reworkedBaronofHell);
+	CON_CvarRegister(&m_reworkedHellKnight);
 	CON_CvarRegister(&m_limitpain);
 }
 
