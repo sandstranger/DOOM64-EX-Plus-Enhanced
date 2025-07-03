@@ -173,7 +173,7 @@ void I_InitScreen(void) {
         SDL_DestroyWindow(window);
     }
 
-	sprintf(title, "Doom64EX+ - Version Date: %s", version_date);
+	sprintf(title, "Doom64EX+Enhanced - Version Date: %s", version_date);
 	window = SDL_CreateWindow(title,
 		video_width,
 		video_height,
