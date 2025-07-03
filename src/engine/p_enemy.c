@@ -2249,9 +2249,17 @@ void A_VileChase(mobj_t* actor)
 
 					P_SetMobjState(corpsehit, info->raisestate);
 					corpsehit->height <<= 2;
-					corpsehit->flags = info->flags;
+					corpsehit->flags = info->flags | corpsehit->flags & MF_NIGHTMARE; // styd: Fixed Nightmare type monsters resurrected by Arch Vile not preserving their transparency and colors
 					corpsehit->health = info->spawnhealth;
 					corpsehit->target = NULL;
+
+					// styd: Fixes for Nightmare type monsters resurrected by Arch Vile not having x2 health
+					if (corpsehit->flags & MF_NIGHTMARE) {
+						corpsehit->health *= 2;
+						corpsehit->flags |= MF_NIGHTMARE;
+						corpsehit->flags |= MF_SHADOW;
+						corpsehit->alpha = 127;
+					}
 
 					return;
 				}
@@ -2288,6 +2296,12 @@ void A_VileTarget(mobj_t* actor)
 	fog = P_SpawnMobj(actor->target->x,
 		actor->target->x,
 		actor->target->z, MT_FIRE);
+
+	// styd: Fixes when Arch Vile has the nightmare flag his fire attack is now in nightmare mode
+	if (actor->flags & MF_NIGHTMARE) {
+		fog->flags |= MF_NIGHTMARE;
+		fog->flags |= MF_SHADOW;
+	}
 
 	actor->tracer = fog;
 	fog->target = actor;
