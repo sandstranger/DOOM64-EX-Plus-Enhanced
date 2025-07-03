@@ -45,6 +45,8 @@
 #include "con_console.h"
 #include "deh_misc.h"
 
+CVAR_EXTERNAL(m_reworkedvanillasounds);
+
 fixed_t         tmbbox[4];
 mobj_t* tmthing;
 int             tmflags;
@@ -291,6 +293,121 @@ boolean PIT_CheckLine(line_t* ld) {
 
 boolean PIT_CheckThing(mobj_t* thing) {
     int    solid;
+
+    if (m_reworkedvanillasounds.value == 1)
+    {
+        // reworked vanilla sounds
+        if (thing->type == MT_CHAINGUY) {
+            thing->info->seesound = sfx_dscgsit1;
+            thing->info->painsound = sfx_dscgpain;
+            thing->info->deathsound = sfx_dscgdth1;
+            thing->info->activesound = sfx_dscgsact;
+        }
+        else if (thing->type == MT_IMP1) {
+            thing->info->painsound = sfx_imppain;
+        }
+        else if (thing->type == MT_IMP2) {
+            thing->info->painsound = sfx_imppain;
+        }
+        else if (thing->type == MT_CACODEMON) {
+            thing->info->painsound = sfx_headpain;
+            thing->info->activesound = sfx_headact;
+        }
+        else if (thing->type == MT_CYBORG) {
+            thing->info->painsound = sfx_cybpain;
+            thing->info->activesound = sfx_cybact;
+        }
+        else if (thing->type == MT_BRUISER1) {
+            thing->info->painsound = sfx_bos1pain;
+            thing->info->activesound = sfx_bos1act;
+        }
+        else if (thing->type == MT_BRUISER2) {
+            thing->info->painsound = sfx_bos2pain;
+            thing->info->activesound = sfx_bos2act;
+        }
+        else if (thing->type == MT_DEMON1) {
+            thing->info->painsound = sfx_sargpain;
+            thing->info->activesound = sfx_sargact;
+        }
+        else if (thing->type == MT_DEMON2) {
+            thing->info->painsound = sfx_sargpain;
+            thing->info->activesound = sfx_sargact;
+        }
+        else if (thing->type == MT_MANCUBUS) {
+            thing->info->activesound = sfx_fattact;
+        }
+        else if (thing->type == MT_PAIN) {
+            thing->info->activesound = sfx_peact;
+        }
+        else if (thing->type == MT_UNDEAD) {
+            thing->info->painsound = sfx_skelpain;
+        }
+        else if (thing->type == MT_BABY) {
+            thing->info->painsound = sfx_bspipain;
+        }
+        else if (thing->type == MT_SKULL) {
+            thing->info->deathsound = sfx_skulldie;
+        }
+
+
+    }
+    else if (m_reworkedvanillasounds.value == 0)
+    {
+        // vanilla sounds
+        if (thing->type == MT_CHAINGUY) {
+            thing->info->seesound = sfx_possit2;
+            thing->info->painsound = sfx_dbpain1;
+            thing->info->deathsound = sfx_posdie2;
+            thing->info->activesound = sfx_posact;
+        }
+        else if (thing->type == MT_IMP1) {
+            thing->info->painsound = sfx_dbpain1;
+        }
+        else if (thing->type == MT_IMP2) {
+            thing->info->painsound = sfx_dbpain1;
+        }
+        else if (thing->type == MT_CACODEMON) {
+            thing->info->painsound = sfx_dbpain2;
+            thing->info->activesound = sfx_dbact;
+        }
+        else if (thing->type == MT_CYBORG) {
+            thing->info->painsound = sfx_dbpain2;
+            thing->info->activesound = sfx_dbact;
+        }
+        else if (thing->type == MT_BRUISER1) {
+            thing->info->painsound = sfx_dbpain2;
+            thing->info->activesound = sfx_dbact;
+        }
+        else if (thing->type == MT_BRUISER2) {
+            thing->info->painsound = sfx_dbpain2;
+            thing->info->activesound = sfx_dbact;
+        }
+        else if (thing->type == MT_DEMON1) {
+            thing->info->painsound = sfx_dbpain2;
+            thing->info->activesound = sfx_dbact;
+        }
+        else if (thing->type == MT_DEMON2) {
+            thing->info->painsound = sfx_dbpain2;
+            thing->info->activesound = sfx_dbact;
+        }
+        else if (thing->type == MT_MANCUBUS) {
+            thing->info->activesound = sfx_posact;
+        }
+        else if (thing->type == MT_PAIN) {
+            thing->info->activesound = sfx_dbact;
+        }
+        else if (thing->type == MT_UNDEAD) {
+            thing->info->painsound = sfx_dbpain1;
+        }
+        else if (thing->type == MT_BABY) {
+            thing->info->painsound = sfx_dbpain2;
+        }
+        else if (thing->type == MT_SKULL) {
+            thing->info->deathsound = sfx_implod;
+        }
+        
+       
+    }
 
     if (!(thing->flags & (MF_SOLID | MF_SPECIAL | MF_SHOOTABLE))) {
         return true;

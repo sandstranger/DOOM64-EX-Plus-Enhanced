@@ -109,7 +109,7 @@ void P_SetPsprite (player_t* player, int position, statenum_t stnum)
 {
 	pspdef_t* psp;
 	state_t* state;
-
+	
 	psp = &player->psprites[position];
 	psp->processPending = true; //ATSB: From GEC
 
@@ -1434,7 +1434,7 @@ void A_Flashcheckanimationvanilla(player_t* player, pspdef_t* psp) {
 
 		if (m_reworkedweaponsanimations.value == 0)
 		{
-			P_SetPsprite(player, ps_flash, S_SGUNFLASHA);
+			P_SetPsprite(player, ps_flash, S_SGUNFLASHA);	
 		}
 
 	}

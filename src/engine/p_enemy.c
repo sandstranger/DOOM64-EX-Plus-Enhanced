@@ -671,12 +671,18 @@ void A_Look(mobj_t* actor) {
 		case sfx_possit1:
 		case sfx_possit2:
 		case sfx_possit3:
-			sound = sfx_possit1 + (P_Random() & 1);
+			sound = sfx_possit1 + (P_Random() % 3);
 			break;
 
 		case sfx_impsit1:
 		case sfx_impsit2:
 			sound = sfx_impsit1 + (P_Random() & 1);
+			break;
+
+		case sfx_dscgsit1:
+		case sfx_dscgsit2:
+		case sfx_dscgsit3:
+			sound = sfx_dscgsit1 + (P_Random() % 3);
 			break;
 
 		default:
@@ -790,45 +796,7 @@ nomissile:
 
 	// make active sound
 	if (actor->info->activesound && P_Random() < 3) {
-
-		if (m_reworkedvanillasounds.value == 1)
-		{
-			// reworked vanilla sounds
-			if (actor->type == MT_CACODEMON) {
-				S_StartSound(actor, sfx_headact);
-			}
-			else if (actor->type == MT_CYBORG) {
-				S_StartSound(actor, sfx_cybact);
-			}
-			else if (actor->type == MT_BRUISER1) {
-				S_StartSound(actor, sfx_bos1act);
-			}
-			else if (actor->type == MT_BRUISER2) {
-				S_StartSound(actor, sfx_bos2act);
-			}
-			else if (actor->type == MT_DEMON1) {
-				S_StartSound(actor, sfx_sargact);
-			}
-			else if (actor->type == MT_DEMON2) {
-				S_StartSound(actor, sfx_sargact);
-			}
-			else if (actor->type == MT_MANCUBUS) {
-				S_StartSound(actor, sfx_fattact);
-			}
-			else if (actor->type == MT_PAIN) {
-				S_StartSound(actor, sfx_peact);
-			}
-			else {
-				S_StartSound(actor, actor->info->activesound);
-			}
-
-		}
-		else if (m_reworkedvanillasounds.value == 0)
-		{
-			// vanilla sounds
 		S_StartSound(actor, actor->info->activesound);
-		}
-
 	}
 }
 
@@ -1128,13 +1096,35 @@ void A_SpidRefire(mobj_t* actor) {
 void A_TroopMelee(mobj_t* actor) {
 	int    damage;
 	int hitdice;
+	int sound;
 
 	if (!actor->target) {
 		return;
 	}
 
 	if (P_CheckMeleeRange(actor)) {
-		S_StartSound(actor, sfx_scratch);
+
+		if (m_reworkedvanillasounds.value == 1)
+		{
+			// reworked vanilla sounds
+			switch (actor->type) {
+			case MT_IMP1:
+				sound = sfx_scratch1;
+				break;
+
+			case MT_IMP2:
+				sound = sfx_scratch1;
+				break;
+			}
+			sound += P_Random() % 4; // four different melee attack sounds
+			
+		}
+		else if (m_reworkedvanillasounds.value == 0)
+		{
+			// vanilla sounds
+			sound = sfx_scratch;
+		}
+		S_StartSound(actor, sound);
 		hitdice = (P_Random() & 7);
 		damage = ((hitdice << 2) - hitdice) + 3;
 		P_DamageMobj(actor->target, actor, actor, damage);
@@ -1178,11 +1168,12 @@ void A_SargAttack(mobj_t* actor) {
 
 //
 // A_HeadAttack
-//
+// styd: fixes a small bug added a melee attack sound that was missing of the cacodemon
 
 void A_HeadAttack(mobj_t* actor) {
 	int    damage;
 	int hitdice;
+	int sound;
 
 	if (!actor->target) {
 		return;
@@ -1190,6 +1181,24 @@ void A_HeadAttack(mobj_t* actor) {
 
 	A_FaceTarget(actor);
 	if (P_CheckMeleeRange(actor)) {
+
+		if (m_reworkedvanillasounds.value == 1)
+		{
+			// reworked vanilla sounds
+			switch (actor->type) {
+			case MT_CACODEMON:
+				sound = sfx_scratch1;
+				break;
+			}
+			sound += P_Random() % 4; // four different melee attack sounds
+			
+		}
+		else if (m_reworkedvanillasounds.value == 0)
+		{
+			// vanilla sounds
+			sound = sfx_scratch;
+		}
+		S_StartSound(actor, sound);
 		hitdice = (P_Random() & 7);
 		damage = (hitdice << 3) + 8;
 		P_DamageMobj(actor->target, actor, actor, damage);
@@ -1241,6 +1250,7 @@ void A_CyberDeathEvent(mobj_t* actor) {
 void A_BruisAttack(mobj_t* actor) {
 	int    damage;
 	int    hitdice;
+	int sound;
 
 	if (!actor->target)
 	{
@@ -1249,7 +1259,27 @@ void A_BruisAttack(mobj_t* actor) {
 
 	if (P_CheckMeleeRange(actor))
 	{
-		S_StartSound(actor, sfx_scratch);
+		if (m_reworkedvanillasounds.value == 1)
+		{
+			// reworked vanilla sounds
+			switch (actor->type) {
+			case MT_BRUISER1:
+				sound = sfx_scratch1;
+				break;
+
+			case MT_BRUISER2:
+				sound = sfx_scratch1;
+				break;
+			}
+			sound += P_Random() % 4; // four different melee attack sounds
+			
+		}
+		else if (m_reworkedvanillasounds.value == 0)
+		{
+			// vanilla sounds
+			sound = sfx_scratch;
+		}
+		S_StartSound(actor, sound);
 		hitdice = (P_Random() & 7);
 		damage = ((hitdice * 11) + 11);
 		P_DamageMobj(actor->target, actor, actor, damage);
@@ -1786,18 +1816,6 @@ void A_FadeIn(mobj_t* actor) {
 void A_Scream(mobj_t* actor) {
 	int sound;
 
-	if (m_reworkedvanillasounds.value == 1)
-	{
-		// reworked vanilla sounds
-		if (actor->type == MT_SKULL) {
-
-			if (actor->info->deathsound) {
-				sound = sfx_skulldie;
-			}
-
-		}
-		else {
-
 		switch (actor->info->deathsound) {
 		case 0:
 			return;
@@ -1805,7 +1823,7 @@ void A_Scream(mobj_t* actor) {
 		case sfx_posdie1:
 		case sfx_posdie2:
 		case sfx_posdie3:
-			sound = sfx_posdie1 + (P_Random() & 1);
+			sound = sfx_posdie1 + (P_Random() % 3);
 			break;
 
 		case sfx_impdth1:
@@ -1813,38 +1831,16 @@ void A_Scream(mobj_t* actor) {
 			sound = sfx_impdth1 + (P_Random() & 1);
 			break;
 
-		default:
-			sound = actor->info->deathsound;
-			break;
-		}
-
-		}
-
-	}
-	else if (m_reworkedvanillasounds.value == 0)
-	{
-		// vanilla sounds
-		switch (actor->info->deathsound) {
-		case 0:
-			return;
-
-		case sfx_posdie1:
-		case sfx_posdie2:
-		case sfx_posdie3:
-			sound = sfx_posdie1 + (P_Random() & 1);
-			break;
-
-		case sfx_impdth1:
-		case sfx_impdth2:
-			sound = sfx_impdth1 + (P_Random() & 1);
+		case sfx_dscgdth1:
+		case sfx_dscgdth2:
+		case sfx_dscgdth3:
+			sound = sfx_dscgdth1 + (P_Random() % 3);
 			break;
 
 		default:
 			sound = actor->info->deathsound;
 			break;
 		}
-
-	}
 
 	S_StartSound(actor, sound);
 }
@@ -1863,60 +1859,12 @@ void A_XScream(mobj_t* actor) {
 
 void A_Pain(mobj_t* actor) {
 	if (actor->info->painsound) {
-
-	if (m_reworkedvanillasounds.value == 1)
-	{
-		// reworked vanilla sounds
-		if (actor->type == MT_IMP1) {
-			S_StartSound(actor, sfx_imppain);
-		}
-		else if (actor->type == MT_IMP2) {
-			S_StartSound(actor, sfx_imppain);
-		}
-		else if (actor->type == MT_CACODEMON) {
-			S_StartSound(actor, sfx_headpain);
-		}
-		else if (actor->type == MT_UNDEAD) {
-			S_StartSound(actor, sfx_skelpain);
-		}
-		else if (actor->type == MT_CYBORG) {
-			S_StartSound(actor, sfx_cybpain);
-		}
-		else if (actor->type == MT_BRUISER1) {
-			S_StartSound(actor, sfx_bos1pain);
-		}
-		else if (actor->type == MT_BRUISER2) {
-			S_StartSound(actor, sfx_bos2pain);
-		}
-		else if (actor->type == MT_DEMON1) {
-			S_StartSound(actor, sfx_sargpain);
-		}
-		else if (actor->type == MT_DEMON2) {
-			S_StartSound(actor, sfx_sargpain);
-		}
-		else if (actor->type == MT_BABY) {
-			S_StartSound(actor, sfx_bspipain);
-		}
-		else if (actor->type == MT_RESURRECTOR) {
-			S_StartSound(NULL, actor->info->painsound);
-		}
-		else {
-			S_StartSound(actor, actor->info->painsound);
-		}
-
-	} 
-	else if (m_reworkedvanillasounds.value == 0)
-	{
-	    // vanilla sounds
 		if (actor->type == MT_RESURRECTOR) {
 			S_StartSound(NULL, actor->info->painsound);
 		}
 		else {
 			S_StartSound(actor, actor->info->painsound);
 		}
-
-	}
-
 	}
 }
 

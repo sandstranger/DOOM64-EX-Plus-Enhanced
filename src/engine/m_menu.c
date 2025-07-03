@@ -1011,7 +1011,6 @@ CVAR_EXTERNAL(m_reworkedweaponsanimations);
 CVAR_EXTERNAL(m_changethecolorofthenightmare);
 CVAR_EXTERNAL(m_reworkedvanillasounds);
 CVAR_EXTERNAL(m_reworkedzombieman);
-
 CVAR_EXTERNAL(m_reworkedzombieshotgun);
 CVAR_EXTERNAL(m_reworkedimp);
 CVAR_EXTERNAL(m_reworkedpinkyandspectre);

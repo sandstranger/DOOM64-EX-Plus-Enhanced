@@ -54,6 +54,8 @@ void P_CreateFadeThinker(mobj_t* mobj, line_t* line);
 void P_CreateFadeOutThinker(mobj_t* mobj, line_t* line);
 void P_CreateFadeThinkerNightmare(mobj_t* mobj, line_t* line);
 
+CVAR_EXTERNAL(m_reworkedvanillasounds);
+
 CVAR(m_nospawnsound, 0);
 CVAR(m_brutal, 0);
 
@@ -136,6 +138,8 @@ void P_SetTarget(mobj_t** mop, mobj_t* targ) {
 //
 
 void P_ExplodeMissile(mobj_t* mo) {
+	int sound;
+
 	if (!P_SetMobjState(mo, mobjinfo[mo->type].deathstate)) {
 		return;
 	}
@@ -152,7 +156,72 @@ void P_ExplodeMissile(mobj_t* mo) {
 
 	if (mo->info->deathsound) {
 		S_StopSound(mo, 0);
-		S_StartSound(mo, mo->info->deathsound);
+		if (m_reworkedvanillasounds.value == 1)
+		{
+			if (mo->type == MT_PROJ_FATSO) {
+				mo->info->deathsound = sfx_implod1;
+			}
+			else if (mo->type == MT_PROJ_IMP1) {
+				mo->info->deathsound = sfx_implod1;
+			}
+			else if (mo->type == MT_PROJ_IMP2) {
+				mo->info->deathsound = sfx_implod1;
+			}
+			else if (mo->type == MT_PROJ_BABY) {
+				mo->info->deathsound = sfx_implod1;
+			}
+			else if (mo->type == MT_PROJ_HEAD) {
+				mo->info->deathsound = sfx_implod1;
+			}
+			else if (mo->type == MT_PROJ_BRUISER1) {
+				mo->info->deathsound = sfx_implod1;
+			}
+			else if (mo->type == MT_PROJ_BRUISER2) {
+				mo->info->deathsound = sfx_implod1;
+			}
+
+			// reworked vanilla sounds
+			switch (mo->info->deathsound) {
+			case sfx_implod1:
+			case sfx_implod2:
+				sound = sfx_implod1 + (P_Random() % 2);
+				break;
+
+			default:
+				sound = mo->info->deathsound;
+				break;
+			}
+
+			S_StartSound(mo, sound);
+		}
+		else if (m_reworkedvanillasounds.value == 0)
+		{
+			// vanilla sounds
+			if (mo->type == MT_PROJ_FATSO) {
+				mo->info->deathsound = sfx_implod;
+			}
+			else if (mo->type == MT_PROJ_IMP1) {
+				mo->info->deathsound = sfx_implod;
+			}
+			else if (mo->type == MT_PROJ_IMP2) {
+				mo->info->deathsound = sfx_implod;
+			}
+			else if (mo->type == MT_PROJ_BABY) {
+				mo->info->deathsound = sfx_implod;
+			}
+			else if (mo->type == MT_PROJ_HEAD) {
+				mo->info->deathsound = sfx_implod;
+			}
+			else if (mo->type == MT_PROJ_BRUISER1) {
+				mo->info->deathsound = sfx_implod;
+			}
+			else if (mo->type == MT_PROJ_BRUISER2) {
+				mo->info->deathsound = sfx_implod;
+			}
+
+			S_StartSound(mo, mo->info->deathsound);
+		}
+
 	}
 }
 
@@ -1578,6 +1647,7 @@ mobj_t* P_SpawnMissile(mobj_t* source, mobj_t* dest, mobjtype_t type,
 	fixed_t y;
 	fixed_t z;
 	int rnd1, rnd2;
+	int sound;
 
 	x = source->x + xoffs;
 	y = source->y + yoffs;
@@ -1586,7 +1656,73 @@ mobj_t* P_SpawnMissile(mobj_t* source, mobj_t* dest, mobjtype_t type,
 	th = P_SpawnMobj(x, y, z, type);
 
 	if (th->info->seesound) {
-		S_StartSound(th, th->info->seesound);
+
+		if (m_reworkedvanillasounds.value == 1)
+		{ 
+			// reworked vanilla sounds
+			if (th->type == MT_PROJ_FATSO) {
+				th->info->seesound = sfx_bdmissile1;
+			}
+			else if (th->type == MT_PROJ_IMP1) {
+				th->info->seesound = sfx_bdmissile1;
+			}
+			else if (th->type == MT_PROJ_IMP2) {
+				th->info->seesound = sfx_bdmissile1;
+			}
+			else if (th->type == MT_PROJ_BABY) {
+				//th->info->deathsound = sfx_implod1;
+			}
+			else if (th->type == MT_PROJ_HEAD) {
+				th->info->seesound = sfx_bdmissile1;
+			}
+			else if (th->type == MT_PROJ_BRUISER1) {
+				th->info->seesound = sfx_bdmissile1;
+			}
+			else if (th->type == MT_PROJ_BRUISER2) {
+				th->info->seesound = sfx_bdmissile1;
+			}
+
+				switch (th->info->seesound) {
+				case sfx_bdmissile1:
+				case sfx_bdmissile2:
+					sound = sfx_bdmissile1 + (P_Random() % 2);
+					break;
+
+				default:
+					sound = th->info->seesound;
+					break;
+				}
+
+			S_StartSound(th, sound);
+		}
+		else if (m_reworkedvanillasounds.value == 0)
+		{
+			// vanilla sounds
+			if (th->type == MT_PROJ_FATSO) {
+				th->info->seesound = sfx_bdmissile;
+			}
+			else if (th->type == MT_PROJ_IMP1) {
+				th->info->seesound = sfx_bdmissile;
+			}
+			else if (th->type == MT_PROJ_IMP2) {
+				th->info->seesound = sfx_bdmissile;
+			}
+			else if (th->type == MT_PROJ_BABY) {
+				//th->info->deathsound = sfx_implod;
+			}
+			else if (th->type == MT_PROJ_HEAD) {
+				th->info->seesound = sfx_bdmissile;
+			}
+			else if (th->type == MT_PROJ_BRUISER1) {
+				th->info->seesound = sfx_bdmissile;
+			}
+			else if (th->type == MT_PROJ_BRUISER2) {
+				th->info->seesound = sfx_bdmissile;
+			}
+
+			S_StartSound(th, th->info->seesound);
+		}
+
 	}
 
 	P_SetTarget(&th->target, source);        // where it came from
