@@ -2293,9 +2293,12 @@ void A_VileTarget(mobj_t* actor)
 
 	A_FaceTarget(actor);
 
-	fog = P_SpawnMobj(actor->target->x,
-		actor->target->x,
-		actor->target->z, MT_FIRE);
+	
+
+	// killough 12/98: fix Vile fog coordinates (with without demo_version)
+	fog = P_SpawnMobj(actor->target->x, 
+		              actor->target->y,
+		              actor->target->z, MT_FIRE);
 
 	// styd: Fixes when Arch Vile has the nightmare flag his fire attack is now in nightmare mode
 	if (actor->flags & MF_NIGHTMARE) {
@@ -2303,9 +2306,9 @@ void A_VileTarget(mobj_t* actor)
 		fog->flags |= MF_SHADOW;
 	}
 
-	actor->tracer = fog;
-	fog->target = actor;
-	fog->tracer = actor->target;
+	P_SetTarget(&actor->tracer, fog);   // killough 11/98
+	P_SetTarget(&fog->target, actor);
+	P_SetTarget(&fog->tracer, actor->target);
 	A_Fire(fog);
 }
 
