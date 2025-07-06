@@ -280,6 +280,7 @@ static mobj_t* P_MissileAttack(mobj_t* actor, int direction) {
 		break;
 	case MT_CYBORG:
 	case MT_CYBORG_TITLE:
+	case MT_ANNIHILATOR:
 		offs = 45;
 		deltaz = 88;
 		type = MT_PROJ_ROCKET;
@@ -295,6 +296,12 @@ static mobj_t* P_MissileAttack(mobj_t* actor, int direction) {
 		offs = 0;
 		deltaz = 48;
 		type = MT_PROJ_BRUISER1;
+		aim = true;
+		break;
+	case MT_HELLHOUND:
+		offs = 9;
+		deltaz = 36;
+		type = MT_PROJ_HEAD;
 		aim = true;
 		break;
 	}
@@ -690,7 +697,7 @@ void A_Look(mobj_t* actor) {
 			break;
 		}
 
-		if (actor->type == MT_RESURRECTOR || actor->type == MT_CYBORG || actor->type == MT_SPIDER) {
+		if (actor->type == MT_RESURRECTOR || actor->type == MT_CYBORG || actor->type == MT_SPIDER || actor->type == MT_ANNIHILATOR) {
 			// full volume
 			S_StartSound(NULL, sound);
 		}
@@ -2343,5 +2350,56 @@ void A_VileAttack(mobj_t* actor)
 	fire->x = actor->target->x - FixedMul(24 * FRACUNIT, finecosine[an]);
 	fire->y = actor->target->y - FixedMul(24 * FRACUNIT, finesine[an]);
 	P_RadiusAttack(fire, actor, 70);
+}
+
+//
+// A_HellhoundAttack
+// 
+
+void A_HellhoundAttack(mobj_t* actor) {
+
+	if (!actor->target) {
+		return;
+	}
+
+	A_FaceTarget(actor);
+
+	// launch a missile
+	P_MissileAttack(actor, DP_LEFT);
+	P_MissileAttack(actor, DP_RIGHT);
+}
+
+//
+// A_HellhoundMelee
+//
+
+void A_HellhoundMelee(mobj_t* actor) {
+	int    damage;
+	int    hitdice;
+
+	if (!actor->target) {
+		return;
+	}
+
+	A_FaceTarget(actor);
+	if (P_CheckMeleeRange(actor)) {
+		hitdice = (P_Random() & 7);
+		damage = ((hitdice << 2) + 8);
+		P_DamageMobj(actor->target, actor, actor, damage);
+	}
+}
+
+//
+// A_AnnihilatorAttack
+//
+
+void A_AnnihilatorAttack(mobj_t* actor) {
+	if (!actor->target) {
+		return;
+	}
+
+	A_FaceTarget(actor);
+	P_MissileAttack(actor, DP_LEFT);
+	P_MissileAttack(actor, DP_RIGHT);
 }
 

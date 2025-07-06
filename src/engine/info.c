@@ -64,7 +64,7 @@ char* sprnames[NUMSPRITES + 1] = {  //0x5FA30
 	"S041", "S026", "S002", "S030", "CPOS", "SKEL", "ARCR", "POW1",
 	"SPID", "VFIR", "VILE", "TEST", "BLUG", "BLUP", "SH1R", "SH2R",
 	"PUNR", "POS1", "POS2", "SAR1", "SAR2", "TRO1", "TRO2", "TROM", 
-	"BOS1", "BOS2", NULL
+	"BOS1", "BOS2", "GECH", "A64A", NULL
 };
 
 // Doesn't work with g++, needs actionf_p1
@@ -166,6 +166,9 @@ void A_Raisecheckanimationvanilla();
 void A_Flashcheckanimationvanilla();
 void A_OpenShotgun2();
 void A_Fistwhiff();
+void A_HellhoundAttack();
+void A_HellhoundMelee();
+void A_AnnihilatorAttack();
 
 #pragma warning(push)
 #pragma warning(disable:4113)
@@ -1462,6 +1465,63 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_BLOOD97*/{ SPR_BLUP, 1, 6, {NULL}, S_BLOOD108 },
 	/*S_BLOOD98*/{ SPR_BLUP, 2, 6, {NULL}, S_BLOOD109 },
 	/*S_BLOOD99*/{ SPR_BLUP, 3, 6, {NULL}, S_NULL },
+
+	/*S_GECH_STND*/{ SPR_GECH, 1, 10, {A_Look}, S_GECH_STND2 },
+	/*S_GECH_STND2*/{ SPR_GECH, 0, 10, {A_Look}, S_GECH_STND },
+	/*S_GECH_RUN1*/{ SPR_GECH, 0, 2, {A_Chase}, S_GECH_RUN2 },
+	/*S_GECH_RUN2*/{ SPR_GECH, 0, 2, {A_Chase}, S_GECH_RUN3 },
+	/*S_GECH_RUN3*/{ SPR_GECH, 1, 2, {A_Chase}, S_GECH_RUN4 },
+	/*S_GECH_RUN4*/{ SPR_GECH, 1, 2, {A_Chase}, S_GECH_RUN5 },
+	/*S_GECH_RUN5*/{ SPR_GECH, 2, 2, {A_Chase}, S_GECH_RUN6 },
+	/*S_GECH_RUN6*/{ SPR_GECH, 2, 2, {A_Chase}, S_GECH_RUN7 },
+	/*S_GECH_RUN7*/{ SPR_GECH, 3, 2, {A_Chase}, S_GECH_RUN8 },
+	/*S_GECH_RUN8*/{ SPR_GECH, 3, 2, {A_Chase}, S_GECH_RUN1 },
+	/*S_GECH_MELEE1*/{ SPR_GECH, 4, 4, {A_FaceTarget}, S_GECH_MELEE2 },
+	/*S_GECH_MELEE2*/{ SPR_GECH, 5, 4, {A_FaceTarget}, S_GECH_MELEE3 },
+	/*S_GECH_MELEE3*/{ SPR_GECH, 6, 4, {A_HellhoundMelee}, S_GECH_MELEE4 },
+	/*S_GECH_MELEE4*/{ SPR_GECH, 5, 4, {A_FaceTarget}, S_GECH_MELEE5 },
+	/*S_GECH_MELEE5*/{ SPR_GECH, 4, 4, {A_FaceTarget}, S_GECH_RUN1 },
+	/*S_GECH_ATK1*/{ SPR_GECH, 4, 4, {A_FaceTarget}, S_GECH_ATK2 },
+	/*S_GECH_ATK2*/{ SPR_GECH, 13, 4, {A_FaceTarget}, S_GECH_ATK3 },
+	/*S_GECH_ATK3*/{ SPR_GECH, 14, 4, {A_HellhoundAttack}, S_GECH_RUN1 },
+	/*S_GECH_PAIN1*/{ SPR_GECH, 7, 3, {NULL}, S_GECH_PAIN2 },
+	/*S_GECH_PAIN2*/{ SPR_GECH, 7, 3, {A_Pain}, S_GECH_RUN1 },
+	/*S_GECH_DIE1*/{ SPR_GECH, 8, 5, {NULL}, S_GECH_DIE2 },
+	/*S_GECH_DIE2*/{ SPR_GECH, 9, 5, {A_Scream}, S_GECH_DIE3 },
+	/*S_GECH_DIE3*/{ SPR_GECH, 10, 5, {A_Fall}, S_GECH_DIE4 },
+	/*S_GECH_DIE4*/{ SPR_GECH, 11, 5, {A_OnDeathTrigger}, S_GECH_DIE5 },
+	/*S_GECH_DIE5*/{ SPR_GECH, 12, -1, {NULL}, S_NULL },
+	/*S_GECH_RAISE1*/{ SPR_GECH, 12, 5, {NULL}, S_GECH_RAISE2 },
+	/*S_GECH_RAISE2*/{ SPR_GECH, 11, 5, {NULL}, S_GECH_RAISE3 },
+	/*S_GECH_RAISE3*/{ SPR_GECH, 10, 5, {NULL}, S_GECH_RAISE4 },
+	/*S_GECH_RAISE4*/{ SPR_GECH, 9, 5, {NULL}, S_GECH_RAISE5 },
+	/*S_GECH_RAISE5*/{ SPR_GECH, 8, 5, {NULL}, S_GECH_RUN1 },
+
+	/*S_A64A_STND*/{ SPR_A64A, 4, 10, {A_Look}, S_A64A_STND },
+	/*S_A64A_RUN1*/{ SPR_A64A, 0, 4, {A_Metal}, S_A64A_RUN2 },
+	/*S_A64A_RUN2*/{ SPR_A64A, 0, 4, {A_Chase}, S_A64A_RUN3 },
+	/*S_A64A_RUN3*/{ SPR_A64A, 1, 4, {A_Chase}, S_A64A_RUN4 },
+	/*S_A64A_RUN4*/{ SPR_A64A, 1, 4, {A_Chase}, S_A64A_RUN5 },
+	/*S_A64A_RUN5*/{ SPR_A64A, 2, 4, {A_Chase}, S_A64A_RUN6 },
+	/*S_A64A_RUN6*/{ SPR_A64A, 2, 4, {A_Chase}, S_A64A_RUN7 },
+	/*S_A64A_RUN7*/{ SPR_A64A, 3, 4, {A_Metal}, S_A64A_RUN8 },
+	/*S_A64A_RUN8*/{ SPR_A64A, 3, 4, {A_Chase}, S_A64A_RUN1 },
+	/*S_A64A_ATK1*/{ SPR_A64A, 4, 6, {A_FaceTarget}, S_A64A_ATK2 },
+	/*S_A64A_ATK2*/{ SPR_A64A, 32773, 12, {A_AnnihilatorAttack}, S_A64A_ATK3 },
+	/*S_A64A_ATK3*/{ SPR_A64A, 4, 12, {A_FaceTarget}, S_A64A_ATK4 },
+	/*S_A64A_ATK4*/{ SPR_A64A, 32773, 12, {A_AnnihilatorAttack}, S_A64A_ATK5 },
+	/*S_A64A_ATK5*/{ SPR_A64A, 4, 12, {A_FaceTarget}, S_A64A_ATK6 },
+	/*S_A64A_ATK6*/{ SPR_A64A, 32773, 12, {A_AnnihilatorAttack}, S_A64A_RUN1 },
+	/*S_A64A_PAIN*/{ SPR_A64A, 4, 10, {A_Pain}, S_A64A_RUN1 },
+	/*S_A64A_DIE1*/{ SPR_A64A, 6, 30, {A_CyberDeathEvent}, S_A64A_DIE2 },
+	/*S_A64A_DIE2*/{ SPR_A64A, 7, 8, {NULL}, S_A64A_DIE3 },
+	/*S_A64A_DIE3*/{ SPR_A64A, 8, 7, {NULL}, S_A64A_DIE4 },
+	/*S_A64A_DIE4*/{ SPR_A64A, 9, 6, {NULL}, S_A64A_DIE5 },
+	/*S_A64A_DIE5*/{ SPR_A64A, 10, 5, {NULL}, S_A64A_DIE6 },
+	/*S_A64A_DIE6*/{ SPR_A64A, 11, 4, {A_Fall}, S_A64A_DIE7 },
+	/*S_A64A_DIE7*/{ SPR_A64A, 12, 4, {NULL}, S_A64A_DIE8 },
+	/*S_A64A_DIE8*/{ SPR_A64A, 13, 4, {A_OnDeathTrigger}, S_A64A_DIE9 },
+	/*S_A64A_DIE9*/{ SPR_A64A, 14, -1, {NULL}, S_NULL },
 	
 };
 
@@ -6474,5 +6534,62 @@ MF_SOLID,// flags
 		MF_NOBLOCKMAP | MF_GRAVITY | MF_SHADOW,       //flags
 		0,        //palette
 		255        //alpha
-},
+    },
+
+	{
+		/*MT_HELLHOUND*/
+		9000,        //doomednum
+		S_GECH_STND,        //spawnstate
+		500,        //spawnhealth
+		S_GECH_RUN1,        //seestate
+		sfx_hellhoundsit,        //seesound
+		8,        //reactiontime
+		sfx_hellhoundatk,        //attacksound
+		S_GECH_PAIN1,        //painstate
+		180,        //painchance
+		sfx_dbpain2,        //painsound
+		S_GECH_MELEE1,        //meleestate
+		S_GECH_ATK1,        //missilestate
+		S_GECH_DIE1,        //deathstate
+		S_NULL,        //xdeathstate
+		sfx_hellhounddie,        //deathsound
+		16,        //speed
+		44 * FRACUNIT,        //radius
+		100 * FRACUNIT,        //height
+		400,        //mass
+		0,        //damage
+		sfx_dbact,        //activesound
+		MF_SOLID | MF_SHOOTABLE | MF_GRAVITY | MF_COUNTKILL,        //flags
+		0,        //palette
+		255,        //alpha
+		S_GECH_RAISE1        //raisestate
+	},
+
+	{
+		/*MT_ANNIHILATOR*/
+		9001,        //doomednum
+		S_A64A_STND,        //spawnstate
+		6000,        //spawnhealth
+		S_A64A_RUN1,        //seestate
+		sfx_cybsit,        //seesound
+		8,        //reactiontime
+		sfx_None/*sfx_000*/,        //attacksound
+		S_A64A_PAIN,        //painstate
+		10,        //painchance
+		sfx_dbpain2,        //painsound
+		S_NULL,        //meleestate
+		S_A64A_ATK1,        //missilestate
+		S_A64A_DIE1,        //deathstate
+		S_NULL,        //xdeathstate
+		sfx_cybdth,        //deathsound
+		16,        //speed
+		70 * FRACUNIT,        //radius
+		170 * FRACUNIT,        //height
+		1000,        //mass
+		0,        //damage
+		sfx_dbact,        //activesound
+		MF_SOLID | MF_SHOOTABLE | MF_GRAVITY | MF_COUNTKILL,        //flags
+		0,        //palette
+		255        // alpha
+	},
 };

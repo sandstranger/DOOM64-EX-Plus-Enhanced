@@ -1687,7 +1687,7 @@ boolean PIT_RadiusAttack(mobj_t* thing) {
     }
 
     // Boss cyborg take no damage from concussion.
-    if (thing->type == MT_CYBORG || thing->type == MT_SPIDER) {
+    if (thing->type == MT_CYBORG || thing->type == MT_SPIDER || thing->type == MT_ANNIHILATOR) {
         return true;
     }
 
