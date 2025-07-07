@@ -13,7 +13,7 @@
 		2A28028629E0652C00230288 /* net_structure.h in Sources */ = {isa = PBXBuildFile; fileRef = 2A28027E29E0615900230288 /* net_structure.h */; };
 		2A44CD3E2930B13E005B23CA /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2A44CD3D2930B13E005B23CA /* CoreAudio.framework */; };
 		2A44CD402930B145005B23CA /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2A44CD3F2930B145005B23CA /* OpenGL.framework */; };
-		2A44CE282930B570005B23CA /* doom64ex-plus.wad in Resources */ = {isa = PBXBuildFile; fileRef = 2A44CE212930B56F005B23CA /* doom64ex-plus.wad */; };
+		2A44CE282930B570005B23CA /* doom64ex-plus-enhanced.wad in Resources */ = {isa = PBXBuildFile; fileRef = 2A44CE212930B56F005B23CA /* doom64ex-plus-enhanced.wad */; };
 		2A44CE292930B570005B23CA /* doomsnd.sf2 in Resources */ = {isa = PBXBuildFile; fileRef = 2A44CE222930B56F005B23CA /* doomsnd.sf2 */; };
 		2A44CE2A2930B570005B23CA /* AUTHORS in Resources */ = {isa = PBXBuildFile; fileRef = 2A44CE232930B56F005B23CA /* AUTHORS */; };
 		2A44CE2B2930B570005B23CA /* doom64ex-plus.6 in Resources */ = {isa = PBXBuildFile; fileRef = 2A44CE242930B56F005B23CA /* doom64ex-plus.6 */; };
@@ -139,7 +139,7 @@
 		2A28028029E0638800230288 /* deh_str.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = deh_str.h; path = ../src/engine/deh_str.h; sourceTree = "<group>"; };
 		2A44CD3D2930B13E005B23CA /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
 		2A44CD3F2930B145005B23CA /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
-		2A44CE212930B56F005B23CA /* doom64ex-plus.wad */ = {isa = PBXFileReference; lastKnownFileType = file; name = "doom64ex-plus.wad"; path = "../doom64ex-plus.wad"; sourceTree = "<group>"; };
+		2A44CE212930B56F005B23CA /* doom64ex-plus-enhanced.wad */ = {isa = PBXFileReference; lastKnownFileType = file; name = "doom64ex-plus-enhanced.wad"; path = "../doom64ex-plus-enhanced.wad"; sourceTree = "<group>"; };
 		2A44CE222930B56F005B23CA /* doomsnd.sf2 */ = {isa = PBXFileReference; lastKnownFileType = file; name = doomsnd.sf2; path = ../doomsnd.sf2; sourceTree = "<group>"; };
 		2A44CE232930B56F005B23CA /* AUTHORS */ = {isa = PBXFileReference; lastKnownFileType = text; name = AUTHORS; path = ../AUTHORS; sourceTree = "<group>"; };
 		2A44CE242930B56F005B23CA /* doom64ex-plus.6 */ = {isa = PBXFileReference; lastKnownFileType = text; name = "doom64ex-plus.6"; path = "../doom64ex-plus.6"; sourceTree = "<group>"; };
@@ -374,7 +374,7 @@
 				2A44CE232930B56F005B23CA /* AUTHORS */,
 				2A44CE272930B570005B23CA /* COPYING */,
 				2A44CE242930B56F005B23CA /* doom64ex-plus.6 */,
-				2A44CE212930B56F005B23CA /* doom64ex-plus.wad */,
+				2A44CE212930B56F005B23CA /* doom64ex-plus-enhanced.wad */,
 				2A44CE222930B56F005B23CA /* doomsnd.sf2 */,
 				2A44CE262930B570005B23CA /* LICENSE */,
 				2A44CE252930B570005B23CA /* README.md */,
@@ -651,7 +651,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2A44CE302930B5B8005B23CA /* doom64ex-plus.icns in Resources */,
-				2A44CE282930B570005B23CA /* doom64ex-plus.wad in Resources */,
+				2A44CE282930B570005B23CA /* doom64ex-plus-enhanced.wad in Resources */,
 				2A44CE292930B570005B23CA /* doomsnd.sf2 in Resources */,
 				2A44CE2A2930B570005B23CA /* AUTHORS in Resources */,
 				2A44CE2B2930B570005B23CA /* doom64ex-plus.6 in Resources */,
