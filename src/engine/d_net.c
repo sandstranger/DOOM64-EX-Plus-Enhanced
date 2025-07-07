@@ -38,12 +38,7 @@
 #include "m_misc.h"
 #include "con_console.h"
 
-#ifdef __OpenBSD__
 #include <SDL3/SDL.h>
-#else
-#include <SDL3/SDL.h>
-#endif
-//#include <SDL3/SDL.h>
 #include "i_video.h"
 #include "i_sdlinput.h"
 
