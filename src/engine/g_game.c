@@ -1752,7 +1752,7 @@ void G_SetFastParms(int fast_pending) {
 	if (fast != fast_pending) {
 		/* only change if necessary */
 		if ((fast = fast_pending)) {
-			for (i = S_SARG_STND; i <= S_SARG_PAIN2; i++) {
+			for (i = S_SARG_RUN1; i <= S_SARG_PAIN2; i++) {
 				if (states[i].info_tics != 1) { // killough 4/10/98
 					states[i].info_tics >>= 1;    // don't change 1->0 since it causes cycles
 				}
@@ -1763,7 +1763,7 @@ void G_SetFastParms(int fast_pending) {
 			mobjinfo[MT_PROJ_IMP1].speed = 20 * FRACUNIT;
 		}
 		else {
-			for (i = S_SARG_STND; i <= S_SARG_PAIN2; i++) {
+			for (i = S_SARG_RUN1; i <= S_SARG_PAIN2; i++) {
 				states[i].info_tics <<= 1;
 			}
 
