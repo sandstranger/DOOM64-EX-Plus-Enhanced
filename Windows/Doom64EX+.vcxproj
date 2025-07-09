@@ -308,7 +308,7 @@
     <ClInclude Include="..\src\engine\z_zone.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\src\engine\doom64ex-plus.ico" />
+    <Image Include="..\src\engine\doom64ex-plus-enhanced.ico" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\engine\doom64ex-plus.rc" />
