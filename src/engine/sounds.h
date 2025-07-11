@@ -116,14 +116,10 @@ typedef enum {
 	sfx_sgcock,     //sgcock
 	sfx_bdmissile,  //projectile
 	sfx_noway,      //oof2??
-	sfx_sht2load3,
-	sfx_fistwhiff,
-	sfx_spisit,
-	sfx_spidth,
-	sfx_spidpain,
-	sfx_spidact,
 	sfx_skelsit,
 	sfx_skeldth,
+	sfx_spisit,
+	sfx_spidth,
 	sfx_flamst,
 	sfx_flame,
 	sfx_vilsit,
@@ -131,6 +127,10 @@ typedef enum {
 	sfx_vildth,
 	sfx_vilact,
 	sfx_vilatk,
+	sfx_sht2load3,
+	sfx_fistwhiff,
+	sfx_spidpain,
+	sfx_spidact,
 	sfx_imppain,
 	sfx_headact,
 	sfx_headpain,
