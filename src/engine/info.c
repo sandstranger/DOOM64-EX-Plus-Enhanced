@@ -58,7 +58,7 @@ char* sprnames[NUMSPRITES + 1] = {  //0x5FA30
 	"S041", "S026", "S002", "S030", "CPOS", "SKEL", "ARCR", "POW1",
 	"SPID", "VFIR", "VILE", "TEST", "BLUG", "BLUP", "SH1R", "SH2R",
 	"PUNR", "POS1", "POS2", "SAR1", "SAR2", "TRO1", "TRO2", "TROM", 
-	"BOS1", "BOS2", "GECH", "A64A", NULL
+	"BOS1", "BOS2", "GECH", "A64A", "SAR3", "HEA2", "NCAC", NULL
 };
 
 // Doesn't work with g++, needs actionf_p1
@@ -205,7 +205,6 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_PBOT_PATK5*/        { SPR_PLAY, 4, 4, {A_PlayAttack}, S_PBOT_PATK6 },
 	/*S_PBOT_PATK6*/        { SPR_PLAY, 32773, 4, {A_PlayAttack}, S_PBOT_RUN1 },
 
-	
 	/*S_SARG_STND*/         { SPR_SARG, 1, 8, {A_Look}, S_SARG_STND2 },
 	/*S_SARG_STND2*/        { SPR_SARG, 3, 8, {A_Look}, S_SARG_STND },
 	/*S_SARG_RUN1*/         { SPR_SARG, 0, 2, {A_Chase}, S_SARG_RUN2 },
@@ -1429,6 +1428,7 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_BLOOD98*/{ SPR_BLUP, 2, 6, {NULL}, S_BLOOD109 },
 	/*S_BLOOD99*/{ SPR_BLUP, 3, 6, {NULL}, S_NULL },
 
+	// HELLHOUND
 	/*S_GECH_STND*/{ SPR_GECH, 1, 10, {A_Look}, S_GECH_STND2 },
 	/*S_GECH_STND2*/{ SPR_GECH, 0, 10, {A_Look}, S_GECH_STND },
 	/*S_GECH_RUN1*/{ SPR_GECH, 0, 2, {A_Chase}, S_GECH_RUN2 },
@@ -1460,6 +1460,7 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_GECH_RAISE4*/{ SPR_GECH, 9, 5, {NULL}, S_GECH_RAISE5 },
 	/*S_GECH_RAISE5*/{ SPR_GECH, 8, 5, {NULL}, S_GECH_RUN1 },
 
+	// ANNIHILATOR
 	/*S_A64A_STND*/{ SPR_A64A, 4, 10, {A_Look}, S_A64A_STND },
 	/*S_A64A_RUN1*/{ SPR_A64A, 0, 4, {A_Metal}, S_A64A_RUN2 },
 	/*S_A64A_RUN2*/{ SPR_A64A, 0, 4, {A_Chase}, S_A64A_RUN3 },
@@ -1485,6 +1486,87 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_A64A_DIE7*/{ SPR_A64A, 12, 4, {NULL}, S_A64A_DIE8 },
 	/*S_A64A_DIE8*/{ SPR_A64A, 13, 4, {A_OnDeathTrigger}, S_A64A_DIE9 },
 	/*S_A64A_DIE9*/{ SPR_A64A, 14, -1, {NULL}, S_NULL },
+
+	// NIGHTMARE DEMON
+	/*S_SAR3_STND*/{ SPR_SAR3, 1, 10, {A_Look}, S_SAR3_STND2 },
+	/*S_SAR3_STND2*/{ SPR_SAR3, 3, 10, {A_Look}, S_SAR3_STND },
+	/*S_SAR3_RUN1*/{ SPR_SAR3, 0, 3, {A_Chase}, S_SAR3_RUN2 },
+	/*S_SAR3_RUN2*/{ SPR_SAR3, 0, 3, {A_Chase}, S_SAR3_RUN3 },
+	/*S_SAR3_RUN3*/{ SPR_SAR3, 1, 3, {A_Chase}, S_SAR3_RUN4 },
+	/*S_SAR3_RUN4*/{ SPR_SAR3, 1, 3, {A_Chase}, S_SAR3_RUN5 },
+	/*S_SAR3_RUN5*/{ SPR_SAR3, 2, 3, {A_Chase}, S_SAR3_RUN6 },
+	/*S_SAR3_RUN6*/{ SPR_SAR3, 2, 3, {A_Chase}, S_SAR3_RUN7 },
+	/*S_SAR3_RUN7*/{ SPR_SAR3, 3, 3, {A_Chase}, S_SAR3_RUN8 },
+	/*S_SAR3_RUN8*/{ SPR_SAR3, 3, 3, {A_Chase}, S_SAR3_RUN1 },
+	/*S_SAR3_ATK1*/{ SPR_SAR3, 4, 5, {A_FaceTarget}, S_SAR3_ATK2 },
+	/*S_SAR3_ATK2*/{ SPR_SAR3, 5, 5, {A_FaceTarget}, S_SAR3_ATK3 },
+	/*S_SAR3_ATK3*/{ SPR_SAR3, 6, 5, {A_SargAttack}, S_SAR3_RUN1 },
+	/*S_SAR3_PAIN1*/{ SPR_SAR3, 7, 2, {NULL}, S_SAR3_PAIN2 },
+	/*S_SAR3_PAIN2*/{ SPR_SAR3, 7, 2, {A_Pain}, S_SAR3_RUN1 },
+	/*S_SAR3_DIE1*/{ SPR_SAR3, 8, 8, {NULL}, S_SAR3_DIE2 },
+	/*S_SAR3_DIE2*/{ SPR_SAR3, 9, 8, {A_Scream}, S_SAR3_DIE3 },
+	/*S_SAR3_DIE3*/{ SPR_SAR3, 10, 4, {NULL}, S_SAR3_DIE4 },
+	/*S_SAR3_DIE4*/{ SPR_SAR3, 11, 4, {A_Fall}, S_SAR3_DIE5 },
+	/*S_SAR3_DIE5*/{ SPR_SAR3, 12, 4, {A_OnDeathTrigger}, S_SAR3_DIE6 },
+	/*S_SAR3_DIE6*/{ SPR_SAR3, 13, -1, {NULL}, S_NULL },
+	/*S_SAR3_RUN0*/{ SPR_SAR3, 0, 0, {A_FadeOut}, S_SAR3_RUN1 },
+	/*S_SAR3_ATK0*/{ SPR_SAR3, 4, 0, {A_FadeOut}, S_SAR3_ATK1 },
+	/*S_SAR3_PAIN0*/{ SPR_SAR3, 7, 0, {A_FadeOut}, S_SAR3_PAIN1 },
+	/*S_SAR3_DIE0*/{ SPR_SAR3, 8, 0, {A_FadeIn}, S_SAR3_DIE1 },
+	/*S_SAR3_RAISE0*/{ SPR_SAR3, 13, 0, {A_FadeOut}, S_SAR3_RAISE1 },
+	/*S_SAR3_RAISE1*/{ SPR_SAR3, 13, 5, {NULL}, S_SAR3_RAISE2 },
+	/*S_SAR3_RAISE2*/{ SPR_SAR3, 12, 5, {NULL}, S_SAR3_RAISE3 },
+	/*S_SAR3_RAISE3*/{ SPR_SAR3, 11, 5, {NULL}, S_SAR3_RAISE4 },
+	/*S_SAR3_RAISE4*/{ SPR_SAR3, 10, 5, {NULL}, S_SAR3_RAISE5 },
+	/*S_SAR3_RAISE5*/{ SPR_SAR3, 9, 5, {NULL}, S_SAR3_RAISE6 },
+	/*S_SAR3_RAISE6*/{ SPR_SAR3, 8, 5, {NULL}, S_SAR3_RUN1 },
+
+	// NIGHTMARE CACODEMON
+	/*S_HEA2_STND*/{ SPR_HEA2, 0, 15, {A_Look}, S_HEA2_STND2 },
+	/*S_HEA2_STND2*/{ SPR_HEA2, 1, 15, {A_Look}, S_HEA2_STND3 },
+	/*S_HEA2_STND3*/{ SPR_HEA2, 2, 15, {A_Look}, S_HEA2_STND4 },
+	/*S_HEA2_STND4*/{ SPR_HEA2, 3, 15, {A_Look}, S_HEA2_STND },
+	/*S_HEA2_RUN1*/{ SPR_HEA2, 0, 3, {A_Chase}, S_HEA2_RUN2 },
+	/*S_HEA2_RUN2*/{ SPR_HEA2, 0, 3, {A_Chase}, S_HEA2_RUN3 },
+	/*S_HEA2_RUN3*/{ SPR_HEA2, 1, 3, {A_Chase}, S_HEA2_RUN4 },
+	/*S_HEA2_RUN4*/{ SPR_HEA2, 1, 3, {A_Chase}, S_HEA2_RUN5 },
+	/*S_HEA2_RUN5*/{ SPR_HEA2, 2, 3, {A_Chase}, S_HEA2_RUN6 },
+	/*S_HEA2_RUN6*/{ SPR_HEA2, 2, 3, {A_Chase}, S_HEA2_RUN7 },
+	/*S_HEA2_RUN7*/{ SPR_HEA2, 3, 3, {A_Chase}, S_HEA2_RUN8 },
+	/*S_HEA2_RUN8*/{ SPR_HEA2, 3, 3, {A_Chase}, S_HEA2_RUN1 },
+	/*S_HEA2_ATK1*/{ SPR_HEA2, 4, 4, {A_FaceTarget}, S_HEA2_ATK2 },
+	/*S_HEA2_ATK2*/{ SPR_HEA2, 5, 4, {A_FaceTarget}, S_HEA2_ATK3 },
+	/*S_HEA2_ATK3*/{ SPR_HEA2, 6, 4, {A_HeadAttack}, S_HEA2_ATK4 },
+	/*S_HEA2_ATK4*/{ SPR_HEA2, 4, 3, {A_FaceTarget}, S_HEA2_ATK5 },
+	/*S_HEA2_ATK5*/{ SPR_HEA2, 5, 3, {A_FaceTarget}, S_HEA2_ATK6 },
+	/*S_HEA2_ATK6*/{ SPR_HEA2, 6, 4, {A_HeadAttack}, S_HEA2_ATK7 },
+	/*S_HEA2_ATK7*/{ SPR_HEA2, 4, 3, {A_FaceTarget}, S_HEA2_ATK8 },
+	/*S_HEA2_ATK8*/{ SPR_HEA2, 5, 3, {A_FaceTarget}, S_HEA2_ATK9 },
+	/*S_HEA2_ATK9*/{ SPR_HEA2, 6, 4, {A_HeadAttack}, S_HEA2_RUN1 },
+	/*S_HEA2_PAIN*/{ SPR_HEA2, 3, 3, {NULL}, S_HEA2_PAIN2 },
+	/*S_HEA2_PAIN2*/{ SPR_HEA2, 3, 3, {A_Pain}, S_HEA2_RUN1 },
+	/*S_HEA2_DIE1*/{ SPR_HEA2, 7, 8, {NULL}, S_HEA2_DIE2 },
+	/*S_HEA2_DIE2*/{ SPR_HEA2, 8, 8, {A_Scream}, S_HEA2_DIE3 },
+	/*S_HEA2_DIE3*/{ SPR_HEA2, 9, 8, {NULL}, S_HEA2_DIE4 },
+	/*S_HEA2_DIE4*/{ SPR_HEA2, 10, 8, {A_Fall}, S_HEA2_DIE5 },
+	/*S_HEA2_DIE5*/{ SPR_HEA2, 11, 8, {A_OnDeathTrigger}, S_HEA2_DIE6 },
+	/*S_HEA2_DIE6*/{ SPR_HEA2, 12, -1, {NULL}, S_NULL },
+	/*S_HEA2_RAISE1*/{ SPR_HEA2, 12, 8, {NULL}, S_HEA2_RAISE2 },
+	/*S_HEA2_RAISE2*/{ SPR_HEA2, 11, 8, {NULL}, S_HEA2_RAISE3 },
+	/*S_HEA2_RAISE3*/{ SPR_HEA2, 10, 8, {NULL}, S_HEA2_RAISE4 },
+	/*S_HEA2_RAISE4*/{ SPR_HEA2, 9, 8, {NULL}, S_HEA2_RAISE5 },
+	/*S_HEA2_RAISE5*/{ SPR_HEA2, 8, 8, {NULL}, S_HEA2_RAISE6 },
+	/*S_HEA2_RAISE6*/{ SPR_HEA2, 7, 8, {NULL}, S_HEA2_RUN1 },
+
+	// NIGHTMARE CACODEMON BALL
+	/*S_NCBALL1*/{ SPR_NCAC, 32768, 4, {NULL}, S_NCBALL2 },
+	/*S_NCBALL2*/{ SPR_NCAC, 32769, 4, {NULL}, S_NCBALL3 },
+	/*S_NCBALL3*/{ SPR_NCAC, 32770, 4, {NULL}, S_NCBALL1 },
+	/*S_NCBALL_DIE1*/{ SPR_NCAC, 32771, 6, {A_MissileSetAlpha}, S_NCBALL_DIE2 },
+	/*S_NCBALL_DIE2*/{ SPR_NCAC, 32772, 5, {NULL}, S_NCBALL_DIE3 },
+	/*S_NCBALL_DIE3*/{ SPR_NCAC, 32773, 2, {NULL}, S_NCBALL_DIE4 },
+	/*S_NCBALL_DIE4*/{ SPR_NCAC, 32774, 2, {NULL}, S_NCBALL_DIE5 },
+	/*S_NCBALL_DIE5*/{ SPR_NCAC, 32775, 2, {NULL}, S_NULL },
 	
 };
 
@@ -6554,5 +6636,91 @@ MF_SOLID,// flags
 		MF_SOLID | MF_SHOOTABLE | MF_GRAVITY | MF_COUNTKILL,        //flags
 		0,        //palette
 		255        // alpha
+	},
+
+	{
+		/*MT_NIGHTMAREDEMON*/
+		9002,        //doomednum
+		S_SAR3_STND,        //spawnstate
+		500,        //spawnhealth
+		S_SAR3_RUN0,        //seestate
+		sfx_sargsit,        //seesound
+		8,        //reactiontime
+		sfx_sargatk,        //attacksound
+		S_SAR3_PAIN0,        //painstate
+		180,        //painchance
+		sfx_dbpain2,        //painsound
+		S_SAR3_ATK0,        //meleestate
+		S_NULL,        //missilestate
+		S_SAR3_DIE0,        //deathstate
+		S_NULL,        //xdeathstate
+		sfx_sargdie,        //deathsound
+		20,        //speed
+		44 * FRACUNIT,        //radius
+		100 * FRACUNIT,        //height
+		400,        //mass
+		0,        //damage
+		sfx_dbact,        //activesound
+		MF_SOLID | MF_SHOOTABLE | MF_GRAVITY | MF_COUNTKILL,        //flags
+		0,        //palette
+		255,        //alpha
+		S_SAR3_RAISE0        //raisestate
+	},
+
+	{
+		/*MT_NIGHTMARECACODEMON*/
+		9003,        //doomednum
+		S_HEA2_STND,        //spawnstate
+		700,        //spawnhealth
+		S_HEA2_RUN1,        //seestate
+		sfx_headsit,        //seesound
+		8,        //reactiontime
+		sfx_None/*sfx_000*/,        //attacksound
+		S_HEA2_PAIN,        //painstate
+		96,        //painchance
+		sfx_dbpain2,        //painsound
+		S_NULL,        //meleestate
+		S_HEA2_ATK1,        //missilestate
+		S_HEA2_DIE1,        //deathstate
+		S_NULL,        //xdeathstate
+		sfx_headdie,        //deathsound
+		24,        //speed
+		55 * FRACUNIT,        //radius
+		90 * FRACUNIT,        //height
+		400,        //mass
+		0,        //damage
+		sfx_dbact,        //activesound
+		MF_SOLID | MF_SHOOTABLE | MF_FLOAT | MF_COUNTKILL | MF_SHADOW,        //flags
+		0,        //palette
+		180,        //alpha
+		S_HEA2_RAISE1        //raisestate
+	},
+
+	{
+		/*MT_PROJ_NIGHTMAREHEAD*/
+		-1,        //doomednum
+		S_NCBALL1,        //spawnstate
+		1000,        //spawnhealth
+		S_NULL,        //seestate
+		sfx_bdmissile,        //seesound
+		8,        //reactiontime
+		sfx_None/*sfx_000*/,        //attacksound
+		S_NULL,        //painstate
+		0,        //painchance
+		sfx_None/*sfx_000*/,        //painsound
+		S_NULL,        //meleestate
+		S_NULL,        //missilestate
+		S_NCBALL_DIE1,        //deathstate
+		S_NULL,        //xdeathstate
+		sfx_implod,        //deathsound
+		20 * FRACUNIT,        //speed
+		6 * FRACUNIT,        //radius
+		8 * FRACUNIT,        //height
+		100,        //mass
+		5,        //damage
+		sfx_None/*sfx_000*/,        //activesound
+		MF_NOBLOCKMAP | MF_DROPOFF | MF_MISSILE,        //flags
+		0,        //palette
+		100        //alpha
 	},
 };

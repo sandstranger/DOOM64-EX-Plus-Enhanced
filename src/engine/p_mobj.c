@@ -505,7 +505,7 @@ void P_NightmareRespawn(mobj_t* mobj) {
 	mo->angle = ANG45 * (mthing->angle / 45);
 
 	// 20120212 villsa - fix for respawning spectures
-	if (mo->type != MT_DEMON2) {
+	if (mo->type != MT_DEMON2 && mo->type != MT_NIGHTMAREDEMON) {
 		mo->alpha = 0;
 		P_CreateFadeThinker(mo, &junk);
 	}
@@ -1005,7 +1005,7 @@ int EV_SpawnMobjTemplate(line_t* line, boolean silent) {
 			mobj->alpha = 0;
 			P_CreateFadeThinkerNightmare(mobj, line);
 		}
-		else if (mobj->type != MT_DEMON2) {
+		else if (mobj->type != MT_DEMON2 && mobj->type != MT_NIGHTMAREDEMON) {
 			mobj->alpha = 0;
 			P_CreateFadeThinker(mobj, line);
 		}

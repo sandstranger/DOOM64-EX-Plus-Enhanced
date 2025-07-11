@@ -293,9 +293,15 @@ static mobj_t* P_MissileAttack(mobj_t* actor, int direction) {
 		aim = true;
 		break;
 	case MT_HELLHOUND:
-		offs = 9;
+		offs = 18;
 		deltaz = 36;
 		type = MT_PROJ_HEAD;
+		aim = true;
+		break;
+	case MT_NIGHTMARECACODEMON:
+		offs = 0;
+		deltaz = 46;
+		type = MT_PROJ_NIGHTMAREHEAD;
 		aim = true;
 		break;
 	}
@@ -1188,6 +1194,7 @@ void A_HeadAttack(mobj_t* actor) {
 			// reworked vanilla sounds
 			switch (actor->type) {
 			case MT_CACODEMON:
+			case MT_NIGHTMARECACODEMON:
 				sound = sfx_scratch1;
 				break;
 			}

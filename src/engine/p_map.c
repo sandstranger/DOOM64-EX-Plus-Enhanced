@@ -341,8 +341,18 @@ boolean PIT_CheckThing(mobj_t* thing) {
         else if (thing->type == MT_SKULL) {
             thing->info->deathsound = sfx_skulldie;
         }
-
-
+        else if (thing->type == MT_NIGHTMAREDEMON) {
+            thing->info->painsound = sfx_sargpain;
+            thing->info->activesound = sfx_sargact;
+        }
+        else if (thing->type == MT_NIGHTMARECACODEMON) {
+            thing->info->painsound = sfx_headpain;
+            thing->info->activesound = sfx_headact;
+        }
+        else if (thing->type == MT_ANNIHILATOR) {
+            thing->info->painsound = sfx_cybpain;
+            thing->info->activesound = sfx_cybact;
+        }
     }
     else if (m_reworkedvanillasounds.value == 0)
     {
@@ -398,8 +408,18 @@ boolean PIT_CheckThing(mobj_t* thing) {
         else if (thing->type == MT_SKULL) {
             thing->info->deathsound = sfx_implod;
         }
-        
-       
+        else if (thing->type == MT_NIGHTMAREDEMON) {
+            thing->info->painsound = sfx_dbpain2;
+            thing->info->activesound = sfx_dbact;
+        }
+        else if (thing->type == MT_NIGHTMARECACODEMON) {
+            thing->info->painsound = sfx_dbpain2;
+            thing->info->activesound = sfx_dbact;
+        }
+        else if (thing->type == MT_ANNIHILATOR) {
+            thing->info->painsound = sfx_dbpain2;
+            thing->info->activesound = sfx_dbact;
+        }
     }
 
     if (!(thing->flags & (MF_SOLID | MF_SPECIAL | MF_SHOOTABLE))) {
