@@ -50,7 +50,7 @@
 
 CVAR_EXTERNAL(v_accessibility);
 
-CVAR(m_reworkedweaponsanimations, 0);
+CVAR(m_reworkedweaponsanimations, 1);
 
 weaponinfo_t    weaponinfo[NUMWEAPONS] = {
 	{ am_noammo,    S_SAWUP, S_SAWDOWN, S_SAWA, S_SAW1, S_NULL },    // chainsaw

@@ -56,12 +56,12 @@ CVAR_EXTERNAL(v_accessibility);
 CVAR_EXTERNAL(r_rendersprites);
 
 CVAR(m_changethecolorofthenightmare, 1);
-CVAR(m_reworkedzombieman, 0);
-CVAR(m_reworkedzombieshotgun, 0);
-CVAR(m_reworkedimp, 0);
-CVAR(m_reworkedpinkyandspectre, 0);
-CVAR(m_reworkedBaronofHell, 0);
-CVAR(m_reworkedHellKnight, 0);
+CVAR(m_reworkedzombieman, 1);
+CVAR(m_reworkedzombieshotgun, 1);
+CVAR(m_reworkedimp, 1);
+CVAR(m_reworkedpinkyandspectre, 1);
+CVAR(m_reworkedBaronofHell, 1);
+CVAR(m_reworkedHellKnight, 1);
 
 static void AddSpriteDrawlist(drawlist_t* dl, visspritelist_t* vis, int texid);
 

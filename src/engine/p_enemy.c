@@ -40,7 +40,7 @@
 #include "info.h"
 #include "z_zone.h"
 
-CVAR(m_reworkedvanillasounds, 0);
+CVAR(m_reworkedvanillasounds, 1);
 CVAR(m_limitpain, 1);
 
 typedef enum {
@@ -1361,7 +1361,7 @@ void A_RectMissile(mobj_t* actor) {
 	if (actor->flags & MF_NIGHTMARE) {
 		mo->flags |= MF_NIGHTMARE;
 		mo->flags |= MF_SHADOW;
-		mo->alpha = 127;
+		mo->alpha = 128;
 	}
 	P_SetTarget(&mo->target, actor);
 	P_SetTarget(&mo->tracer, actor->target);
@@ -1382,7 +1382,7 @@ void A_RectMissile(mobj_t* actor) {
 	if (actor->flags & MF_NIGHTMARE) {
 		mo->flags |= MF_NIGHTMARE;
 		mo->flags |= MF_SHADOW;
-		mo->alpha = 127;
+		mo->alpha = 128;
 	}
 	P_SetTarget(&mo->target, actor);
 	P_SetTarget(&mo->tracer, actor->target);
@@ -1403,7 +1403,7 @@ void A_RectMissile(mobj_t* actor) {
 	if (actor->flags & MF_NIGHTMARE) {
 		mo->flags |= MF_NIGHTMARE;
 		mo->flags |= MF_SHADOW;
-		mo->alpha = 127;
+		mo->alpha = 128;
 	}
 	P_SetTarget(&mo->target, actor);
 	P_SetTarget(&mo->tracer, actor->target);
@@ -1424,7 +1424,7 @@ void A_RectMissile(mobj_t* actor) {
 	if (actor->flags & MF_NIGHTMARE) {
 		mo->flags |= MF_NIGHTMARE;
 		mo->flags |= MF_SHADOW;
-		mo->alpha = 127;
+		mo->alpha = 128;
 	}
 	P_SetTarget(&mo->target, actor);
 	P_SetTarget(&mo->tracer, actor->target);
@@ -1469,7 +1469,7 @@ void A_RectGroundFire(mobj_t* actor) {
 	if (actor->flags & MF_NIGHTMARE) {
 		mo->flags |= MF_NIGHTMARE;
 		mo->flags |= MF_SHADOW;
-		mo->alpha = 127;
+		mo->alpha = 128;
 	}
 	P_SetTarget(&mo->target, actor);
 	an = actor->angle + R_PointToAngle2(actor->x, actor->y, mo->target->x, mo->target->y);
@@ -1485,7 +1485,7 @@ void A_RectGroundFire(mobj_t* actor) {
 	if (actor->flags & MF_NIGHTMARE) {
 		mo->flags |= MF_NIGHTMARE;
 		mo->flags |= MF_SHADOW;
-		mo->alpha = 127;
+		mo->alpha = 128;
 	}
 	P_SetTarget(&mo->target, actor);
 	mo->angle = an - ANG45;
@@ -1499,7 +1499,7 @@ void A_RectGroundFire(mobj_t* actor) {
 	if (actor->flags & MF_NIGHTMARE) {
 		mo->flags |= MF_NIGHTMARE;
 		mo->flags |= MF_SHADOW;
-		mo->alpha = 127;
+		mo->alpha = 128;
 	}
 	P_SetTarget(&mo->target, actor);
 	mo->angle = an + ANG45;
@@ -1527,7 +1527,7 @@ void A_MoveGroundFire(mobj_t* fire) {
 	if (fire->flags & MF_NIGHTMARE) {
 		mo->flags |= MF_NIGHTMARE;
 		mo->flags |= MF_SHADOW;
-		mo->alpha = 127;
+		mo->alpha = 128;
 	}
 	P_FadeMobj(mo, -8, 0, 0);
 }
@@ -1746,7 +1746,7 @@ void A_PainShootSkull(mobj_t* actor, angle_t angle) {
 		newmobj->health *= 2;
 		newmobj->flags |= MF_NIGHTMARE;
 		newmobj->flags |= MF_SHADOW;
-		newmobj->alpha = 127;
+		newmobj->alpha = 128;
 	}
 
 	// Check for movements
@@ -2266,7 +2266,7 @@ void A_VileChase(mobj_t* actor)
 						corpsehit->health *= 2;
 						corpsehit->flags |= MF_NIGHTMARE;
 						corpsehit->flags |= MF_SHADOW;
-						corpsehit->alpha = 127;
+						corpsehit->alpha = 128;
 					}
 
 					return;

@@ -961,7 +961,7 @@ void P_CreateFadeThinkerNightmare(mobj_t* mobj, line_t* line) {
 		mobj->flags &= ~MF_SPECIAL;
 	}
 
-	P_FadeMobj(mobj, 8, 127, flags);
+	P_FadeMobj(mobj, 8, 128, flags);
 }
 
 //
@@ -1220,7 +1220,7 @@ mobj_t* P_SpawnMapThing(mapthing_t* mthing) {
 		mobj->health *= 2;
 		mobj->flags |= MF_NIGHTMARE;
 		mobj->flags |= MF_SHADOW; // styd: add the MF_SHADOW flag on the nightmare things, this is just a test to see what it does to the transparency or maybe it does nothing ?
-		mobj->alpha = 127; // styd: set transparency things to 127
+		mobj->alpha = 128; // styd: set transparency things to 128
 	}
 
 	if (mthing->options & MTF_SECRET)
@@ -1377,7 +1377,7 @@ void P_SpawnBloodNightmareColor(fixed_t x, fixed_t y, fixed_t z, int damage) {
 		th->tics -= (P_Random() & 1);
 		th->flags |= MF_NIGHTMARE;
 		th->flags |= MF_SHADOW;
-		th->alpha = 127;
+		th->alpha = 128;
 
 		if (th->tics < 1) {
 			th->tics = 1;
@@ -1598,7 +1598,7 @@ mobj_t* P_SpawnMissile(mobj_t* source, mobj_t* dest, mobjtype_t type,
         th->flags |= MF_NIGHTMARE;
 		th->flags |= MF_SHADOW;
         speed *= 2;
-		th->alpha = 127;
+		th->alpha = 128;
     }
 
 	th->angle = an;

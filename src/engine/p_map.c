@@ -39,6 +39,7 @@
 #include "con_console.h"
 
 CVAR_EXTERNAL(m_reworkedvanillasounds);
+CVAR_EXTERNAL(m_reworkedBaronofHell);
 
 fixed_t         tmbbox[4];
 mobj_t* tmthing;
@@ -1404,6 +1405,16 @@ boolean PTR_ShootTraverse(intercept_t* in) {
     }
     else if (in->d.thing->flags & MF_NIGHTMARE) {
         P_SpawnBloodNightmareColor(x, y, z, la_damage);
+    }
+    else if (th->type == MT_BRUISER1) {
+        if (m_reworkedBaronofHell.value == 1) {
+            // green blood
+            P_SpawnBloodGreen(x, y, z, la_damage);
+        }
+        else if (m_reworkedBaronofHell.value == 0) {
+            // vanilla red blood
+            P_SpawnBlood(x, y, z, la_damage);
+        }
     }
     else if (th->type == MT_BRUISER2) {
         P_SpawnBloodGreen(x, y, z, la_damage);
