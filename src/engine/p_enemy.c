@@ -1723,13 +1723,13 @@ void A_PainShootSkull(mobj_t* actor, angle_t angle) {
 		if (newmobj->type == MT_SKULL) {
 			count++;
 		}
-	}
 
 	// if there are all ready 17 skulls on the level, don't spit another one
 	// styd: Adds an option to enable or disable the limit on the number of lost souls spit by pain elemental
-	if (m_limitpain.value == 1) {
-	    if (count >= 17) {
-		    return;
+	    if (m_limitpain.value == 1) {
+		   if (count >= 17) {
+			   return;
+		   }
 	    }
 	}
 
