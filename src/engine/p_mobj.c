@@ -152,6 +152,7 @@ void P_ExplodeMissile(mobj_t* mo) {
 		S_StopSound(mo, 0);
 		if (m_reworkedvanillasounds.value == 1)
 		{
+			// reworked vanilla sounds
 			if (mo->type == MT_PROJ_FATSO) {
 				mo->info->deathsound = sfx_implod1;
 			}
@@ -173,8 +174,10 @@ void P_ExplodeMissile(mobj_t* mo) {
 			else if (mo->type == MT_PROJ_BRUISER2) {
 				mo->info->deathsound = sfx_implod1;
 			}
+			else if (mo->type == MT_PROJ_NIGHTMAREHEAD) {
+				mo->info->deathsound = sfx_implod1;
+			}
 
-			// reworked vanilla sounds
 			switch (mo->info->deathsound) {
 			case sfx_implod1:
 			case sfx_implod2:
@@ -210,6 +213,9 @@ void P_ExplodeMissile(mobj_t* mo) {
 				mo->info->deathsound = sfx_implod;
 			}
 			else if (mo->type == MT_PROJ_BRUISER2) {
+				mo->info->deathsound = sfx_implod;
+			}
+			else if (mo->type == MT_PROJ_NIGHTMAREHEAD) {
 				mo->info->deathsound = sfx_implod;
 			}
 
@@ -1531,6 +1537,9 @@ mobj_t* P_SpawnMissile(mobj_t* source, mobj_t* dest, mobjtype_t type,
 			else if (th->type == MT_PROJ_BRUISER2) {
 				th->info->seesound = sfx_bdmissile1;
 			}
+			else if (th->type == MT_PROJ_NIGHTMAREHEAD) {
+				th->info->seesound = sfx_bdmissile1;
+			}
 
 				switch (th->info->seesound) {
 				case sfx_bdmissile1:
@@ -1567,6 +1576,9 @@ mobj_t* P_SpawnMissile(mobj_t* source, mobj_t* dest, mobjtype_t type,
 				th->info->seesound = sfx_bdmissile;
 			}
 			else if (th->type == MT_PROJ_BRUISER2) {
+				th->info->seesound = sfx_bdmissile;
+			}
+			else if (th->type == MT_PROJ_NIGHTMAREHEAD) {
 				th->info->seesound = sfx_bdmissile;
 			}
 
