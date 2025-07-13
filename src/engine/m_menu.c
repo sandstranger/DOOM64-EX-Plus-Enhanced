@@ -118,7 +118,6 @@ static char     MenuBindBuff[256];
 static char     MenuBindMessage[256];
 static boolean MenuBindActive = false;
 static boolean showfullitemvalue[3] = { false, false, false };
-static int      levelwarp = 0;
 static int      thermowait = 0;
 static int      m_aspectRatio = 0;
 static int      m_ScreenSize = 1;
@@ -933,12 +932,6 @@ void M_DrawNetwork(void) {
 		"8 Minutes",
 		"9 Minutes",
 		"10 Minutes"
-	};
-
-	static const char* networkscalestrings[3] = {
-		"x 1",
-		"x 2",
-		"x 3"
 	};
 
 #define DRAWNETWORKITEM(a, b, c) \
@@ -2704,8 +2697,6 @@ void M_Features(int choice) {
 }
 
 void M_DrawFeaturesMenu(void) {
-	mapdef_t* map = P_GetMapInfo(levelwarp + 1);
-
 	/*Lock Monsters Mode*/
 	M_DrawSmbString(msgNames[(int)sv_lockmonsters.value], &featuresDef, features_lockmonsters);
 
@@ -3496,7 +3487,6 @@ void M_ReadSaveStrings(void) {
 // M_SetCvar
 //
 
-static int prevtic = 0; // hack - check for overlapping sounds
 static void M_SetCvar(cvar_t* cvar, float value) {
 	if (cvar->value == value) {
 		return;
