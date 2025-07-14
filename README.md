@@ -2,6 +2,32 @@
 
 Doom 64 EX+ Enhanced is a fork of the Doom 64 EX+ engine, Its main goal is to show what the Doom 64 engine would have looked like if it hadn't been limited by the N64 console, and also aims to improve the vanilla experience, by adding new features to the engine, adding new features for modding, adding missing monsters from Doom 2, adding monsters cut from Doom 64 like the Hellhound and the red cyberdemon with dual rocket launchers that were cut during the game's development, adding more new custom monsters to the engine, adding new animations, reworked vanilla weapons for an improved vanilla experience, and all this while keeping the vanilla gameplay unchanged.
 
+# Key Features and Differences from Doom 64 EX+
+
+* **Missing Monsters from Doom 2:** added Zombie Chaingunner, Revenant, Arch Vile, Spider Mastermind they are already present in the EX+ engine but the sprites of Zombie Chaingunner and Spider Mastermind have been updated by DrPyspy's sprites.
+* **missing weapons animations and new weapons animations:** Added new vanilla weapons animations reworked for the Punch, Shotgun, Super Shotgun while retaining their attack speed from the original game.
+* **the cut monsters of Doom 64:** Added the Hellhound and Annihilator, a red cyberdemon with two rocket launchers in each hand, which was cut during game development.
+* **fixes vanilla bugs:** fixes some vanilla bugs in the original Doom 64 engine that were never fixed by Midway Games in 1997.
+* **Ultra Nightmare:** add a new difficulty called Ultra Nightmare which consists of replacing all the monsters on the map with monsters in nightmare mode.
+* **rework the transparency of the nightmare:** the transparency of the nightmare was reworked in the engine because it was a big problem of the EX engine, the transparency of the nightmare was almost invisible and we had a lot of trouble distinguishing them in the game now it was corrected, and moreover there is a small bonus there is a new option which allows you to change the color of the transparency of the nightmare to your choices.
+* **updated monsters sprites:** The sprites of some vanilla monsters were reworked and updated, like Zombie Man, Zombie Shotgun, IMP, IMP Nightmare, Pinky, Spectre, Hell Knight, Baron Of Hell they now use their own sprites instead of using the same sprites with a color palette to differentiate them.
+* **Sound Caulking:** Added new reworked vanilla sounds on some vanilla monsters, monsters now use their own unique sounds instead of using some of the same sounds on some monsters.
+* **adds new custom monsters:** Adding new custom monsters to the engine and that mappers can use them on their maps.
+* **Enhanced Modding And Mapping:** extensive modding and mapping.
+* **new options:** Added new options that allow you to enable or disable whether you want to return to the vanilla experience of the original game or to the enhanced vanilla experience of the engine.
+
+# Compatibility Between Engines
+
+Doom 64 EX+ Enhanced should be compatible with both the Doom 64 EX+ engine and Doom 64 Remastered engine of Nightdive Studios.
+
+# Things Planned For The Engine In The Future
+
+* **Priority:**
+* update the engine source code with all the latest EX+ engine patches.
+* rework the doom engine random system that was done by Lee Killough on their BOOM and MBF engines.
+* **Optional:**
+* Should my Complex DOOM 64 game mode return to my engine?
+
 # Doom 64 EX+
 
 Doom 64 EX+ is a community-driven continuation of Samuel "Kaiser" Villarreal's original Doom 64 EX project. The primary goal of Doom 64 EX+ is to faithfully recreate the classic Nintendo 64 experience while incorporating modern features, extensive modding capabilities, and performance enhancements.
@@ -137,3 +163,4 @@ Enjoy the game! For support or to join the community, check out the official Dis
 * **Onox792:** for having creating the sprites of Annihilator, who is a red cyberdemon and who has two rocket launchers in each hand, and who is a monster that was cut from the game during development.
 * **Jaxxoon R:** for having done the Sound Caulking.
 * **DrDoctor:**  for having done the reworked version sprites of the Hell Knight and the Hell Baron, and for the sprites of the Imp with a mouth.
+* **Hieronymus:** for having creating this beautiful logo DOOM 64 EX+ Enhanced in 3D !
