@@ -1,6 +1,6 @@
 # Doom 64 EX+ Enhanced
 
-Doom 64 EX+ Enhanced is a fork of the Doom 64 EX+ engine, Its main goal is to show what the Doom 64 engine would have looked like if it hadn't been limited by the N64 console, and also aims to improve the vanilla experience, by adding new features to the engine, adding new features for modding, adding missing monsters from Doom 2, adding monsters cut from Doom 64 like the Hellhound and the red cyberdemon with dual rocket launchers that were cut during the game's development, adding more new custom monsters to the engine, adding new animations, reworked vanilla weapons for an improved vanilla experience, and all this while keeping the vanilla gameplay unchanged.
+Doom 64 EX+ Enhanced is a fork of the Doom 64 EX+ engine, Its main goal is to show what the Doom 64 engine would have looked like if it hadn't been limited by the N64 console, it also aims to improve on the vanilla experience of the original game while retaining the vanilla gameplay of the original game, and it aims to extend modding and mapping.
 
 # Key Features and Differences from Doom 64 EX+
 
