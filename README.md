@@ -126,3 +126,14 @@ Once compiled and your asset files are in the correct location, simply run the e
     ```
 
 Enjoy the game! For support or to join the community, check out the official Discord server.
+
+# Credits
+
+* **Midway Games:** for the creation of the game DOOM64.
+* **Kaiser:** for having done the EX engine.
+* **Gibbon:** for having done the EX+ engine.
+* **DrPyspy:** for having creating the sprites for the Zombie Chaingunner, the Revenant, the Arch Vile, the Spider Mastermind and the animations for the missing weapons the Punch, the Shotgun and the Super Shotgun in DOOM64 style.
+* **Team GEC:** for having creating the Hellhound sprites which is a monster that was cut from the game during development.
+* **Onox792:** for having creating the sprites of Annihilator, who is a red cyberdemon and who has two rocket launchers in each hand, and who is a monster that was cut from the game during development.
+* **Jaxxoon R:** for having done the Sound Caulking.
+* **DrDoctor:**  for having done the reworked version sprites of the Hell Knight and the Hell Baron, and for the sprites of the Imp with a mouth.
