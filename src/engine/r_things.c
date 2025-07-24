@@ -247,13 +247,17 @@ void R_AddSprites(subsector_t* sub) {
 		if (m_reworkedzombieman.value == 1) {
 			// reworked vanilla monsters sprites
 			if (thing->type == MT_POSSESSED1) {
-				thing->sprite = SPR_POS1;
+				if (thing->sprite == SPR_POSS) {
+					thing->sprite = SPR_POS1;
+				}
 			}
 		}
 		else if (m_reworkedzombieman.value == 0) {
 			// vanilla monsters sprites
 			if (thing->type == MT_POSSESSED1) {
-				thing->sprite = SPR_POSS;
+				if (thing->sprite == SPR_POS1) {
+					thing->sprite = SPR_POSS;
+				}
 			}
 		}
 
@@ -261,14 +265,18 @@ void R_AddSprites(subsector_t* sub) {
 			// reworked vanilla monsters sprites
 			if (thing->type == MT_POSSESSED2) {
 				thing->info->palette = 0;
-				thing->sprite = SPR_POS2;
+				if (thing->sprite == SPR_POSS) {
+					thing->sprite = SPR_POS2;
+				}
 			}
 		}
 		else if (m_reworkedzombieshotgun.value == 0) {
 			// vanilla monsters sprites
 			if (thing->type == MT_POSSESSED2) {
 				thing->info->palette = 1;
-				thing->sprite = SPR_POSS;
+				if (thing->sprite == SPR_POS2) {
+					thing->sprite = SPR_POSS;
+				}
 			}
 		}
 
@@ -277,51 +285,73 @@ void R_AddSprites(subsector_t* sub) {
 			// imp with a mouth
 			if (thing->type == MT_IMP2) {
 				thing->info->palette = 1;
-				thing->sprite = SPR_TROM;
+				if (thing->sprite == SPR_TRO2 || thing->sprite == SPR_TROO) {
+					thing->sprite = SPR_TROM;
+				}
 			}
 			else if (thing->type == MT_IMP1) {
-				thing->sprite = SPR_TROM;
+				if (thing->sprite == SPR_TRO1 || thing->sprite == SPR_TROO) {
+					thing->sprite = SPR_TROM;
+				}
 			}
 		}
 		else if (m_reworkedimp.value == 1) {
 			// reworked vanilla monsters sprites
 			if (thing->type == MT_IMP2) {
 				thing->info->palette = 0;
-				thing->sprite = SPR_TRO2;
+				if (thing->sprite == SPR_TROO || thing->sprite == SPR_TROM) {
+					thing->sprite = SPR_TRO2;
+				}
 			}
 			else if (thing->type == MT_IMP1) {
-				thing->sprite = SPR_TRO1;
+				if (thing->sprite == SPR_TROO || thing->sprite == SPR_TROM) {
+					thing->sprite = SPR_TRO1;
+				}
 			}
 		}
 		else if (m_reworkedimp.value == 0) {
 			// vanilla monsters sprites
 			if (thing->type == MT_IMP2) {
 				thing->info->palette = 1;
-				thing->sprite = SPR_TROO;
+				if (thing->sprite == SPR_TRO2 || thing->sprite == SPR_TROM) {
+					thing->sprite = SPR_TROO;
+				}
 			}
 			else if (thing->type == MT_IMP1) {
-				thing->sprite = SPR_TROO;
+				if (thing->sprite == SPR_TRO1 || thing->sprite == SPR_TROM) {
+					thing->sprite = SPR_TROO;
+				}
 			}
 		}
 
 		if (m_reworkedpinkyandspectre.value == 1) {
+			
 			// reworked vanilla monsters sprites
 			if (thing->type == MT_DEMON2) {
 				thing->info->palette = 0;
-				thing->sprite = SPR_SAR2;
+				if (thing->sprite == SPR_SARG) {
+					thing->sprite = SPR_SAR2;
+				}
 			}
 			else if (thing->type == MT_DEMON1) {
-				thing->sprite = SPR_SAR1;
+				
+				if (thing->sprite == SPR_SARG) {
+					thing->sprite = SPR_SAR1;
+				}
 			}
 		}
 		else if (m_reworkedpinkyandspectre.value == 0) {
 			// vanilla monsters sprites
 			if (thing->type == MT_DEMON2) {
 				thing->info->palette = 1;
-				thing->sprite = SPR_SARG;
+				if (thing->sprite == SPR_SAR2) {
+					thing->sprite = SPR_SARG;
+				}
 			}
 			else if (thing->type == MT_DEMON1) {
-				thing->sprite = SPR_SARG;
+				if (thing->sprite == SPR_SAR1) {
+					thing->sprite = SPR_SARG;
+				}
 			}
 		}
 
@@ -329,27 +359,35 @@ void R_AddSprites(subsector_t* sub) {
 			// reworked vanilla monsters sprites
 			if (thing->type == MT_BRUISER1) {
 				thing->info->palette = 0;
-				thing->sprite = SPR_BOS1;
+				if (thing->sprite == SPR_BOSS) {
+					thing->sprite = SPR_BOS1;
+				}
 			}
 		}
 		else if (m_reworkedBaronofHell.value == 0) {
 			// vanilla monsters sprites
 			if (thing->type == MT_BRUISER1) {
 				thing->info->palette = 1;
-				thing->sprite = SPR_BOSS;
+				if (thing->sprite == SPR_BOS1) {
+					thing->sprite = SPR_BOSS;
+				}
 			}
 		}
 
 		if (m_reworkedHellKnight.value == 1) {
 			// reworked vanilla monsters sprites
 			if (thing->type == MT_BRUISER2) {
-				thing->sprite = SPR_BOS2;
+				if (thing->sprite == SPR_BOSS) {
+					thing->sprite = SPR_BOS2;
+				}
 			}
 		}
 		else if (m_reworkedHellKnight.value == 0) {
 			// vanilla monsters sprites
 			if (thing->type == MT_BRUISER2) {
-				thing->sprite = SPR_BOSS;
+				if (thing->sprite == SPR_BOS2) {
+					thing->sprite = SPR_BOSS;
+				}
 			}
 		}
 		
