@@ -231,9 +231,11 @@
 #define CC_PAIN     "Pain Elemental"
 #define CC_REVEN	"Revenant"
 #define CC_MANCU    "Mancubus"
+#define CC_HELLHOUND    "Hellhound"
 #define CC_ARCH		"Arch-Vile"
 #define CC_SPIDER	"The Spider Mastermind"
 #define CC_CYBER    "The Cyberdemon"
+#define CC_ANNIHILATOR    "The Annihilator"
 #define CC_MOTH     "The Mother Demon"
 #define CC_HERO     "Our Hero"
 

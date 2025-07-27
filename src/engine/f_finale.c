@@ -88,9 +88,11 @@ castinfo_t extendedorder[] = {
 	{   CC_PAIN,    MT_PAIN         },
 	{   CC_REVEN,   MT_UNDEAD       },
 	{   CC_MANCU,   MT_MANCUBUS     },
+	{   CC_HELLHOUND,   MT_HELLHOUND     },
 	{   CC_ARCH,    MT_VILE         },
 	{   CC_SPIDER,  MT_SPIDER       },
 	{   CC_CYBER,   MT_CYBORG       },
+	{   CC_ANNIHILATOR,   MT_ANNIHILATOR       },
 	{   CC_MOTH,    MT_RESURRECTOR  },
 	{   CC_HERO,    MT_PLAYER       },
 	{   NULL,       0               }
@@ -234,6 +236,7 @@ int F_Ticker(void) {
 			case S_HEAD_ATK3:                           // cacodemon
 			case S_BOSS1_ATK3:                          // hell knight
 			case S_BOSS2_ATK3:                          // baron
+			case S_GECH_ATK3:                           // hellhound
 				sound = sfx_bdmissile;
 				break;
 			case S_TROO_MELEE3:                         // imp scratch
@@ -261,6 +264,9 @@ int F_Ticker(void) {
 			case S_CYBR_ATK2:                           // cyberdemon
 			case S_CYBR_ATK4:
 			case S_CYBR_ATK6:
+			case S_A64A_ATK2:                           // annihilator
+			case S_A64A_ATK4:
+			case S_A64A_ATK6:
 				sound = sfx_missile;
 				break;
 			case S_SKEL_FIST2:
@@ -275,6 +281,9 @@ int F_Ticker(void) {
 				break;
 			case S_VILE_ATK2:
 				sound = sfx_vilatk;
+				break;
+			case S_GECH_MELEE3:                         // hellhound melee
+				sound = sfx_hellhoundatk;
 				break;
 			default:
 				sound = 0;
