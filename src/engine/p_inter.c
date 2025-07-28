@@ -52,6 +52,7 @@
 CVAR_EXTERNAL(p_damageindicator);
 CVAR(m_obituaries, 0);
 CVAR_EXTERNAL(m_brutal);
+CVAR_EXTERNAL(m_secretsound);
 
 // a weapon is found with two clip loads,
 // a big item has five clip loads
@@ -771,6 +772,10 @@ void P_TouchSpecialThing(mobj_t* special, mobj_t* toucher) {
 		player->secretcount++;
 		player->message = FOUNDSECRETITEM;
 		player->messagepic = 40;
+		// styd: adds a new option to play a sound when you find a secret
+		if (m_secretsound.value == 1) {
+			S_StartSound(NULL, sfx_secret);
+		}
 	}
 
 	P_RemoveMobj(special);

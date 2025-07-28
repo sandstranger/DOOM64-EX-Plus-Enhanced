@@ -990,6 +990,7 @@ CVAR_EXTERNAL(compat_mobjpass);
 CVAR_EXTERNAL(r_wipe);
 CVAR_EXTERNAL(hud_disablesecretmessages);
 CVAR_EXTERNAL(m_nospawnsound);
+CVAR_EXTERNAL(m_secretsound);
 CVAR_EXTERNAL(m_obituaries);
 CVAR_EXTERNAL(m_brutal);
 CVAR_EXTERNAL(m_extendedcast);
@@ -1002,7 +1003,6 @@ CVAR_EXTERNAL(m_reworkedimp);
 CVAR_EXTERNAL(m_reworkedpinkyandspectre);
 CVAR_EXTERNAL(m_reworkedBaronofHell);
 CVAR_EXTERNAL(m_reworkedHellKnight);
-
 CVAR_EXTERNAL(m_limitpain);
 
 enum {
@@ -1026,6 +1026,7 @@ enum {
 	misc_amoverlay,
 	misc_header5,
 	misc_nospawnsound,
+	misc_secretsound,
 	misc_obituaries,
 	misc_brutal,
 	misc_extendedcast,
@@ -1068,6 +1069,7 @@ menuitem_t MiscMenu[] = {
 	{2,"Overlay:",M_MiscChoice },
 	{-1,"Extras",0 },
 	{2,"Spawn Sound:",M_MiscChoice },
+	{2,"Secret Sound:",M_MiscChoice },
 	{2,"Obituaries:",M_MiscChoice },
 	{2,"Brutal Mode:",M_MiscChoice },
 	{2,"New Cast Roll:",M_MiscChoice },
@@ -1109,6 +1111,7 @@ char* MiscHints[misc_end] = {
 	"render the automap into the player hud",
 	NULL,
 	"spawn sound toggle",
+	"enable a sound when you find a secret",
 	"death messages",
 	"get knee deep in the gibs",
 	"enable new monsters in the cast of characters sequence",
@@ -1144,6 +1147,7 @@ menudefault_t MiscDefault[] = {
 	{ &am_drawobjects, 0 },
 	{ &am_overlay, 0 },
 	{ &m_nospawnsound, 0 },
+	{ &m_secretsound, 0 },
 	{ &m_obituaries, 0 },
 	{ &m_brutal, 0 },
 	{ &m_extendedcast, 0 },
@@ -1277,6 +1281,10 @@ void M_MiscChoice(int choice) {
 		M_SetOptionValue(choice, 0, 1, 1, &m_nospawnsound);
 		break;
 
+	case misc_secretsound:
+		M_SetOptionValue(choice, 0, 1, 1, &m_secretsound);
+		break;
+
 	case misc_obituaries:
 		M_SetOptionValue(choice, 0, 1, 1, &m_obituaries);
 		break;
@@ -1377,6 +1385,7 @@ void M_DrawMisc(void) {
 	DRAWMISCITEM(misc_amobjects, am_drawobjects.value, objectdrawtype);
 	DRAWMISCITEM(misc_amoverlay, am_overlay.value, msgNames);
 	DRAWMISCITEM(misc_nospawnsound, m_nospawnsound.value, disablesecretmessages);
+	DRAWMISCITEM(misc_secretsound, m_secretsound.value, autoruntype);
 	DRAWMISCITEM(misc_obituaries, m_obituaries.value, autoruntype);
 	DRAWMISCITEM(misc_brutal, m_brutal.value, autoruntype);
 	DRAWMISCITEM(misc_extendedcast, m_extendedcast.value, autoruntype);

@@ -51,6 +51,8 @@
 
 #include <SDL3/SDL.h>
 
+CVAR(m_secretsound, 0);
+
 short globalint = 0;
 static byte tryopentype[3];
 
@@ -1813,6 +1815,10 @@ void P_PlayerInSpecialSector(player_t* player) {
 		player->message = FOUNDSECRET;
 		player->messagepic = 40;
 		sector->flags &= ~MS_SECRET;
+		// styd: adds a new option to play a sound when you find a secret
+		if (m_secretsound.value == 1) {
+		S_StartSound(NULL, sfx_secret);
+		}
 	}
 
 	if (sector->flags & MS_DAMAGEX5) {

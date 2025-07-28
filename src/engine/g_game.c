@@ -160,6 +160,7 @@ CVAR_EXTERNAL(p_sdoubleclick);
 CVAR_EXTERNAL(v_msensitivityx);
 CVAR_EXTERNAL(v_msensitivityy);
 CVAR_EXTERNAL(m_nospawnsound);
+CVAR_EXTERNAL(m_secretsound);
 CVAR_EXTERNAL(m_obituaries);
 CVAR_EXTERNAL(m_brutal);
 CVAR_EXTERNAL(st_hud_color);
@@ -192,6 +193,7 @@ void G_RegisterCvars(void) {
 	CON_CvarRegister(&sv_friendlyfire);
 	CON_CvarRegister(&sv_keepitems);
 	CON_CvarRegister(&m_nospawnsound);
+	CON_CvarRegister(&m_secretsound);
 	CON_CvarRegister(&m_brutal);
 	CON_CvarRegister(&st_hud_color);
 	CON_CvarRegister(&m_obituaries);
