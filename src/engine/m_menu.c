@@ -1495,7 +1495,7 @@ menu_t MouseDef = {
 	MouseDefault,
 	-1,
 	0,
-	0.925f,
+	0.8f,
 	NULL,
 	MouseBars
 };
@@ -1512,7 +1512,7 @@ void M_DrawMouse(void) {
 		msgNames[(int)v_mlookinvert.value]);
 	Draw_BigText(MouseDef.x + 144, MouseDef.y + LINEHEIGHT * mouse_yaxismove, MENUCOLORRED,
 		msgNames[(int)v_yaxismove.value]);
-	Draw_BigText(144, MouseDef.x + LINEHEIGHT * mouse_xaxismove, MENUCOLORRED,
+	Draw_BigText(MouseDef.x + 144, MouseDef.y + LINEHEIGHT * mouse_xaxismove, MENUCOLORRED,
 		msgNames[(int)v_xaxismove.value]);
 
 }
@@ -1719,7 +1719,7 @@ menu_t DisplayDef = {
 	DisplayDefault,
 	-1,
 	0,
-	0.715f,
+	0.6f,
 	DisplayHints,
 	DisplayBars
 };
