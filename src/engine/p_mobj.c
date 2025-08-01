@@ -1110,11 +1110,8 @@ mobj_t* P_SpawnMapThing(mapthing_t* mthing) {
 	if (gameskill == sk_baby) {
 		bit = 1;
 	}
-	else if (gameskill == sk_nightmare) {
+	else if (gameskill == sk_nightmare || gameskill == sk_ultranightmare) {
 		bit = 4;
-	}
-	else if (gameskill == sk_ultranightmare) {
-		bit = 5;
 	}
 	else {
 		bit = 1 << (gameskill - 1);
