@@ -1124,6 +1124,8 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_LASERG2*/           { SPR_LASR, 0, 3, {A_ReFire}, S_LASERG },
 	/*S_LASERGLIGHT*/       { SPR_LASR, 32769, 3, {NULL}, S_NULL },
 
+	{ SPR_S015,0,-1,NULL,S_NULL },// S_ALPHALAMP1
+	{ SPR_S016,0,-1,NULL,S_NULL },// S_ALPHALAMP2
 	{ SPR_S003,0,4,NULL,S_BWTORCH2 },// S_BWTORCH1
 	{ SPR_S003,1,4,NULL,S_BWTORCH3 },// S_BWTORCH2
 	{ SPR_S003,2,4,NULL,S_BWTORCH4 },// S_BWTORCH3
@@ -5251,9 +5253,10 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 		0,        //palette
 		255        //alpha
 	},
+
 {// MT_MISC2
 10000,// doomednum
-S_LAMP1,// spawnstate
+S_ALPHALAMP1,// spawnstate
 1000,// spawnhealth
 S_NULL,// seestate
 sfx_None,// seesound
@@ -5280,7 +5283,7 @@ MF_SPAWNCEILING | MF_NOBLOCKMAP,// flags
 
 {// MT_MISC3
 10001,// doomednum
-S_LAMP2,// spawnstate
+S_ALPHALAMP2,// spawnstate
 1000,// spawnhealth
 S_NULL,// seestate
 sfx_None,// seesound
