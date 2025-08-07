@@ -176,6 +176,9 @@ typedef struct mobj_s {
     fixed_t             floorz;
     fixed_t             ceilingz;
 
+    // killough 11/98: the lowest floor over all contacted Sectors.
+    fixed_t             dropoffz;
+
     // For movement checking.
     fixed_t             radius;
     fixed_t             height;

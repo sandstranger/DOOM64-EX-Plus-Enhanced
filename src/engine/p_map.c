@@ -747,6 +747,7 @@ boolean P_TeleportMove(mobj_t* thing, fixed_t x, fixed_t y) {
 
     thing->floorz = tmfloorz;
     thing->ceilingz = tmceilingz;
+    thing->dropoffz = tmdropoffz;        // killough 11/98
     thing->x = x;
     thing->y = y;
 
