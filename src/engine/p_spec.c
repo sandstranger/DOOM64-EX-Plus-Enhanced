@@ -1196,8 +1196,7 @@ int P_DoSpecialLine(mobj_t* thing, line_t* line, int side) {
 
 	case 39:
 		// TELEPORT!
-		EV_Teleport(line, thing);
-		ok = false;
+		ok = EV_Teleport(line, side, thing);
 		break;
 
 	case 43:
@@ -1340,8 +1339,7 @@ int P_DoSpecialLine(mobj_t* thing, line_t* line, int side) {
 		// Teleport (monsters ONLY!)
 	case 125:
 		if (!thing->player) {
-			EV_Teleport(line, thing);
-			ok = false;
+			ok = EV_Teleport(line, side, thing);
 		}
 		break;
 

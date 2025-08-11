@@ -410,7 +410,7 @@ int EV_SplitSector(line_t* line, boolean sync);
 //
 // P_TELEPT
 //
-int EV_Teleport(line_t* line, mobj_t* thing);
+int EV_Teleport(line_t* line, int side, mobj_t* thing);
 int EV_SilentTeleport(line_t* line, mobj_t* thing);
 
 // Misc stuff
