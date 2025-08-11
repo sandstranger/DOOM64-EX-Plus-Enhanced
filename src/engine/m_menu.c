@@ -1878,6 +1878,7 @@ void M_ChangeFadeIn(int choice);
 void M_DrawVideo(void);
 void M_ChangeVsync(int choice);
 
+CVAR_EXTERNAL(v_checkratio);
 CVAR_EXTERNAL(v_width);
 CVAR_EXTERNAL(v_height);
 CVAR_EXTERNAL(v_windowed);
@@ -1959,6 +1960,7 @@ menudefault_t VideoDefault[] = {
 	{ &r_anisotropic, 1 },
 	{ &v_windowed, 0 },
 	{ &i_interpolateframes, 1 },
+	{ &v_checkratio, 0 },
 	{ &v_vsync, 1 },
 	{ &v_accessibility, 0 },
 	{ &v_fadein, 1 },
@@ -2082,23 +2084,22 @@ static char gammamsg[21][28] = {
 };
 
 void M_Video(int choice) {
-	float checkratio;
 	int i;
 
 	M_SetupNextMenu(&VideoDef);
 
-	checkratio = v_width.value / v_height.value;
+	v_checkratio.value = v_width.value / v_height.value;
 
-	if (dfcmp(checkratio, ratioVal[2])) {
+	if (dfcmp(v_checkratio.value, ratioVal[2])) {
 		m_aspectRatio = 2;
 	}
-	else if (dfcmp(checkratio, ratioVal[1])) {
+	else if (dfcmp(v_checkratio.value, ratioVal[1])) {
 		m_aspectRatio = 1;
 	}
-	else if (dfcmp(checkratio, ratioVal[3])) {
+	else if (dfcmp(v_checkratio.value, ratioVal[3])) {
 		m_aspectRatio = 3;
 	}
-	else if (dfcmp(checkratio, ratioVal[4])) {
+	else if (dfcmp(v_checkratio.value, ratioVal[4])) {
 		m_aspectRatio = 4;
 	}
 	else {
@@ -2314,6 +2315,7 @@ static void M_SetResolution(void) {
 
 	M_SetCvar(&v_width, (float)width);
 	M_SetCvar(&v_height, (float)height);
+	M_SetCvar(&v_checkratio, (float)m_aspectRatio);
 }
 
 void M_ChangeRatio(int choice) {
