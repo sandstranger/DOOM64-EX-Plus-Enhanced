@@ -41,6 +41,8 @@
 CVAR_EXTERNAL(m_reworkedvanillasounds);
 CVAR_EXTERNAL(m_reworkedBaronofHell);
 
+CVAR(m_fixspectrehitbox, 1);
+
 fixed_t         tmbbox[4];
 mobj_t* tmthing;
 int             tmflags;
@@ -421,6 +423,24 @@ boolean PIT_CheckThing(mobj_t* thing) {
         else if (thing->type == MT_ANNIHILATOR) {
             thing->info->painsound = sfx_dbpain2;
             thing->info->activesound = sfx_dbact;
+        }
+    }
+
+    if (m_fixspectrehitbox.value == 1)
+    {
+        // Styd: fix the spectre hitbox to match the same hitbox as the pinky
+        if (thing->type == MT_DEMON2) {
+            thing->radius = 44 * FRACUNIT;
+            thing->height = 100 * FRACUNIT;
+
+        }
+    }
+    else if (m_fixspectrehitbox.value == 0)
+    {
+        // vanilla spectre hitbox
+        if (thing->type == MT_DEMON2) {
+            thing->radius = 50 * FRACUNIT;
+            thing->height = 100 * FRACUNIT;
         }
     }
 

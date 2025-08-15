@@ -175,6 +175,7 @@ CVAR_EXTERNAL(m_reworkedpinkyandspectre);
 CVAR_EXTERNAL(m_reworkedBaronofHell);
 CVAR_EXTERNAL(m_reworkedHellKnight);
 CVAR_EXTERNAL(m_limitpain);
+CVAR_EXTERNAL(m_fixspectrehitbox);
 
 //
 // G_RegisterCvars
@@ -209,6 +210,7 @@ void G_RegisterCvars(void) {
 	CON_CvarRegister(&m_reworkedBaronofHell);
 	CON_CvarRegister(&m_reworkedHellKnight);
 	CON_CvarRegister(&m_limitpain);
+	CON_CvarRegister(&m_fixspectrehitbox);
 }
 
 //

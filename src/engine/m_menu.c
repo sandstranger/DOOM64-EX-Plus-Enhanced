@@ -1004,6 +1004,7 @@ CVAR_EXTERNAL(m_reworkedpinkyandspectre);
 CVAR_EXTERNAL(m_reworkedBaronofHell);
 CVAR_EXTERNAL(m_reworkedHellKnight);
 CVAR_EXTERNAL(m_limitpain);
+CVAR_EXTERNAL(m_fixspectrehitbox);
 
 enum {
 	misc_header1,
@@ -1043,6 +1044,7 @@ enum {
 	misc_limitpain,
 	misc_comp_pass,
 	misc_disablesecretmessages,
+	misc_fixspectrehitbox,
 	misc_default,
 	misc_return,
 	misc_end
@@ -1086,6 +1088,7 @@ menuitem_t MiscMenu[] = {
 	{2,"Limit Lost Souls:",M_MiscChoice,'l'},
 	{2,"Tall Actors:",M_MiscChoice,'i'},
 	{2,"Secret Messages:",M_MiscChoice,'x'},
+	{2,"Spectre Hitbox:",M_MiscChoice },
 	{-2,"Default",M_DoDefaults,'d'},
 	{1,"/r Return",M_Return, 0x20}
 };
@@ -1128,6 +1131,7 @@ char* MiscHints[misc_end] = {
 	"limit max amount of lost souls spit by pain elemental to 17",
 	"emulate infinite height bug for all solid actors",
 	"disable the secret message text",
+	"Fix the specter hitbox having a bigger hitbox than the pinky",
 	NULL,
 	//NULL
 };
@@ -1162,6 +1166,7 @@ menudefault_t MiscDefault[] = {
 	{ &m_reworkedHellKnight, 0 },
 	{ &m_limitpain, 1 },
 	{ &compat_mobjpass, 1 },
+	{ &m_fixspectrehitbox, 0 },
 	{ NULL, -1 }
 };
 
@@ -1340,6 +1345,10 @@ void M_MiscChoice(int choice) {
 	case misc_comp_pass:
 		M_SetOptionValue(choice, 0, 1, 1, &compat_mobjpass);
 		break;
+
+	case misc_fixspectrehitbox:
+		M_SetOptionValue(choice, 0, 1, 1, &m_fixspectrehitbox);
+		break;
 	}
 }
 
@@ -1401,6 +1410,7 @@ void M_DrawMisc(void) {
 	DRAWMISCITEM(misc_limitpain, m_limitpain.value, msgNames);
 	DRAWMISCITEM(misc_comp_pass, !compat_mobjpass.value, msgNames);
 	DRAWMISCITEM(misc_disablesecretmessages, hud_disablesecretmessages.value, disablesecretmessages);
+	DRAWMISCITEM(misc_fixspectrehitbox, m_fixspectrehitbox.value, autoruntype);
 
 #undef DRAWMISCITEM
 
