@@ -122,10 +122,11 @@ static void P_BlockMapBox(fixed_t* bbox, fixed_t x, fixed_t y, mobj_t* thing) {
     tmbbox[BOXRIGHT] = x + thing->radius;
     tmbbox[BOXLEFT] = x - thing->radius;
 
-    bbox[BOXLEFT] = (tmbbox[BOXLEFT] - bmaporgx) >> MAPBLOCKSHIFT;
-    bbox[BOXRIGHT] = (tmbbox[BOXRIGHT] - bmaporgx) >> MAPBLOCKSHIFT;
-    bbox[BOXBOTTOM] = (tmbbox[BOXBOTTOM] - bmaporgy) >> MAPBLOCKSHIFT;
-    bbox[BOXTOP] = (tmbbox[BOXTOP] - bmaporgy) >> MAPBLOCKSHIFT;
+    // Styd: restores MAXRADIUS here, we don't know if it was a typo or mistake or if it was done intentionally by Midway Games
+    bbox[BOXLEFT] = (tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS) >> MAPBLOCKSHIFT;
+    bbox[BOXRIGHT] = (tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS) >> MAPBLOCKSHIFT;
+    bbox[BOXBOTTOM] = (tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS) >> MAPBLOCKSHIFT;
+    bbox[BOXTOP] = (tmbbox[BOXTOP] - bmaporgy + MAXRADIUS) >> MAPBLOCKSHIFT;
 
     if (bbox[BOXLEFT] < 0) {
         bbox[BOXLEFT] = 0;
