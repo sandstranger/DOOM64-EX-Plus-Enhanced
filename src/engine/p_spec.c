@@ -813,7 +813,26 @@ static void P_AlertTaggedMobj(mobj_t* activator, int tid) {
 			continue;
 		}
 
+		// 20120610 villsa - check for killable things only
+		if (!(mo->flags & MF_COUNTKILL)) {
+			continue;
+		}
+
+		// Styd: added a check if mobjs are dead to fix the bug where when a mobj is dead and alerted by the thing alert function, it returns to the "seestate" as if it was resurrected but in ghost mode, you do no damage to it, it cannot die, and you pass through it, but it continues to do damage to you
+		if (mo->health = 0) {
+			return;
+		}
+
 		st = &states[mo->info->seestate];
+
+		// Styd: fixes mobjs not making sound when alerted by the thing alert function
+		if (mo->type == MT_RESURRECTOR || mo->type == MT_CYBORG || mo->type == MT_SPIDER || mo->type == MT_ANNIHILATOR) {
+			// full volume
+			S_StartSound(NULL, mo->info->seesound);
+		}
+		else {
+			S_StartSound(mo, mo->info->seesound);
+		}
 
 		// 03022014 villsa - handle checks if activator is not a player
 		if (activator->player) {
