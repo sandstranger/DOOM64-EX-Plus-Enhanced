@@ -127,7 +127,7 @@ void F_Start(void) {
 	castonmelee = 0;
 	castattacking = false;
 	castdying = false;
-	
+
 	finalePal.a = 255;
 	finalePal.r = 0;
 	finalePal.g = 0;
@@ -212,7 +212,7 @@ int F_Ticker(void) {
 		}
 
 		caststate = &states[mobjinfo[castorder[castnum].type].seestate];
-		castframes = 0; 
+		castframes = 0;
 	}
 	else {
 		// just advance to next state in animation
@@ -341,7 +341,7 @@ int F_Ticker(void) {
 	if (casttics == -1) {
 		casttics = TICRATE;
 	}
-	
+
 	return 0;
 }
 
