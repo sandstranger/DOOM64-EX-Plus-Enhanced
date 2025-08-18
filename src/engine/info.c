@@ -226,17 +226,45 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_SARG_DIE4*/         { SPR_SARG, 11, 4, {A_Fall}, S_SARG_DIE5 },
 	/*S_SARG_DIE5*/         { SPR_SARG, 12, 4, {A_OnDeathTrigger}, S_SARG_DIE6 },
 	/*S_SARG_DIE6*/         { SPR_SARG, 13, -1, {NULL}, S_NULL },
-	/*S_SARG_RUN0*/         { SPR_SARG, 0, 1, {A_FadeOut}, S_SARG_RUN1 },
-	/*S_SARG_ATK0*/         { SPR_SARG, 4, 1, {A_FadeOut}, S_SARG_ATK1 },
-	/*S_SARG_PAIN0*/        { SPR_SARG, 7, 1, {A_FadeOut}, S_SARG_PAIN1 },
-	/*S_SARG_DIE0*/         { SPR_SARG, 8, 1, {A_FadeIn}, S_SARG_DIE1 },
-	/*S_SARG_RAISE0*/       { SPR_SARG, 13, 1, {A_FadeOut}, S_SARG_RAISE1 },
 	/*S_SARG_RAISE1*/       { SPR_SARG, 13, 5, {NULL}, S_SARG_RAISE2 },
 	/*S_SARG_RAISE2*/       { SPR_SARG, 12, 5, {NULL}, S_SARG_RAISE3 },
 	/*S_SARG_RAISE3*/       { SPR_SARG, 11, 5, {NULL}, S_SARG_RAISE4 },
 	/*S_SARG_RAISE4*/       { SPR_SARG, 10, 5, {NULL}, S_SARG_RAISE5 },
 	/*S_SARG_RAISE5*/       { SPR_SARG, 9, 5, {NULL}, S_SARG_RAISE6 },
 	/*S_SARG_RAISE6*/       { SPR_SARG, 8, 5, {NULL}, S_SARG_RUN1 },
+
+	/*S_SARG2_STND*/         { SPR_SARG, 1, 8, {A_Look}, S_SARG2_STND2 },
+	/*S_SARG2_STND2*/        { SPR_SARG, 3, 8, {A_Look}, S_SARG2_STND },
+	/*S_SARG2_RUN1*/         { SPR_SARG, 0, 2, {A_Chase}, S_SARG2_RUN2 },
+	/*S_SARG2_RUN2*/         { SPR_SARG, 0, 2, {A_Chase}, S_SARG2_RUN3 },
+	/*S_SARG2_RUN3*/         { SPR_SARG, 1, 2, {A_Chase}, S_SARG2_RUN4 },
+	/*S_SARG2_RUN4*/         { SPR_SARG, 1, 2, {A_Chase}, S_SARG2_RUN5 },
+	/*S_SARG2_RUN5*/         { SPR_SARG, 2, 2, {A_Chase}, S_SARG2_RUN6 },
+	/*S_SARG2_RUN6*/         { SPR_SARG, 2, 2, {A_Chase}, S_SARG2_RUN7 },
+	/*S_SARG2_RUN7*/         { SPR_SARG, 3, 2, {A_Chase}, S_SARG2_RUN8 },
+	/*S_SARG2_RUN8*/         { SPR_SARG, 3, 2, {A_Chase}, S_SARG2_RUN1 },
+	/*S_SARG2_ATK1*/         { SPR_SARG, 4, 8, {A_FaceTarget}, S_SARG2_ATK2 },
+	/*S_SARG2_ATK2*/         { SPR_SARG, 5, 8, {A_FaceTarget}, S_SARG2_ATK3 },
+	/*S_SARG2_ATK3*/         { SPR_SARG, 6, 8, {A_SargAttack}, S_SARG2_RUN1 },
+	/*S_SARG2_PAIN1*/        { SPR_SARG, 7, 2, {NULL}, S_SARG2_PAIN2 },
+	/*S_SARG2_PAIN2*/        { SPR_SARG, 7, 2, {A_Pain}, S_SARG2_RUN1 },
+	/*S_SARG2_DIE1*/         { SPR_SARG, 8, 8, {NULL}, S_SARG2_DIE2 },
+	/*S_SARG2_DIE2*/         { SPR_SARG, 9, 8, {A_Scream}, S_SARG2_DIE3 },
+	/*S_SARG2_DIE3*/         { SPR_SARG, 10, 4, {NULL}, S_SARG2_DIE4 },
+	/*S_SARG2_DIE4*/         { SPR_SARG, 11, 4, {A_Fall}, S_SARG2_DIE5 },
+	/*S_SARG2_DIE5*/         { SPR_SARG, 12, 4, {A_OnDeathTrigger}, S_SARG2_DIE6 },
+	/*S_SARG2_DIE6*/         { SPR_SARG, 13, -1, {NULL}, S_NULL },
+	/*S_SARG2_RUN0*/         { SPR_SARG, 0, 1, {A_FadeOut}, S_SARG2_RUN1 },
+	/*S_SARG2_ATK0*/         { SPR_SARG, 4, 1, {A_FadeOut}, S_SARG2_ATK1 },
+	/*S_SARG2_PAIN0*/        { SPR_SARG, 7, 1, {A_FadeOut}, S_SARG2_PAIN1 },
+	/*S_SARG2_DIE0*/         { SPR_SARG, 8, 1, {A_FadeIn}, S_SARG2_DIE1 },
+	/*S_SARG2_RAISE0*/       { SPR_SARG, 13, 1, {A_FadeOut}, S_SARG2_RAISE1 },
+	/*S_SARG2_RAISE1*/       { SPR_SARG, 13, 5, {NULL}, S_SARG2_RAISE2 },
+	/*S_SARG2_RAISE2*/       { SPR_SARG, 12, 5, {NULL}, S_SARG2_RAISE3 },
+	/*S_SARG2_RAISE3*/       { SPR_SARG, 11, 5, {NULL}, S_SARG2_RAISE4 },
+	/*S_SARG2_RAISE4*/       { SPR_SARG, 10, 5, {NULL}, S_SARG2_RAISE5 },
+	/*S_SARG2_RAISE5*/       { SPR_SARG, 9, 5, {NULL}, S_SARG2_RAISE6 },
+	/*S_SARG2_RAISE6*/       { SPR_SARG, 8, 5, {NULL}, S_SARG2_RUN1 },
 
 	/*S_FATT_STND*/         { SPR_FATT, 0, 15, {A_Look}, S_FATT_STND2 },
 	/*S_FATT_STND2*/        { SPR_FATT, 1, 15, {A_Look}, S_FATT_STND },
@@ -343,7 +371,6 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_POSS2_RAISE3*/		{ SPR_POSS, 9, 5, {NULL}, S_POSS2_RAISE4 },
 	/*S_POSS2_RAISE4*/		{ SPR_POSS, 8, 5, {NULL}, S_POSS2_RAISE5 },
 	/*S_POSS2_RAISE5*/		{ SPR_POSS, 7, 5, {NULL}, S_POSS2_RUN1 },
-
 	
 	/*S_TROO_STND*/         { SPR_TROO, 0, 10, {A_Look}, S_TROO_STND2 },
 	/*S_TROO_STND2*/        { SPR_TROO, 1, 10, {A_Look}, S_TROO_STND },
@@ -381,6 +408,43 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_TROO_RAISE3*/		{ SPR_TROO, 13, 6, {NULL}, S_TROO_RAISE4 },
 	/*S_TROO_RAISE4*/		{ SPR_TROO, 12, 8, {NULL}, S_TROO_RAISE5 },
 	/*S_TROO_RAISE5*/		{ SPR_TROO, 11, 8, {NULL}, S_TROO_RUN1 },
+
+	/*S_TROO2_STND*/{ SPR_TROO, 0, 10, {A_Look}, S_TROO2_STND2 },
+	/*S_TROO2_STND2*/{ SPR_TROO, 1, 10, {A_Look}, S_TROO2_STND },
+	/*S_TROO2_RUN1*/{ SPR_TROO, 0, 3, {A_Chase}, S_TROO2_RUN2 },
+	/*S_TROO2_RUN2*/{ SPR_TROO, 0, 3, {A_Chase}, S_TROO2_RUN3 },
+	/*S_TROO2_RUN3*/{ SPR_TROO, 1, 3, {A_Chase}, S_TROO2_RUN4 },
+	/*S_TROO2_RUN4*/{ SPR_TROO, 1, 3, {A_Chase}, S_TROO2_RUN5 },
+	/*S_TROO2_RUN5*/{ SPR_TROO, 2, 3, {A_Chase}, S_TROO2_RUN6 },
+	/*S_TROO2_RUN6*/{ SPR_TROO, 2, 3, {A_Chase}, S_TROO2_RUN7 },
+	/*S_TROO2_RUN7*/{ SPR_TROO, 3, 3, {A_Chase}, S_TROO2_RUN8 },
+	/*S_TROO2_RUN8*/{ SPR_TROO, 3, 3, {A_Chase}, S_TROO2_RUN1 },
+	/*S_TROO2_MELEE1*/{ SPR_TROO, 4, 8, {A_FaceTarget}, S_TROO2_MELEE2 },
+	/*S_TROO2_MELEE2*/{ SPR_TROO, 5, 8, {A_FaceTarget}, S_TROO2_MELEE3 },
+	/*S_TROO2_MELEE3*/{ SPR_TROO, 6, 6, {A_TroopMelee}, S_TROO2_RUN1 },
+	/*S_TROO2_ATK1*/{ SPR_TROO, 8, 8, {A_FaceTarget}, S_TROO2_ATK2 },
+	/*S_TROO2_ATK2*/{ SPR_TROO, 9, 8, {A_FaceTarget}, S_TROO2_ATK3 },
+	/*S_TROO2_ATK3*/{ SPR_TROO, 10, 6, {A_TroopAttack}, S_TROO2_RUN1 },
+	/*S_TROO2_PAIN*/{ SPR_TROO, 7, 2, {NULL}, S_TROO2_PAIN2 },
+	/*S_TROO2_PAIN2*/{ SPR_TROO, 7, 2, {A_Pain}, S_TROO2_RUN1 },
+	/*S_TROO2_DIE1*/{ SPR_TROO, 11, 8, {NULL}, S_TROO2_DIE2 },
+	/*S_TROO2_DIE2*/{ SPR_TROO, 12, 8, {A_Scream}, S_TROO2_DIE3 },
+	/*S_TROO2_DIE3*/{ SPR_TROO, 13, 6, {A_Fall}, S_TROO2_DIE4 },
+	/*S_TROO2_DIE4*/{ SPR_TROO, 14, 6, {A_OnDeathTrigger}, S_TROO2_DIE5 },
+	/*S_TROO2_DIE5*/{ SPR_TROO, 15, -1, {NULL}, S_NULL },
+	/*S_TROO2_XDIE1*/{ SPR_TROO, 16, 5, {NULL}, S_TROO2_XDIE2 },
+	/*S_TROO2_XDIE2*/{ SPR_TROO, 17, 5, {A_XScream}, S_TROO2_XDIE3 },
+	/*S_TROO2_XDIE3*/{ SPR_TROO, 18, 5, {NULL}, S_TROO2_XDIE4 },
+	/*S_TROO2_XDIE4*/{ SPR_TROO, 19, 5, {A_Fall}, S_TROO2_XDIE5 },
+	/*S_TROO2_XDIE5*/{ SPR_TROO, 20, 5, {NULL}, S_TROO2_XDIE6 },
+	/*S_TROO2_XDIE6*/{ SPR_TROO, 21, 5, {NULL}, S_TROO2_XDIE7 },
+	/*S_TROO2_XDIE7*/{ SPR_TROO, 22, 5, {A_OnDeathTrigger}, S_TROO2_XDIE8 },
+	/*S_TROO2_XDIE8*/{ SPR_TROO, 23, -1, {NULL}, S_NULL },
+	/*S_TROO2_RAISE1*/{ SPR_TROO, 15, 6, {NULL}, S_TROO2_RAISE2 },
+	/*S_TROO2_RAISE2*/{ SPR_TROO, 14, 6, {NULL}, S_TROO2_RAISE3 },
+	/*S_TROO2_RAISE3*/{ SPR_TROO, 13, 6, {NULL}, S_TROO2_RAISE4 },
+	/*S_TROO2_RAISE4*/{ SPR_TROO, 12, 8, {NULL}, S_TROO2_RAISE5 },
+	/*S_TROO2_RAISE5*/{ SPR_TROO, 11, 8, {NULL}, S_TROO2_RUN1 },
 
 	/*S_HEAD_STND*/         { SPR_HEAD, 0, 15, {A_Look}, S_HEAD_STND2 },
 	/*S_HEAD_STND2*/        { SPR_HEAD, 1, 15, {A_Look}, S_HEAD_STND3 },
@@ -1719,18 +1783,18 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 	{
 		/*MT_DEMON2*/
 		58,        //doomednum
-		S_SARG_STND,        //spawnstate
+		S_SARG2_STND,        //spawnstate
 		150,        //spawnhealth
-		S_SARG_RUN0,        //seestate
+		S_SARG2_RUN0,        //seestate
 		sfx_sargsit,        //seesound
 		8,        //reactiontime
 		sfx_sargatk,        //attacksound
-		S_SARG_PAIN0,        //painstate
+		S_SARG2_PAIN0,        //painstate
 		180,        //painchance
 		sfx_dbpain2,        //painsound
-		S_SARG_ATK0,        //meleestate
+		S_SARG2_ATK0,        //meleestate
 		S_NULL,        //missilestate
-		S_SARG_DIE0,        //deathstate
+		S_SARG2_DIE0,        //deathstate
 		S_NULL,        //xdeathstate
 		sfx_sargdie,        //deathsound
 		12,        //speed
@@ -1742,7 +1806,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 		MF_SOLID | MF_SHOOTABLE | MF_GRAVITY | MF_COUNTKILL,        //flags
 		1,        //palette
 		255,        //alpha
-		S_SARG_RAISE0        //raisestate
+		S_SARG2_RAISE0        //raisestate
 	},
 
 	{
@@ -1864,19 +1928,19 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 	{
 		/*MT_IMP2*/
 		3007,        //doomednum
-		S_TROO_STND,        //spawnstate
+		S_TROO2_STND,        //spawnstate
 		60,        //spawnhealth
-		S_TROO_RUN1,        //seestate
+		S_TROO2_RUN1,        //seestate
 		sfx_impsit1,        //seesound
 		8,        //reactiontime
 		sfx_None/*sfx_000*/,        //attacksound
-		S_TROO_PAIN,        //painstate
+		S_TROO2_PAIN,        //painstate
 		128,        //painchance
 		sfx_dbpain1,        //painsound
-		S_TROO_MELEE1,        //meleestate
-		S_TROO_ATK1,        //missilestate
-		S_TROO_DIE1,        //deathstate
-		S_TROO_XDIE1,        //xdeathstate
+		S_TROO2_MELEE1,        //meleestate
+		S_TROO2_ATK1,        //missilestate
+		S_TROO2_DIE1,        //deathstate
+		S_TROO2_XDIE1,        //xdeathstate
 		sfx_impdth1,        //deathsound
 		16,        //speed
 		42 * FRACUNIT,        //radius
@@ -1887,7 +1951,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 		MF_SOLID | MF_SHOOTABLE | MF_GRAVITY | MF_COUNTKILL | MF_SHADOW,        //flags
 		1,        //palette
 		180,        //alpha
-		S_TROO_RAISE1        //raisestate
+		S_TROO2_RAISE1        //raisestate
 	},
 
 	{
