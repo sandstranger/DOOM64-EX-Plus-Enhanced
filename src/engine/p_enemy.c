@@ -1313,12 +1313,13 @@ void A_RectChase(mobj_t* actor) {
 		A_Chase(actor);
 		return;
 	}
+	//Styd: Added a P_CheckSight function to fix the vanilla bug where the mother demon continues to attack even if it does not see the player when he is hidden behind a wall.
 	if (!(P_AproxDistance(actor->target->x - actor->x,
-		actor->target->y - actor->y) < (600 * FRACUNIT))) {
+		actor->target->y - actor->y) < (600 * FRACUNIT)) || !P_CheckSight(actor, actor->target)) {
 		A_Chase(actor);
 		return;
 	}
-
+	
 	A_FaceTarget(actor);
 	S_StartSound(actor, actor->info->attacksound);
 	P_SetMobjState(actor, actor->info->meleestate);
