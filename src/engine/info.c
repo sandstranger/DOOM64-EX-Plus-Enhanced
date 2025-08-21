@@ -58,7 +58,8 @@ char* sprnames[NUMSPRITES + 1] = {  //0x5FA30
 	"S041", "S026", "S002", "S030", "CPOS", "SKEL", "ARCR", "POW1",
 	"SPID", "VFIR", "VILE", "TEST", "BLUG", "BLUP", "SH1R", "SH2R",
 	"PUNR", "POS1", "POS2", "SAR1", "SAR2", "TRO1", "TRO2", "TROM", 
-	"BOS1", "BOS2", "GECH", "A64A", "SAR3", "HEA2", "NCAC", NULL
+	"BOS1", "BOS2", "GECH", "A64A", "SAR3", "HEA2", "NCAC", "PAI2",
+	 NULL
 };
 
 // Doesn't work with g++, needs actionf_p1
@@ -631,6 +632,25 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_PAIN_DIE6*/         { SPR_PAIN, 32777, 5, {A_PainDeathEvent}, S_PAIN_DIE7 },
 	/*S_PAIN_DIE7*/         { SPR_PAIN, 32778, 5, {NULL}, S_PAIN_DIE8 },
 	/*S_PAIN_DIE8*/         { SPR_PAIN, 32779, 5, {NULL}, S_NULL },
+
+	/*S_PAINALPHA_STND*/    { SPR_PAI2, 0, 5, {A_Look}, S_PAINALPHA_STND2 },
+	/*S_PAINALPHA_STND2*/   { SPR_PAI2, 1, 5, {A_Look}, S_PAINALPHA_STND },
+	/*S_PAINALPHA_RUN1*/    { SPR_PAI2, 0, 3, {A_Chase}, S_PAINALPHA_RUN2 },
+	/*S_PAINALPHA_RUN2*/    { SPR_PAI2, 1, 3, {A_Chase}, S_PAINALPHA_RUN1 },
+	/*S_PAINALPHA_ATK1*/    { SPR_PAI2, 32770, 5, {A_FaceTarget}, S_PAINALPHA_ATK2 },
+	/*S_PAINALPHA_ATK2*/    { SPR_PAI2, 32770, 5, {A_FaceTarget}, S_PAINALPHA_ATK3 },
+	/*S_PAINALPHA_ATK3*/    { SPR_PAI2, 32771, 5, {A_FaceTarget}, S_PAINALPHA_ATK4 },
+	/*S_PAINALPHA_ATK4*/    { SPR_PAI2, 32771, 0, {A_PainAttack}, S_PAINALPHA_RUN1 },
+	/*S_PAINALPHA_PAIN*/    { SPR_PAI2, 4, 6, {NULL}, S_PAINALPHA_PAIN2 },
+	/*S_PAINALPHA_PAIN2*/   { SPR_PAI2, 4, 6, {A_Pain}, S_PAINALPHA_RUN1 },
+	/*S_PAINALPHA_DIE1*/    { SPR_PAI2, 32773, 8, {NULL}, S_PAINALPHA_DIE2 },
+	/*S_PAINALPHA_DIE2*/    { SPR_PAI2, 32774, 8, {A_Scream}, S_PAINALPHA_DIE3 },
+	/*S_PAINALPHA_DIE3*/    { SPR_PAI2, 32775, 8, {A_PainDie}, S_PAINALPHA_DIE4 },
+	/*S_PAINALPHA_DIE4*/    { SPR_PAI2, 32776, 8, {A_PainDeathEvent}, S_PAINALPHA_DIE5 },
+	/*S_PAINALPHA_DIE5*/    { SPR_PAI2, 32777, 5, {A_PainDeathEvent}, S_PAINALPHA_DIE6 },
+	/*S_PAINALPHA_DIE6*/    { SPR_PAI2, 32778, 5, {A_PainDeathEvent}, S_PAINALPHA_DIE7 },
+	/*S_PAINALPHA_DIE7*/    { SPR_PAI2, 32779, 5, {NULL}, S_PAINALPHA_DIE8 },
+	/*S_PAINALPHA_DIE8*/    { SPR_PAI2, 32780, 5, {NULL}, S_NULL },
 
 	/*S_RECT_STND*/         { SPR_RECT, 0, 8, {A_Look}, S_RECT_STND2 },
 	/*S_RECT_STND2*/        { SPR_RECT, 1, 8, {A_Look}, S_RECT_STND3 },

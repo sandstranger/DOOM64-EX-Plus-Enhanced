@@ -42,6 +42,7 @@ CVAR_EXTERNAL(m_reworkedvanillasounds);
 CVAR_EXTERNAL(m_reworkedBaronofHell);
 
 CVAR(m_fixspectrehitbox, 1);
+CVAR(m_painelementalalpha, 0);
 
 fixed_t         tmbbox[4];
 mobj_t* tmthing;
@@ -423,6 +424,29 @@ boolean PIT_CheckThing(mobj_t* thing) {
         else if (thing->type == MT_ANNIHILATOR) {
             thing->info->painsound = sfx_dbpain2;
             thing->info->activesound = sfx_dbact;
+        }
+    }
+
+    if (m_painelementalalpha.value == 1)
+    {
+        // Styd: restores sprites from the alpha version of Pain Elemental
+        if (thing->type == MT_PAIN) {
+            thing->info->spawnstate = S_PAINALPHA_STND;
+            thing->info->seestate = S_PAINALPHA_RUN1;
+            thing->info->painstate = S_PAINALPHA_PAIN;
+            thing->info->missilestate = S_PAINALPHA_ATK1;
+            thing->info->deathstate = S_PAINALPHA_DIE1;
+        }
+    }
+    else if (m_painelementalalpha.value == 0)
+    {
+        // sprite pain elemental Vanilla
+        if (thing->type == MT_PAIN) {
+            thing->info->spawnstate = S_PAIN_STND;
+            thing->info->seestate = S_PAIN_RUN;
+            thing->info->painstate = S_PAIN_PAIN;
+            thing->info->missilestate = S_PAIN_ATK1;
+            thing->info->deathstate = S_PAIN_DIE1;
         }
     }
 

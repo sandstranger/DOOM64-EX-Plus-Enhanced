@@ -1003,6 +1003,7 @@ CVAR_EXTERNAL(m_reworkedimp);
 CVAR_EXTERNAL(m_reworkedpinkyandspectre);
 CVAR_EXTERNAL(m_reworkedBaronofHell);
 CVAR_EXTERNAL(m_reworkedHellKnight);
+CVAR_EXTERNAL(m_painelementalalpha);
 CVAR_EXTERNAL(m_limitpain);
 CVAR_EXTERNAL(m_fixspectrehitbox);
 
@@ -1040,6 +1041,7 @@ enum {
 	misc_reworkedpinkyandspectre,
 	misc_reworkedBaronofHell,
 	misc_reworkedHellKnight,
+	misc_painelementalalpha,
 	misc_header6,
 	misc_limitpain,
 	misc_comp_pass,
@@ -1084,6 +1086,7 @@ menuitem_t MiscMenu[] = {
 	{2,"Pinky Spectre:",M_MiscChoice },
 	{2,"Baron Of Hell:",M_MiscChoice },
 	{2,"Hell Knight:",M_MiscChoice },
+	{2,"Pain Elemental:",M_MiscChoice },
 	{-1,"N64 Compatibility",0 },
 	{2,"Limit Lost Souls:",M_MiscChoice,'l'},
 	{2,"Tall Actors:",M_MiscChoice,'i'},
@@ -1127,6 +1130,7 @@ char* MiscHints[misc_end] = {
 	"enable reworked vanilla sprites for the pinky and spectre",
 	"enable reworked vanilla sprites for the baron of hell",
 	"enable reworked vanilla sprites for the hell knight",
+	"enable the sprites of the alpha version of the pain elemental",
 	NULL,
 	"limit max amount of lost souls spit by pain elemental to 17",
 	"emulate infinite height bug for all solid actors",
@@ -1164,6 +1168,7 @@ menudefault_t MiscDefault[] = {
 	{ &m_reworkedpinkyandspectre, 0 },
 	{ &m_reworkedBaronofHell, 0 },
 	{ &m_reworkedHellKnight, 0 },
+	{ &m_painelementalalpha, 0 },
 	{ &m_limitpain, 1 },
 	{ &compat_mobjpass, 1 },
 	{ &m_fixspectrehitbox, 0 },
@@ -1338,6 +1343,10 @@ void M_MiscChoice(int choice) {
 		M_SetOptionValue(choice, 0, 1, 1, &m_reworkedHellKnight);
 		break;
 
+	case misc_painelementalalpha:
+		M_SetOptionValue(choice, 0, 1, 1, &m_painelementalalpha);
+		break;
+
 	case misc_limitpain:
 		M_SetOptionValue(choice, 0, 1, 1, &m_limitpain);
 		break;
@@ -1360,6 +1369,7 @@ void M_DrawMisc(void) {
 	static const char* nightmarecolorstype[10] = { "Off", "Green", "Red", "Yellow", "Blue", "Pink", "Purple", "Orange", "Cyan", "Black" };
 	static const char* enchancedvanillatype[2] = { "Vanilla", "Enhanced" };
 	static const char* enchancedvanillaimptype[3] = { "Vanilla", "Enhanced", "Mouth" };
+	static const char* alphavanillatype[2] = { "Vanilla", "Alpha" };
 	int y;
 
 	if (currentMenu->menupageoffset <= misc_menufade + 1 &&
@@ -1407,6 +1417,7 @@ void M_DrawMisc(void) {
 	DRAWMISCITEM(misc_reworkedpinkyandspectre, m_reworkedpinkyandspectre.value, enchancedvanillatype);
 	DRAWMISCITEM(misc_reworkedBaronofHell, m_reworkedBaronofHell.value, enchancedvanillatype);
 	DRAWMISCITEM(misc_reworkedHellKnight, m_reworkedHellKnight.value, enchancedvanillatype);
+	DRAWMISCITEM(misc_painelementalalpha, m_painelementalalpha.value, alphavanillatype);
 	DRAWMISCITEM(misc_limitpain, m_limitpain.value, msgNames);
 	DRAWMISCITEM(misc_comp_pass, !compat_mobjpass.value, msgNames);
 	DRAWMISCITEM(misc_disablesecretmessages, hud_disablesecretmessages.value, disablesecretmessages);

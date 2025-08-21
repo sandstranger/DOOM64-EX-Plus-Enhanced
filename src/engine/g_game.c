@@ -174,6 +174,7 @@ CVAR_EXTERNAL(m_reworkedimp);
 CVAR_EXTERNAL(m_reworkedpinkyandspectre);
 CVAR_EXTERNAL(m_reworkedBaronofHell);
 CVAR_EXTERNAL(m_reworkedHellKnight);
+CVAR_EXTERNAL(m_painelementalalpha);
 CVAR_EXTERNAL(m_limitpain);
 CVAR_EXTERNAL(m_fixspectrehitbox);
 
@@ -209,6 +210,7 @@ void G_RegisterCvars(void) {
 	CON_CvarRegister(&m_reworkedpinkyandspectre);
 	CON_CvarRegister(&m_reworkedBaronofHell);
 	CON_CvarRegister(&m_reworkedHellKnight);
+	CON_CvarRegister(&m_painelementalalpha);
 	CON_CvarRegister(&m_limitpain);
 	CON_CvarRegister(&m_fixspectrehitbox);
 }
