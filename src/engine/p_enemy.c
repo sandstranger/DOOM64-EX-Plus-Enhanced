@@ -2270,6 +2270,9 @@ void A_VileChase(mobj_t* actor)
 						corpsehit->alpha = 128;
 					}
 
+					// styd: Fixes a vanilla bug of Doom engine when Arch Vile resurrects monsters, monsters that are resurrected by Arch Vile are not counted in the total kill counter of intermission, which means that you can exceed more than 100% kill on the total kill counter.
+					totalkills++;
+					
 					return;
 				}
 			}
