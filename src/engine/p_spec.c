@@ -51,7 +51,7 @@
 
 #include <SDL3/SDL.h>
 
-CVAR(m_secretsound, 0);
+CVAR(m_secretsound, 1);
 
 short globalint = 0;
 static byte tryopentype[3];
