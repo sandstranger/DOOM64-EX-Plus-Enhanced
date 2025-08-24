@@ -1190,8 +1190,6 @@ static void P_InitMapInfo(void) {
 						const char* name = sc_parser.getstring();
 						int lump = W_CheckNumForName(name);
 
-						
-
 						if (lump == -1) {
 							CON_Warnf("P_InitMapInfo: Invalid music name: %s\n", name);
 							cluster.music = -1;
