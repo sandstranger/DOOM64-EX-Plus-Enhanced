@@ -25,11 +25,10 @@ Doom 64 EX+ Enhanced should be compatible with both the Doom 64 EX+ engine and D
 * **Priority:**
 * update the engine source code with all the latest EX+ engine patches.
 * reworking the random system code of the Doom 64 engine that was done by Lee Killough on their BOOM and MBF engines.
-* Adds decorations that were cut from the version Doom 64 Alpha to the engine.
 * adds a new monster, the Duke of Hell from the Team GEC.
 * **Optional:**
 * Should my Complex DOOM 64 game mode return to my engine?
-* add the MF BOUNCES flag to make projectiles that bounce off walls and the floor, if a day I ever manage to reprogram it into the engine
+* add the MF_BOUNCES flag to make projectiles that bounce off walls and the floor, if a day I ever manage to reprogram it into the engine
 
 # Doom 64 EX+
 
@@ -141,7 +140,8 @@ For manual compilation, you must install the dependencies via a package manager 
 
 For Windows, use the Visual Studio solution file provided in the `Windows` directory of the repository to compile for either 32-bit or 64-bit systems.
 
-**Data File Path (Windows):** Place the three asset files (`DOOM64.wad`, `doom64ex-plus.wad`, `doomsnd.sf2`) in the **same directory** as the compiled `DOOM64EX+.exe`.
+**Data File Path (Windows):** Place the three asset files (`DOOM64.wad`, `doom64ex-plus.wad`, `DOOMSND.DLS`) in the **same directory** as the compiled `DOOM64EX+.exe`.
+ These data files are retrieved from the DOOM64 Remaster on GOG or Steam.
 
 ## Usage
 
