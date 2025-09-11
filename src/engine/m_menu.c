@@ -2826,6 +2826,7 @@ void M_BuildControlMenu(void) {
 			menu->menuitems[item].routine = M_ChangeKeyBinding;
 
 			G_GetActionBindings(&menu->menuitems[item].name[17], PlayerActions[item].action);
+
 		}
 		else {
 			menu->menuitems[item].status = -1;
@@ -4047,10 +4048,6 @@ boolean M_Responder(event_t* ev) {
 		}
 	}
 
-	if (ch == -1) {
-		return false;
-	}
-
 	if (MenuBindActive == true) { //key Bindings
 		if (ch == KEY_ESCAPE) {
 			MenuBindActive = false;
@@ -4061,6 +4058,10 @@ boolean M_Responder(event_t* ev) {
 			M_BuildControlMenu();
 		}
 		return true;
+	}
+
+	if (ch == -1) {
+		return false;
 	}
 
 	// save game / player name string input
