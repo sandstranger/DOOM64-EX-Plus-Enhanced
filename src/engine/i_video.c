@@ -39,18 +39,12 @@
 SDL_Window* window = NULL;
 SDL_GLContext   glContext = NULL;
 
-#if defined(_WIN32) && defined(USE_XINPUT)
-#include "i_xinput.h"
-#endif
-
-CVAR(v_width, 640);
-CVAR(v_height, 480);
 CVAR(v_checkratio, 0);
 CVAR(v_windowed, 1);
 CVAR(v_windowborderless, 0);
 
 CVAR_CMD(v_vsync, 1) {
-    SDL_GL_SetSwapInterval((int)v_vsync.value);    
+	SDL_GL_SetSwapInterval((int)v_vsync.value);
 }
 
 float display_scale = 1.0f;
@@ -63,6 +57,10 @@ boolean window_focused;
 float mouse_x = 0.0f;
 float mouse_y = 0.0f;
 
+int win_px_w = 0;
+int win_px_h = 0;
+
+void GL_OnResize(int w, int h);
 
 static void NVidiaGLFinishConditional(void) {
 	const char* vendor = (const char*)glGetString(GL_VENDOR);
@@ -81,52 +79,47 @@ static void NVidiaGLFinishConditional(void) {
 	}
 }
 
+static void GetNativeDisplayPixels(int* out_w, int* out_h) {
+	*out_w = 0; *out_h = 0;
+
+	SDL_DisplayID primary = SDL_GetPrimaryDisplay();
+	if (!primary) {
+		I_Printf("SDL_GetPrimaryDisplay failed (%s)", SDL_GetError());
+	}
+
+	SDL_DisplayMode mode;
+	memset(&mode, 0, sizeof(mode));
+
+	if (primary && SDL_GetCurrentDisplayMode(primary) == 0) {
+		*out_w = mode.w;
+		*out_h = mode.h;
+	}
+	else {
+		*out_w = 1920;
+		*out_h = 1080;
+		I_Printf("SDL_GetCurrentDisplayMode failed (%s); defaulting to %dx%d",
+			SDL_GetError(), *out_w, *out_h);
+	}
+}
+
 //
 // I_InitScreen
 //
 
 void I_InitScreen(void) {
-	int     newwidth;
-	int     newheight;
-	int     p;
 	unsigned int  flags = 0;
 	char    title[256];
 	SDL_DisplayID displayid;
 
 	InWindow = (int)v_windowed.value;
 	InWindowBorderless = (int)v_windowborderless.value;
-	video_width = (int)v_width.value;
-	video_height = (int)v_height.value;
+
+	int native_w = 0, native_h = 0;
+	GetNativeDisplayPixels(&native_w, &native_h);
+
+	video_width = native_w;
+	video_height = native_h;
 	video_ratio = (float)video_width / (float)video_height;
-
-	if (M_CheckParm("-borderless")) {
-		InWindowBorderless = 1;
-	}
-	if (M_CheckParm("-window")) {
-		InWindow = 1;
-	}
-	if (M_CheckParm("-fullscreen")) {
-		InWindow = 0;
-	}
-
-	newwidth = newheight = 0;
-
-	p = M_CheckParm("-width");
-	if (p && p < myargc - 1) {
-		newwidth = datoi(myargv[p + 1]);
-	}
-
-	p = M_CheckParm("-height");
-	if (p && p < myargc - 1) {
-		newheight = datoi(myargv[p + 1]);
-	}
-
-	if (newwidth && newheight) {
-		video_width = newwidth;
-		video_height = newheight;
-		CON_CvarSetValue(v_width.name, (float)video_width);
-		CON_CvarSetValue(v_height.name, (float)video_height);
-	}
 
 	usingGL = false;
 
@@ -162,12 +155,14 @@ void I_InitScreen(void) {
 		flags |= SDL_WINDOW_BORDERLESS;
 	}
 
-    if(glContext) {
+	if (glContext) {
         SDL_GL_DestroyContext(glContext);
+		glContext = NULL;
     }
    
-    if(window) {
+	if (window) {
         SDL_DestroyWindow(window);
+		window = NULL;
     }
 
 	sprintf(title, "Doom64EX+Enhanced - Version Date: %s", version_date);
@@ -184,22 +179,27 @@ void I_InitScreen(void) {
 #ifdef __linux__
     // NVIDIA Linux specific: fixes input lag with vsync on
     putenv("__GL_MaxFramesAllowed=1");
-#endif   
-    
+#endif
+
 	if ((glContext = SDL_GL_CreateContext(window)) == NULL) {
 		I_Error("I_InitScreen: Failed to create OpenGL context");
 		return;
 	}
 
+	SDL_GetWindowSizeInPixels(window, &win_px_w, &win_px_h);
+	GL_OnResize(win_px_w, win_px_h);
+
 	displayid = SDL_GetDisplayForWindow(window);
-	if(displayid) {
+	if (displayid) {
 		float f = SDL_GetDisplayContentScale(displayid);
-		if(f != 0) {
-			display_scale = f;	   
-		} else {
+		if (f != 0) {
+			display_scale = f;
+		}
+		else {
 			I_Printf("SDL_GetDisplayContentScale failed (%s)", SDL_GetError());
 		}
-	} else {
+	}
+	else {
 		I_Printf("SDL_GetDisplayForWindow failed (%s)", SDL_GetError());
 	}
 
@@ -251,8 +251,6 @@ void I_InitVideo(void) {
 //
 
 void V_RegisterCvars(void) {
-	CON_CvarRegister(&v_width);
-	CON_CvarRegister(&v_height);
 	CON_CvarRegister(&v_checkratio);
 	CON_CvarRegister(&v_windowed);
 	CON_CvarRegister(&v_windowborderless);
