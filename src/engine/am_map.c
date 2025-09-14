@@ -391,7 +391,6 @@ static void AM_GetBounds(void) {
 
 boolean AM_Responder(event_t* ev) {
 	int rc = false;
-	SDL_Event se;
 
 	if (am_flags & AF_PANMODE) {
 		if (ev->type == ev_mouse) {
@@ -418,11 +417,7 @@ boolean AM_Responder(event_t* ev) {
 			}
 		}
 	}
-	while (SDL_PollEvent(&se)) {
-		if (AM_HandleGamepadEvent(&se)) {
-			rc = true;
-		}
-	}
+	
 	return rc;
 }
 
