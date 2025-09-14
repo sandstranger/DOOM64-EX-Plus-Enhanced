@@ -21,7 +21,7 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
+#include <SDL3/SDL.h>
 
 #include "z_zone.h"
 #include "g_game.h"
@@ -36,6 +36,7 @@
 #include "r_wipe.h"
 #include "gl_draw.h"
 #include "m_misc.h"
+#include "i_sdlinput.h"
 
 #define WIALPHARED      D_RGBA(0xC0, 0, 0, 0xFF)
 
@@ -143,7 +144,7 @@ int WI_Ticker(void) {
 		for (i = 0, player = players; i < MAXPLAYERS; i++, player++) {
 			if (playeringame[i]) {
 				if (player->cmd.buttons & BT_ATTACK) {
-					if (!player->attackdown) {
+					if (!player->attackdown || !SDL_GetGamepadButton(gamepad64.gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER)) {
 						S_StartSound(NULL, sfx_explode);
 						wi_advance++;
 					}
@@ -154,7 +155,7 @@ int WI_Ticker(void) {
 				}
 
 				if (player->cmd.buttons & BT_USE) {
-					if (!player->usedown) {
+					if (!player->usedown || !SDL_GetGamepadButton(gamepad64.gamepad, SDL_GAMEPAD_BUTTON_SOUTH)) {
 						S_StartSound(NULL, sfx_explode);
 						wi_advance++;
 					}
