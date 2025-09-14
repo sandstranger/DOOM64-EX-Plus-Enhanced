@@ -47,6 +47,8 @@ boolean	DigiJoy;
 boolean	MouseMode;
 boolean	window_mouse;
 
+gamepad64_t gamepad64;
+
 //
 // SDL3 Gamepad
 //

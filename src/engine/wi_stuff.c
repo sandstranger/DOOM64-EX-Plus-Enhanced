@@ -38,6 +38,8 @@
 #include "m_misc.h"
 #include "i_sdlinput.h"
 
+extern gamepad64_t gamepad64;
+
 #define WIALPHARED      D_RGBA(0xC0, 0, 0, 0xFF)
 
 static int itempercent[MAXPLAYERS];
