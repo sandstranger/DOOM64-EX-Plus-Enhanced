@@ -56,7 +56,7 @@ CVAR_EXTERNAL(i_interpolateframes);
 CVAR_EXTERNAL(v_accessibility);
 CVAR_EXTERNAL(r_rendersprites);
 
-CVAR(m_changethecolorofthenightmare, 1);
+CVAR(r_changethecolorofthenightmare, 1);
 CVAR(m_reworkedzombieman, 1);
 CVAR(m_reworkedzombieshotgun, 1);
 CVAR(m_reworkedimp, 1);
@@ -512,56 +512,56 @@ static boolean R_GenerateSpritePlane(visspritelist_t* vissprite, vtx_t* vertex) 
 	if (thing->flags & MF_NIGHTMARE) {
 
 		// styd: add a new option to change the color of nightmares
-		if (m_changethecolorofthenightmare.value == 0)
+		if (r_changethecolorofthenightmare.value == 0)
 		{
 			// white Nightmare Color (off Nightmare Color)
 			dglSetVertexColor(vertex, D_RGBA(255, 255, 255, thing->alpha), 4);
 		}
-		else if (m_changethecolorofthenightmare.value == 1)
+		else if (r_changethecolorofthenightmare.value == 1)
 		{
 		// Green Nightmare Color
 		dglSetVertexColor(vertex, D_RGBA(64, 255, 0, thing->alpha), 4);
 		}
-		else if (m_changethecolorofthenightmare.value == 2)
+		else if (r_changethecolorofthenightmare.value == 2)
 		{
 			// Red Nightmare Color
 			dglSetVertexColor(vertex, D_RGBA(255, 0, 0, thing->alpha), 4);
 		}
-		else if (m_changethecolorofthenightmare.value == 3)
+		else if (r_changethecolorofthenightmare.value == 3)
 		{
 			// Yellow Nightmare Color
 			dglSetVertexColor(vertex, D_RGBA(255, 255, 0, thing->alpha), 4);
 		}
-		else if (m_changethecolorofthenightmare.value == 4)
+		else if (r_changethecolorofthenightmare.value == 4)
 		{
 			// Blue Nightmare Color
 			dglSetVertexColor(vertex, D_RGBA(0, 0, 255, thing->alpha), 4);
 		}
-		else if (m_changethecolorofthenightmare.value == 5)
+		else if (r_changethecolorofthenightmare.value == 5)
 		{
 			// Pink Nightmare Color
 			//dglSetVertexColor(vertex, D_RGBA(255, 128, 192, thing->alpha), 4);
 			dglSetVertexColor(vertex, D_RGBA(255, 0, 255, thing->alpha), 4);
 		}
-		else if (m_changethecolorofthenightmare.value == 6)
+		else if (r_changethecolorofthenightmare.value == 6)
 		{
 			// Purple Nightmare Color
 			dglSetVertexColor(vertex, D_RGBA(128, 0, 255, thing->alpha), 4);
 			//dglSetVertexColor(vertex, D_RGBA(64, 0, 128, thing->alpha), 4);
 		}
-		else if (m_changethecolorofthenightmare.value == 7)
+		else if (r_changethecolorofthenightmare.value == 7)
 		{
 			// Orange Nightmare Color
 			dglSetVertexColor(vertex, D_RGBA(255, 128, 0, thing->alpha), 4);
 			
 		}
-		else if (m_changethecolorofthenightmare.value == 8)
+		else if (r_changethecolorofthenightmare.value == 8)
 		{
 			// Cyan Nightmare Color
 			dglSetVertexColor(vertex, D_RGBA(0, 255, 255, thing->alpha), 4);
 
 		}
-		else if (m_changethecolorofthenightmare.value == 9)
+		else if (r_changethecolorofthenightmare.value == 9)
 		{
 			// Black Nightmare Color
 			dglSetVertexColor(vertex, D_RGBA(0, 0, 0, thing->alpha), 4);

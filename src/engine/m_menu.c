@@ -995,7 +995,8 @@ CVAR_EXTERNAL(m_obituaries);
 CVAR_EXTERNAL(m_brutal);
 CVAR_EXTERNAL(m_extendedcast);
 CVAR_EXTERNAL(m_reworkedweaponsanimations);
-CVAR_EXTERNAL(m_changethecolorofthenightmare);
+CVAR_EXTERNAL(r_changethecolorofthenightmare);
+CVAR_EXTERNAL(r_transparencynightmare);
 CVAR_EXTERNAL(m_reworkedvanillasounds);
 CVAR_EXTERNAL(m_reworkedzombieman);
 CVAR_EXTERNAL(m_reworkedzombieshotgun);
@@ -1034,6 +1035,7 @@ enum {
 	misc_extendedcast,
 	misc_reworkedweaponsanimations,
 	misc_changethecolorofthenightmare,
+	misc_transparencynightmare,
 	misc_reworkedvanillasounds,
 	misc_reworkedzombieman,
 	misc_reworkedzombieshotgun,
@@ -1079,6 +1081,7 @@ menuitem_t MiscMenu[] = {
 	{2,"New Cast Roll:",M_MiscChoice },
 	{2,"Anim Smooth:",M_MiscChoice },
 	{2,"Nightmare Color:",M_MiscChoice },
+	{2,"Nightmare Style:",M_MiscChoice },
 	{2,"Extra Sounds:",M_MiscChoice },
 	{2,"Zombie Man:",M_MiscChoice },
 	{2,"Zombie Shotgun:",M_MiscChoice },
@@ -1123,6 +1126,7 @@ char* MiscHints[misc_end] = {
 	"enable new monsters in the cast of characters sequence",
 	"enable or disable reworked weapons animations",
 	"change the color of monsters in nightmare mode",
+	"changes the transparency of nightmare",
 	"change sounds to vanilla or reworked vanilla sounds",
 	"enable reworked vanilla sprites for the zombie man",
 	"enable reworked vanilla sprites for the zombie shotgun",
@@ -1160,7 +1164,8 @@ menudefault_t MiscDefault[] = {
 	{ &m_brutal, 0 },
 	{ &m_extendedcast, 0 },
 	{ &m_reworkedweaponsanimations, 0 },
-	{ &m_changethecolorofthenightmare, 0 },
+	{ &r_changethecolorofthenightmare, 0 },
+	{ &r_transparencynightmare, 0 },
 	{ &m_reworkedvanillasounds, 0 },
 	{ &m_reworkedzombieman, 0 },
 	{ &m_reworkedzombieshotgun, 0 },
@@ -1312,7 +1317,11 @@ void M_MiscChoice(int choice) {
 		break;
 
 	case misc_changethecolorofthenightmare:
-		M_SetOptionValue(choice, 0, 9, 1, &m_changethecolorofthenightmare);
+		M_SetOptionValue(choice, 0, 9, 1, &r_changethecolorofthenightmare);
+		break;
+
+	case misc_transparencynightmare:
+		M_SetOptionValue(choice, 0, 1, 1, &r_transparencynightmare);
 		break;
 
 	case misc_reworkedvanillasounds:
@@ -1370,6 +1379,7 @@ void M_DrawMisc(void) {
 	static const char* enchancedvanillatype[2] = { "Vanilla", "Enhanced" };
 	static const char* enchancedvanillaimptype[3] = { "Vanilla", "Enhanced", "Mouth" };
 	static const char* alphavanillatype[2] = { "Vanilla", "Alpha" };
+	static const char* transparencynightmaretype[2] = { "EX", "Enhanced" };
 	int y;
 
 	if (currentMenu->menupageoffset <= misc_menufade + 1 &&
@@ -1409,7 +1419,8 @@ void M_DrawMisc(void) {
 	DRAWMISCITEM(misc_brutal, m_brutal.value, autoruntype);
 	DRAWMISCITEM(misc_extendedcast, m_extendedcast.value, autoruntype);
 	DRAWMISCITEM(misc_reworkedweaponsanimations, m_reworkedweaponsanimations.value, enchancedvanillatype);
-	DRAWMISCITEM(misc_changethecolorofthenightmare, m_changethecolorofthenightmare.value, nightmarecolorstype);
+	DRAWMISCITEM(misc_changethecolorofthenightmare, r_changethecolorofthenightmare.value, nightmarecolorstype);
+	DRAWMISCITEM(misc_transparencynightmare, r_transparencynightmare.value, transparencynightmaretype);
 	DRAWMISCITEM(misc_reworkedvanillasounds, m_reworkedvanillasounds.value, enchancedvanillatype);
 	DRAWMISCITEM(misc_reworkedzombieman, m_reworkedzombieman.value, enchancedvanillatype);
 	DRAWMISCITEM(misc_reworkedzombieshotgun, m_reworkedzombieshotgun.value, enchancedvanillatype);

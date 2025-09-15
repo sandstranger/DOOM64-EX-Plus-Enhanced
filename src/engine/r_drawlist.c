@@ -37,6 +37,8 @@ drawlist_t drawlist[NUMDRAWLISTS];
 
 CVAR_EXTERNAL(r_texturecombiner);
 
+CVAR(r_transparencynightmare, 1);
+
 //
 // DL_AddVertexList
 //
@@ -161,11 +163,23 @@ void DL_ProcessDrawList(int tag, boolean(*procfunc)(vtxlist_t*, int*)) {
 				// villsa 12152013 - change blend states for nightmare things
 				if ((checkNightmare ^ (flags & MF_NIGHTMARE))) {
 					if (!checkNightmare && (flags & MF_NIGHTMARE)) {
-						//dglBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR); // styd: disable hardcoded nightmare transparency
+
+						// Styd: Add a new option "Nightmare Style" that allows you to change the transparency of the Nightmares between the transparency of the original ex version, or between my reworked transparency version
+						if (r_transparencynightmare.value == 0)
+						{
+							dglBlendFunc(GL_SRC_COLOR, GL_ONE_MINUS_SRC_COLOR);
+						}
+
 						checkNightmare ^= 1;
 					}
 					else if (checkNightmare && !(flags & MF_NIGHTMARE)) {
-						//dglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // styd: disable hardcoded nightmare transparency
+
+						// Styd: Add a new option "Nightmare Style" that allows you to change the transparency of the Nightmares between the transparency of the original ex version, or between my reworked transparency version
+						if (r_transparencynightmare.value == 0)
+						{
+							dglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+						}
+
 						checkNightmare ^= 1;
 					}
 				}
