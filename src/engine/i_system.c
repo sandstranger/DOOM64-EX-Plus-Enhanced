@@ -51,6 +51,12 @@ CVAR(v_fadein, 1);
 
 ticcmd_t        emptycmd;
 
+#ifdef ANDROID
+extern char* pathToDoom64MainWadsFolder;
+extern char* pathToRootUserFolder;
+extern char* pathToDoom64UserFolder;
+#endif
+
 //
 // I_Sleep
 //
@@ -196,7 +202,11 @@ char* I_GetUserDir(void)
 	static char* g_user_dir = NULL;
 
 	if (!g_user_dir) {
+#ifndef ANDROID
 		g_user_dir = SDL_GetPrefPath("", "doom64ex-plus"); // string allocated by SDL
+#else
+        g_user_dir = pathToDoom64UserFolder;
+#endif
 		if (g_user_dir) {
 			I_Printf("User data dir: %s\n", g_user_dir);
 		} else {
@@ -228,8 +238,12 @@ static char* FindDataFile(char* file) {
 	static filepath_t steam_install_dir;
 
 	char* dirs[] = {
-		(char *)SDL_GetBasePath(), // install dir (where executable is located)
+#ifdef ANDROID
+        pathToDoom64MainWadsFolder,
+#else
+        (char *)SDL_GetBasePath(), // install dir (where executable is located)
 		".", // cur dir from where executable is launched
+#endif
 		I_GetUserDir(), 
 #ifdef DOOM_UNIX_SYSTEM_DATADIR
 		DOOM_UNIX_SYSTEM_DATADIR

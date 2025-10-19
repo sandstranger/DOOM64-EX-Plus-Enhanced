@@ -38,10 +38,10 @@
 const char version_date[] = __DATE__;
 
 #ifdef ANDROID
-static char* pathToDoom64MainWadsFolder = nullptr;
-static char* pathToDoom64ModsFolder = nullptr;
-static char* pathToDoom64UserFolder = nullptr;
-static char* pathToRootUserFolder = nullptr;
+char* pathToDoom64MainWadsFolder = nullptr;
+char* pathToDoom64ModsFolder = nullptr;
+char* pathToDoom64UserFolder = nullptr;
+char* pathToRootUserFolder = nullptr;
 #endif
 
 //
