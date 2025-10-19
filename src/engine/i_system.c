@@ -42,7 +42,9 @@
 #include "gl_draw.h"
 #include "steam.h"
 #include "w_file.h"
-
+#ifdef ANDROID
+#include "SDL3/SDL_log.h"
+#endif
 extern void I_ShutdownSound(void);
 
 CVAR(i_interpolateframes, 1);
@@ -417,6 +419,9 @@ void I_Printf(const char* string, ...) {
 	SDL_vsnprintf(buff, sizeof(buff), string, va);
 	va_end(va);
 	printf("%s", buff);
+#ifdef ANDROID
+    SDL_Log("Doom64EX+ log line = %s", buff);
+#endif
 	fflush(stdout);
 	if (console_initialized) {
 		CON_AddText(buff);
