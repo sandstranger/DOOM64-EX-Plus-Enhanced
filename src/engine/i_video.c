@@ -36,6 +36,10 @@
 #include "gl_main.h"
 #include "con_cvar.h"
 
+#ifdef ANDROID
+#include <stdlib.h>
+#endif
+
 SDL_Window* window = NULL;
 SDL_GLContext   glContext = NULL;
 
@@ -218,7 +222,22 @@ void I_InitScreen(void) {
 	const char *video_driver;
 
     int native_w = 0, native_h = 0;
+
+#ifdef ANDROID
+    v_fullscreen.value = 1;
+
+    char* screenWidthString = getenv("SCREEN_WIDTH");
+    char* screenHeightString = getenv("SCREEN_HEIGHT");
+
+    if (screenWidthString && strlen(screenWidthString)> 0 && screenHeightString && strlen(screenHeightString) >0){
+        native_w = atoi(screenWidthString);
+        native_h = atoi(screenHeightString);
+    } else{
+        GetNativeDisplayPixels(&native_w, &native_h, window);
+    }
+#else
     GetNativeDisplayPixels(&native_w, &native_h, window);
+#endif
 
     video_width = native_w;
     video_height = native_h;
@@ -226,6 +245,7 @@ void I_InitScreen(void) {
 
     usingGL = false;
 
+#ifndef ANDROID
     // GL context attributes
 	video_driver = SDL_GetCurrentVideoDriver();
 	if(!video_driver || !dstreq(video_driver, "wayland")) {
@@ -234,6 +254,14 @@ void I_InitScreen(void) {
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
 	}
+#else
+    bool useLegacyOpenGLES2_0 = strcmp(getenv("LIBGL_ES"), "2") == 0;
+    SDL_Log(useLegacyOpenGLES2_0 ? "Legacy OpenGL ES 2.0 is using for rendering" :
+            "OpenGL ES 3.2 is using for rendering");
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, useLegacyOpenGLES2_0 ? 2 : 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, useLegacyOpenGLES2_0 ? 0 : 2);
+#endif
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 0);
@@ -250,8 +278,12 @@ void I_InitScreen(void) {
 
     flags |= SDL_WINDOW_OPENGL | SDL_WINDOW_MAXIMIZED | SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY;
 
+#ifndef ANDROID
 #ifdef HAS_FULLSCREEN_BORDERLESS
     flags |= (int)v_fullscreen.value ? SDL_WINDOW_FULLSCREEN : SDL_WINDOW_BORDERLESS;
+#else
+    flags |= SDL_WINDOW_FULLSCREEN;
+#endif
 #else
     flags |= SDL_WINDOW_FULLSCREEN;
 #endif
@@ -269,7 +301,11 @@ void I_InitScreen(void) {
     if (window) { SDL_DestroyWindow(window); window = NULL; }
 
     sprintf(title, "Doom64EX+Enhanced - Version Date: %s", version_date);
+#ifdef ANDROID
+    window = SDL_CreateWindow(title, 0, 0, flags);
+#else
     window = SDL_CreateWindow(title, video_width, video_height, flags);
+#endif
     if (!window) {
         I_Error("I_InitScreen: Failed to create window");
         return;
@@ -348,6 +384,68 @@ void I_InitScreen(void) {
     SDL_ShowWindow(window);
     SDL_GL_SwapWindow(window);
     SDL_HideCursor();
+}
+
+void RecalculateScreenResolution (int native_w, int native_h){
+    if (!window) return;
+
+    if ((int)v_fullscreen.value) {
+        SDL_DisplayID displayid = SDL_GetDisplayForWindow(window);
+        if (!displayid) displayid = SDL_GetPrimaryDisplay();
+
+        const SDL_DisplayMode* desk = displayid ? SDL_GetDesktopDisplayMode(displayid) : NULL;
+        SDL_DisplayMode disp_mode = { 0 };
+
+        if (desk) {
+            if (!SDL_GetClosestFullscreenDisplayMode(displayid, desk->w, desk->h, 0.0f, false, &disp_mode)) {
+                disp_mode.displayID = displayid;
+                disp_mode.w = native_w;
+                disp_mode.h = native_h;
+                disp_mode.refresh_rate = 0.0f;
+            }
+        }
+        else {
+            disp_mode.displayID = displayid;
+            disp_mode.w = native_w;
+            disp_mode.h = native_h;
+            disp_mode.refresh_rate = 0.0f;
+        }
+
+        SDL_SetWindowFullscreenMode(window, &disp_mode);
+        SDL_SetWindowFullscreen(window, true);
+        SDL_SyncWindow(window);
+
+        video_width = native_w;
+        video_height = native_h;
+
+#ifdef SDL_PLATFORM_WIN32
+        setUseDXGISwapChainNVIDIA(false);
+#endif
+    }
+    else {
+        SDL_SetWindowFullscreen(window, false);
+        SDL_SetWindowBordered(window, true);
+
+        int windowed_w = (int)(native_w * 0.8f);
+        int windowed_h = (int)(native_h * 0.8f);
+
+        SDL_SetWindowSize(window, windowed_w, windowed_h);
+        SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+
+        video_width = windowed_w;
+        video_height = windowed_h;
+
+#ifdef SDL_PLATFORM_WIN32
+        setUseDXGISwapChainNVIDIA(true);
+#endif
+    }
+
+    video_ratio = (float)video_width / (float)video_height;
+
+    SDL_GetWindowSizeInPixels(window, &win_px_w, &win_px_h);
+    GL_OnResize(win_px_w, win_px_h);
+
+    I_SetMenuCursorMouseRect();
 }
 
 void I_SetMenuCursorMouseRect() {

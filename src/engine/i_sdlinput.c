@@ -31,6 +31,9 @@
 #include "con_cvar.h"
 #include "dgl.h"
 #include "g_settings.h"
+#ifdef ANDROID
+#include <stdlib.h>
+#endif
 
 CVAR(v_msensitivityx, 5);
 CVAR(v_msensitivityy, 5);
@@ -231,7 +234,18 @@ static void I_GamepadInitOnce(void) {
 	if (gamepad64.init) return;
 	if (!SDL_WasInit(SDL_INIT_GAMEPAD)) SDL_InitSubSystem(SDL_INIT_GAMEPAD);
 	I_GamepadInit();
-	gamepad64.init = true;
+
+#ifdef ANDROID
+    char *pathToSdlControllerDb = getenv("PATH_TO_SDL2_CONTROLLER_DB");
+
+    if (SDL_AddGamepadMappingsFromFile(pathToSdlControllerDb) < 0) {
+        SDL_Log("Couldn't load mappings: %s\n", SDL_GetError());
+    } else{
+        SDL_Log("Custom controller db was loaded from: %s", pathToSdlControllerDb);
+    }
+#endif
+
+    gamepad64.init = true;
 }
 
 static void I_GamepadHandleSDLEvent(const SDL_Event* e) {

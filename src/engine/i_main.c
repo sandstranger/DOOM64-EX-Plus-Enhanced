@@ -29,8 +29,20 @@
 #include "d_main.h"
 #include "m_misc.h"
 #include "i_system.h"
+#ifdef ANDROID
+#include <stdlib.h>
+#include <unistd.h>
+#include <SDL3/SDL_main.h>
+#endif
 
 const char version_date[] = __DATE__;
+
+#ifdef ANDROID
+static char* pathToDoom64MainWadsFolder = nullptr;
+static char* pathToDoom64ModsFolder = nullptr;
+static char* pathToDoom64UserFolder = nullptr;
+static char* pathToRootUserFolder = nullptr;
+#endif
 
 //
 // dmemcpy
@@ -443,9 +455,21 @@ float D_fabs(float x) {
 // main
 //
 
+#ifdef ANDROID
+int SDL_main(int argc, char **argv){
+#else
 int main(int argc, char *argv[]) {
+#endif
 	myargc = argc;
 	myargv = argv;
+
+#ifdef ANDROID
+    pathToDoom64MainWadsFolder = getenv ("PATH_TO_DOOM64_MAIN_WADS_FOLDER");
+    pathToDoom64ModsFolder = getenv("PATH_TO_DOOM64_MODS_FOLDER");
+    pathToDoom64UserFolder = getenv("PATH_TO_DOOM_64_USER_FOLDER");
+    pathToRootUserFolder = getenv("PATH_TO_ROOT_USER_FOLDER");
+    chdir(pathToRootUserFolder);
+#endif
 
 	D_DoomMain();
 
