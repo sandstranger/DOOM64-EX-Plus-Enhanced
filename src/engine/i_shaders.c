@@ -112,7 +112,7 @@ static void I_ShaderLoad(void) {
 */
 
 static const char* vertex_shader_bilateral =
-"#version 120\n"
+"#version 120\n\n"
 "varying vec2 vUV;\n"
 "varying vec4 vColor;\nvarying float vEyeDist;\n"
 "uniform int   uPassCount;\n"
@@ -130,7 +130,7 @@ static const char* vertex_shader_bilateral =
 
 /* N64 3-point filter (atsb) */
 static const char* fragment_shader_bilateral_3point =
-"#version 120\n"
+"#version 120\n\n"
 "#define ADD_SCALE 0.60\n"
 "uniform sampler2D uTex;\n"
 "uniform vec2  uTexel;\n"
@@ -238,7 +238,7 @@ static const char* fragment_shader_bilateral_3point =
 
 /* atsb: bilinear */
 static const char* fragment_shader_bilateral =
-"#version 120\n"
+"#version 120\n\n"
 "#define ADD_SCALE 0.60\n"
 "uniform sampler2D uTex;\n"
 "varying vec2 vUV;\n"
@@ -399,10 +399,10 @@ void I_OverlayTintShaderInit(void) {
 	if (generic_tint_overlay_prog) 
 		return;
 	GLuint vs = I_OverlayTintShaderCompile(GL_VERTEX_SHADER,
-		"#version 120\n"
+		"#version 120\n\n"
 		"void main(){ gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex; }\n");
 	GLuint fs = I_OverlayTintShaderCompile(GL_FRAGMENT_SHADER,
-		"#version 120\n"
+		"#version 120\n\n"
 		"uniform vec4 uColor;\n" 
 		"void main(){ gl_FragColor = uColor; }\n");
 	generic_tint_overlay_prog = pglCreateProgram();
