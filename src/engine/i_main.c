@@ -466,7 +466,7 @@ int main(int argc, char *argv[]) {
     pathToDoom64MainWadsFolder = getenv ("PATH_TO_DOOM64_MAIN_WADS_FOLDER");
     pathToDoom64ModsFolder = getenv("PATH_TO_DOOM64_MODS_FOLDER");
     pathToDoom64UserFolder = getenv("PATH_TO_DOOM_64_USER_FOLDER");
-    chdir(SDL_GetAndroidExternalStoragePath());
+    chdir(pathToDoom64UserFolder);
 #endif
 
 	D_DoomMain();
