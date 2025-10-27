@@ -41,7 +41,6 @@ const char version_date[] = __DATE__;
 char* pathToDoom64MainWadsFolder = nullptr;
 char* pathToDoom64ModsFolder = nullptr;
 char* pathToDoom64UserFolder = nullptr;
-char* pathToRootUserFolder = nullptr;
 #endif
 
 //
@@ -467,8 +466,7 @@ int main(int argc, char *argv[]) {
     pathToDoom64MainWadsFolder = getenv ("PATH_TO_DOOM64_MAIN_WADS_FOLDER");
     pathToDoom64ModsFolder = getenv("PATH_TO_DOOM64_MODS_FOLDER");
     pathToDoom64UserFolder = getenv("PATH_TO_DOOM_64_USER_FOLDER");
-    pathToRootUserFolder = getenv("PATH_TO_ROOT_USER_FOLDER");
-    chdir(pathToRootUserFolder);
+    chdir(SDL_GetAndroidExternalStoragePath());
 #endif
 
 	D_DoomMain();
