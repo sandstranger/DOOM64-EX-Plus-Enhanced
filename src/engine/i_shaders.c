@@ -399,7 +399,7 @@ void I_OverlayTintShaderInit(void) {
 	if (generic_tint_overlay_prog) 
 		return;
 	GLuint vs = I_OverlayTintShaderCompile(GL_VERTEX_SHADER,
-		"#version 120\n\n"
+		"#version 120\n\n\n"
 		"void main(){ gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex; }\n");
 	GLuint fs = I_OverlayTintShaderCompile(GL_FRAGMENT_SHADER,
 		"#version 120\n\n"
