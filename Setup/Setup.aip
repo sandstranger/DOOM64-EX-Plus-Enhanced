@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="22.3" version="22.7" Modules="simple" RootPath="." Language="en" Id="{B4723B47-1FD9-4576-996F-BFE374DEC5AF}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="22.3" version="22.3" Modules="simple" RootPath="." Language="en" Id="{B4723B47-1FD9-4576-996F-BFE374DEC5AF}">
   <COMPONENT cid="caphyon.advinst.msicomp.MsiPropsComponent">
     <ROW Property="AI_BITMAP_DISPLAY_MODE" Value="0"/>
     <ROW Property="AI_PRODUCTNAME_ARP" Value="Doom64EX+"/>
@@ -96,7 +96,7 @@
     <ROW File="zlib1.dll" Component_="zlib1.dll" FileName="zlib1.dll" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\src\engine\3rdparty\Libs\x64\zlib1.dll" SelfReg="false"/>
     <ROW File="AUTHORS" Component_="AUTHORS" FileName="AUTHORS" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\AUTHORS" SelfReg="false"/>
     <ROW File="COPYING" Component_="AUTHORS" FileName="COPYING" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\COPYING" SelfReg="false"/>
-    <ROW File="doom64explus.wad" Component_="AUTHORS" FileName="DOOM64~1.WAD|doom64ex-plus-enhanced.wad" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\doom64ex-plus-enhanced.wad" SelfReg="false"/>
+    <ROW File="doom64explus.wad" Component_="AUTHORS" FileName="DOOM64~1.WAD|doom64ex-plus.wad" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\doom64ex-plus.wad" SelfReg="false"/>
     <ROW File="doomsnd.sf2" Component_="AUTHORS" FileName="doomsnd.sf2" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\doomsnd.sf2" SelfReg="false"/>
     <ROW File="LICENSE" Component_="AUTHORS" FileName="LICENSE" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\LICENSE" SelfReg="false"/>
     <ROW File="README.md" Component_="AUTHORS" FileName="README.md" Version="65535.65535.65535.65535" Attributes="0" SourcePath="..\README.md" SelfReg="false"/>
@@ -200,7 +200,7 @@
     <ROW Feature_="MainFeature" Component_="AUTHORS"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
-    <ROW Name="doom64explus.exe" SourcePath="..\src\engine\doom64ex-plus-enhanced.ico" Index="0"/>
+    <ROW Name="doom64explus.exe" SourcePath="..\src\engine\doom64ex-plus.ico" Index="0"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstExSeqComponent">
     <ROW Action="AI_DOWNGRADE" Condition="AI_NEWERPRODUCTFOUND AND (UILevel &lt;&gt; 5)" Sequence="210"/>

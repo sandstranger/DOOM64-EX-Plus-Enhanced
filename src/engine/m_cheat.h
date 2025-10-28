@@ -18,9 +18,8 @@
 #ifndef __M_CHEAT__
 #define __M_CHEAT__
 
-#include "doomdef.h"
-#include "g_game.h"
-#include "doomstat.h"
+#include "d_player.h"
+#include "d_event.h"
 
 //
 // CHEAT SEQUENCE PACKAGE
@@ -36,6 +35,8 @@ void M_CheatGiveWeapon(player_t* player, char dat[4]);
 void M_CheatArtifacts(player_t* player, char dat[4]);
 void M_CheatBoyISuck(player_t* player, char dat[4]);
 void M_CheatGiveKey(player_t* player, char dat[4]);
+void M_CheatWarp(player_t* player, char dat[4]);
+
 
 extern int        amCheating;
 

@@ -19,18 +19,13 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "doomdef.h"
 #include "r_wipe.h"
-#include "r_local.h"
-#include "st_stuff.h"
-#include "m_fixed.h"
-#include "z_zone.h"
+#include "doomdef.h"
 #include "i_system.h"
-#include "m_random.h"
 #include "gl_texture.h"
 #include "doomstat.h"
-
-void M_ClearMenus(void);    // from m_menu.c
+#include "dgl.h"
+#include "m_menu.h"
 
 static dtexture wipeMeltTexture = 0;
 static int wipeFadeAlpha = 0;
@@ -60,6 +55,8 @@ void WIPE_FadeScreen(int fadetics) {
 	int padw, padh;
 	vtx_t v[4];
 	float left, right, top, bottom;
+
+	I_ShaderUnBind();
 
 	allowmenu = false;
 
@@ -128,6 +125,8 @@ void WIPE_FadeScreen(int fadetics) {
 	GL_UnloadTexture(&wipeMeltTexture);
 
 	allowmenu = true;
+
+	I_ShaderBind();
 }
 
 //
@@ -140,6 +139,8 @@ void WIPE_MeltScreen(void) {
 	vtx_t v2[4];
 	float left, right, top, bottom;
 	int i = 0;
+
+	I_ShaderUnBind();
 
 	M_ClearMenus();
 	allowmenu = false;
@@ -227,4 +228,6 @@ void WIPE_MeltScreen(void) {
 	// fade screen out
 	//
 	WIPE_FadeScreen(6);
+
+	I_ShaderBind();
 }

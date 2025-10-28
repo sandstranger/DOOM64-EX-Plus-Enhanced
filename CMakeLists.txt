@@ -1,14 +1,22 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.11)
 
-project(DOOM64EX-Plus LANGUAGES C VERSION 4.2.0.0)
+project(DOOM64 LANGUAGES C VERSION 5.0.0.0)
+
+if (NOT DEFINED ENV{FMOD_STUDIO_SDK_ROOT})
+	message(
+		FATAL_ERROR
+		"FMOD_STUDIO_SDK_ROOT environment variable is not set.\n"
+		"Point it to the root of the FMOD studio SDK that can be downloaded on https://www.fmod.com/download#fmodstudio"
+	)
+endif()
 
 if(
 	CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR
 	CMAKE_SYSTEM_PROCESSOR STREQUAL "EM64T" OR
 	CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64"
-)   
-	set(CPU_ARCH "x86_64")   
-elseif(   
+)
+	set(CPU_ARCH "x86_64")
+elseif(
 	CMAKE_SYSTEM_PROCESSOR STREQUAL "X86" OR
 	CMAKE_SYSTEM_PROCESSOR STREQUAL "i386" OR
 	CMAKE_SYSTEM_PROCESSOR STREQUAL "i686"
@@ -31,7 +39,8 @@ set(FMOD_LIB_DIR "$ENV{FMOD_STUDIO_SDK_ROOT}/api/core/lib/${CPU_ARCH}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I${FMOD_INC_DIR} -L${FMOD_LIB_DIR} -Wunknown-pragmas -fwrapv -MD")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I${FMOD_INC_DIR} -Wunknown-pragmas -fwrapv -MD")
+set(CMAKE_EXE_LINKER_FLAGS "-L${FMOD_LIB_DIR}")
 
 set(CMAKE_C_FLAGS_DEBUG "-g -Wall")
 set(CMAKE_C_FLAGS_RELEASE "-s -O2")

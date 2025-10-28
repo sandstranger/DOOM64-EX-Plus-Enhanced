@@ -19,28 +19,26 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <math.h>
+#include <SDL3/SDL_opengl.h>
 
-
-#ifdef __APPLE__
+#ifdef SDL_PLATFORM_MACOS
 #include <OpenGL/OpenGL.h>
 #endif
 
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_opengl.h>
-
+#include "gl_main.h"
 #include "i_sdlinput.h"
 #include "doomdef.h"
 #include "doomstat.h"
-#include "i_video.h"
-#include "gl_main.h"
 #include "i_system.h"
+#include "i_video.h"
 #include "z_zone.h"
 #include "r_main.h"
 #include "gl_texture.h"
 #include "con_console.h"
 #include "m_misc.h"
 #include "g_actions.h"
+#include "dgl.h"
+#include "i_sectorcombiner.h"
 
 int ViewWindowX = 0;
 int ViewWindowY = 0;
@@ -58,7 +56,6 @@ const char *gl_version;
 static float glScaleFactor = 1.0f;
 
 boolean    usingGL = false;
-int         DGL_CLAMP = GL_CLAMP;
 float       max_anisotropic = 16.0;
 boolean    widescreen = false;
 
@@ -68,8 +65,6 @@ CVAR_EXTERNAL(r_anisotropic);
 CVAR_EXTERNAL(r_multisample);
 CVAR_EXTERNAL(st_flashoverlay);
 CVAR_EXTERNAL(r_colorscale);
-
-extern int win_px_w, win_px_h;
 
 void GL_OnResize(int w, int h);
 
@@ -104,45 +99,11 @@ GL_EXT_texture_env_combine_Define();
 GL_EXT_texture_filter_anisotropic_Define();
 
 //
-// FindExtension
-//
-
-static bool FindExtension(const char *ext) {
-    const char *extensions = NULL;
-    const char *start;
-    const char *where, *terminator;
-
-    // Extension names should not have spaces.
-    where = strrchr(ext, ' ');
-    if(where || *ext == '\0') {
-        return 0;
-    }
-
-    extensions = (const char *)dglGetString(GL_EXTENSIONS);
-
-    start = extensions;
-    for(;;) {
-        where = strstr(start, ext);
-        if(!where) {
-            break;
-        }
-        terminator = where + dstrlen(ext);
-        if(where == start || *(where - 1) == ' ') {
-            if(*terminator == ' ' || *terminator == '\0') {
-                return true;
-            }
-            start = terminator;
-        }
-    }
-    return false;
-}
-
-//
 // GL_CheckExtension
 //
 
 boolean GL_CheckExtension(const char *ext) {
-    if(FindExtension(ext)) {
+    if(SDL_GL_ExtensionSupported(ext)) {
         CON_Printf(WHITE, "GL Extension: %s = true\n", ext);
         return true;
     }
@@ -306,8 +267,8 @@ void GL_SetTextureFilter(void) {
         return;
     }
 
-    dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (int)r_filter.value == 0 ? GL_LINEAR : GL_NEAREST);
-    dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (int)r_filter.value == 0 ? GL_LINEAR : GL_NEAREST);
+    dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (int)r_filter.value == 1 ? GL_LINEAR : GL_NEAREST);
+    dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (int)r_filter.value == 1 ? GL_LINEAR : GL_NEAREST);
 
     if(has_GL_EXT_texture_filter_anisotropic) {
         if(r_anisotropic.value) {
@@ -430,7 +391,7 @@ void GL_SetupAndDraw2DQuad(float x, float y, int width, int height,
 
     GL_Set2DQuad(v, x, y, width, height, u1, u2, v1, v2, c);
     GL_Draw2DQuad(v, stretch);
-};
+}
 
 //
 // GL_SetState
@@ -521,7 +482,7 @@ boolean GL_GetBool(int x) {
 //
 
 static void CalcViewSize(void) {
-    ViewWidth = (win_px_w > 0) ? win_px_w : video_width;
+    ViewWidth  = (win_px_w > 0) ? win_px_w : video_width;
     ViewHeight = (win_px_h > 0) ? win_px_h : video_height;
 
     widescreen = !dfcmp(((float)ViewWidth / (float)ViewHeight), (4.0f / 3.0f));
@@ -531,41 +492,12 @@ static void CalcViewSize(void) {
 }
 
 //
-// GetVersionInt
-// Borrowed from prboom+
-//
-
-typedef enum {
-    OPENGL_VERSION_2_0,
-    OPENGL_VERSION_4_6,
-} glversion_t;
-
-static int GetVersionInt(const char* version) {
-    int MajorVersion;
-    int MinorVersion;
-    int versionvar;
-
-    versionvar = OPENGL_VERSION_4_6;
-
-    if (sscanf(version, "%d.%d", &MajorVersion, &MinorVersion) == 2) {
-        if(MajorVersion > 3) {
-            versionvar = OPENGL_VERSION_4_6;
-        }
-        else {
-            versionvar = OPENGL_VERSION_2_0;
-        }
-    }
-
-    return versionvar;
-}
-
-//
 // GL_OnResize
 // Keep GL viewport in sync with res.
 //
 
 void GL_OnResize(int w, int h) {
-    ViewWidth = w;
+    ViewWidth  = w;
     ViewHeight = h;
     ViewWindowX = 0;
     ViewWindowY = 0;
@@ -617,6 +549,7 @@ void GL_Init(void) {
 
     GL_SetTextureFilter();
     GL_SetDefaultCombiner();
+    GL_SetColorScale();
 
     r_fillmode.value = 1.0f;
 
@@ -641,7 +574,6 @@ void GL_Init(void) {
     dglEnableClientState(GL_TEXTURE_COORD_ARRAY);
     dglEnableClientState(GL_COLOR_ARRAY);
 
-    DGL_CLAMP = (GetVersionInt(gl_version) >= OPENGL_VERSION_4_6 ? GL_CLAMP_TO_EDGE : GL_CLAMP);
 
     glScaleFactor = 1.0f;
 
@@ -652,4 +584,7 @@ void GL_Init(void) {
     usingGL = true;
 
     G_AddCommand("dumpglext", CMD_DumpGLExtensions, 0);
+
+    // atsb: initialise the glue!!!
+    I_SectorCombiner_Init();
 }

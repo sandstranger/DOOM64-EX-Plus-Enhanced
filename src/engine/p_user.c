@@ -34,7 +34,8 @@
 #include "d_englsh.h"
 #include "s_sound.h"
 #include "sounds.h"
-#include "r_local.h"
+#include "r_main.h"
+#include "r_lights.h"
 #include "st_stuff.h"
 
 //
@@ -280,7 +281,6 @@ void P_CalcHeight(player_t* player) {
 //
 // P_MovePlayer
 //
-
 void P_MovePlayer(player_t* player) {
     ticcmd_t* cmd;
     int         mpitch;
@@ -654,7 +654,18 @@ void P_PlayerThink(player_t* player) {
                 newweapon = wp_supershotgun;
             }
 
-            if (player->weaponowned[newweapon] && newweapon != player->readyweapon) {
+            if (newweapon == wp_onlyshotgun
+                && player->weaponowned[wp_shotgun]) {
+                newweapon = wp_shotgun;
+            }
+
+            if (newweapon == wp_onlyfist) {
+                newweapon = wp_fist;
+            }
+
+            if (player->weaponowned[newweapon] &&
+                newweapon != player->readyweapon &&
+                newweapon < NUMWEAPONS) {
                 player->pendingweapon = newweapon;
             }
         }

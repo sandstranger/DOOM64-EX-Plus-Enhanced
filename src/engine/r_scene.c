@@ -22,16 +22,27 @@
 #include "doomstat.h"
 #include "gl_main.h"
 #include "gl_texture.h"
-#include "r_local.h"
+#include "r_lights.h"
 #include "r_sky.h"
 #include "r_drawlist.h"
+#include "r_main.h"
+#include "r_things.h"
 #include "i_swap.h"
+#include "i_system.h"
+#include "dgl.h"
+#include "con_cvar.h"
+#include "m_fixed.h"
 
 CVAR_EXTERNAL(r_texturecombiner);
 CVAR_EXTERNAL(i_interpolateframes);
 CVAR_EXTERNAL(r_fog);
 CVAR_EXTERNAL(r_rendersprites);
 CVAR_EXTERNAL(st_flashoverlay);
+
+int game_world_shader_scope = 0;
+
+extern void I_SectorCombiner_SetFog(int en, float r, float g, float b, float fac);
+extern void I_SectorCombiner_SetFogParams(int mode, float start, float end, float density);
 
 //
 // ProcessWalls
@@ -196,76 +207,54 @@ static boolean ProcessSprites(vtxlist_t* vl, int* drawcount) {
 //
 // SetupFog
 //
-// Fog is handled via RGB colour combinations.  This includes
-// fog color.  Fog distance and density are included
-// but are not RGB values themselves, but integers.
-// The factor for fog density is based on values from the original N64 version.
-//
-
 static void SetupFog(void) {
-	dglFogi(GL_FOG_MODE, GL_LINEAR);
-
-    // don't render fog in wireframe mode
-    if(r_fillmode.value <= 0) {
-        return;
-    }
-
-	if (!skyflatnum) {
+	if (r_fillmode.value <= 0) {
+		I_SectorCombiner_SetFog(0, 0, 0, 0, 0);
+		I_SectorCombiner_SetFogParams(0, 0, 0, 0);
 		dglDisable(GL_FOG);
+		return;
 	}
-	else if (r_fog.value) {
-		rfloat color[4] = { 0, 0, 0, 0 };
-		rcolor fogcolor = 0;
-		int fognear = 0;
-		int fogfactor;
 
-		// density factors range from 990 to 900
-		// each step in density is suppose to be (128 * 1000)
-		// 985 is the default if no sky is present at all
+	boolean has_fog = r_fog.value || (sky && sky->fogcolor != 0);
 
-		fognear = sky ? sky->fognear : 985;
-		fogfactor = (1000 - fognear);
-
-		if (fogfactor <= 0) {
-			fogfactor = 1;
-		}
-
-		dglEnable(GL_FOG);
-
-		// do exponential fog if color is black
-		if (sky && (sky->fogcolor & 0xFFFFFF) != 0) {
-			int min;
-			int max;
-
-			max = 128000 / fogfactor;
-			min = ((fognear - 500) * 256) / fogfactor;
-
-			fogcolor = sky->fogcolor;
-			dglFogi(GL_FOG_MODE, GL_EXP);
-			dglFogf(GL_FOG_DENSITY, 14.0f / (max + min));
-		}
-		// do linear rendering for colored fog
-		else {
-			float min;
-			float max;
-			float position;
-
-			position = ((float)fogfactor / 1000.0f);
-
-			if (position <= 0.0f) {
-				position = 0.00001f;
-			}
-
-			min = 5.0f / position;
-			max = 30.0f / position;
-
-			dglFogf(GL_FOG_START, min);
-			dglFogf(GL_FOG_END, max);
-		}
-
-		dglGetColorf(LONG(fogcolor), color);
-		dglFogfv(GL_FOG_COLOR, color);
+	if (!has_fog) {
+		dglDisable(GL_FOG);
+		I_SectorCombiner_SetFog(0, 0, 0, 0, 0);
+		I_SectorCombiner_SetFogParams(0, 0, 0, 0);
+		return;
 	}
+
+	rfloat color[4] = { 0,0,0,1 };
+	rcolor fogcolor = 0;
+	int fognear = sky ? sky->fognear : 985;
+	int fogfactor = 1000 - fognear;
+
+	if (fogfactor <= 0) fogfactor = 1;
+
+	dglEnable(GL_FOG);
+
+	if (sky) {
+		fogcolor = sky->fogcolor;
+	}
+
+	color[0] = ((fogcolor & 0xFF)) / 255.0f;
+	color[1] = ((fogcolor >> 8) & 0xFF) / 255.0f; 
+	color[2] = ((fogcolor >> 16) & 0xFF) / 255.0f;
+	color[3] = 1.0f;
+
+	float position = ((float)fogfactor) / 1000.0f;
+	if (position <= 0.0f) position = 0.00001f;
+
+	float start = 5.0f / position;
+	float end = 30.0f / position;
+
+	dglFogi(GL_FOG_MODE, GL_LINEAR);
+	dglFogf(GL_FOG_START, start);
+	dglFogf(GL_FOG_END, end);
+	I_SectorCombiner_SetFogParams(1, start, end, 0.0f);
+
+	dglFogfv(GL_FOG_COLOR, color);
+	I_SectorCombiner_SetFog(1, color[0], color[1], color[2], (float)fogfactor / 1000.0f);
 }
 
 //
@@ -288,77 +277,63 @@ void R_SetViewMatrix(void) {
 //
 
 void R_RenderWorld(void) {
-    SetupFog();
+	game_world_shader_scope = 1;
+	I_ShaderBind();
+	SetupFog();
 
-    dglEnable(GL_DEPTH_TEST);
+	if (sky && (sky->flags & SKF_VOID)) {
+		byte* vb = (byte*)&sky->skycolor[2];
+		dglClearColor(vb[0] / 255.0f, vb[1] / 255.0f, vb[2] / 255.0f, 1.0f);
+		dglClear(GL_COLOR_BUFFER_BIT);
+	}
 
-    DL_BeginDrawList(r_fillmode.value >= 1, r_texturecombiner.value >= 1);
+	dglEnable(GL_DEPTH_TEST);
+	DL_BeginDrawList(r_fillmode.value >= 1, r_texturecombiner.value >= 1);
 
-    // setup texture environment for effects
-    if(r_texturecombiner.value) {
-        if(!nolights) {
-            GL_UpdateEnvTexture(WHITE);
-            GL_SetTextureUnit(1, true);
-            dglTexCombModulate(GL_PREVIOUS, GL_PRIMARY_COLOR);
-        }
+	// setup texture environment for effects
+	if (r_texturecombiner.value) {
+		if (!nolights) {
+			GL_UpdateEnvTexture(WHITE);
+			GL_SetTextureUnit(1, true);
+			dglTexCombModulate(GL_PREVIOUS, GL_PRIMARY_COLOR);
+		}
+		if (st_flashoverlay.value <= 0) {
+			GL_SetTextureUnit(2, true);
+			dglTexCombColor(GL_PREVIOUS, flashcolor, GL_ADD);
+		}
+		dglTexCombReplaceAlpha(GL_TEXTURE0_ARB);
+		GL_SetTextureUnit(0, true);
+	}
 
-        if(st_flashoverlay.value <= 0) {
-            GL_SetTextureUnit(2, true);
-            dglTexCombColor(GL_PREVIOUS, flashcolor, GL_ADD);
-        }
+	dglEnable(GL_ALPHA_TEST);
+	dglAlphaFunc(GL_GREATER, 0.5f);
+	GL_SetState(GLSTATE_BLEND, 0);
+	DL_ProcessDrawList(DLT_FLAT, ProcessFlats);
+	DL_ProcessDrawList(DLT_WALL, ProcessWalls);
 
-        dglTexCombReplaceAlpha(GL_TEXTURE0_ARB);
+	dglDisable(GL_ALPHA_TEST);
+	dglDepthMask(GL_FALSE);
+	GL_SetState(GLSTATE_BLEND, 1);
+	dglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        GL_SetTextureUnit(0, true);
-    }
-    else {
-        GL_SetTextureUnit(1, true);
-        GL_SetTextureMode(GL_ADD);
-        GL_SetTextureUnit(0, true);
+	DL_ProcessDrawList(DLT_FLAT, ProcessFlats);
+	DL_ProcessDrawList(DLT_WALL, ProcessWalls);
 
-        if(nolights) {
-            GL_SetTextureMode(GL_REPLACE);
-        }
-    }
+	if (r_rendersprites.value) {
+		R_SetupSprites();
+		dglBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		GL_SetState(GLSTATE_BLEND, 1);
+		DL_ProcessDrawList(DLT_SPRITE, ProcessSprites);
+	}
 
-    dglEnable(GL_ALPHA_TEST);
-
-    // begin draw list loop
-
-    // -------------- Draw walls (segs) --------------------------
-
-    DL_ProcessDrawList(DLT_WALL, ProcessWalls);
-
-    // -------------- Draw floors/ceilings (leafs) ---------------
-
-    GL_SetState(GLSTATE_BLEND, 1);
-    DL_ProcessDrawList(DLT_FLAT, ProcessFlats);
-
-    // -------------- Draw things (sprites) ----------------------
-
-    if(devparm) {
-        spriteRenderTic = I_GetTimeMS();
-    }
-
-    if(r_rendersprites.value) {
-        R_SetupSprites();
-    }
-
-    dglDepthMask(GL_FALSE);
-    DL_ProcessDrawList(DLT_SPRITE, ProcessSprites);
-
-    // -------------- Restore states -----------------------------
-
-    dglDisable(GL_ALPHA_TEST);
-    dglDepthMask(GL_TRUE);
-    dglDisable(GL_FOG);
-    dglDisable(GL_DEPTH_TEST);
-
-    GL_SetOrthoScale(1.0f);
-    GL_SetState(GLSTATE_BLEND, 0);
-    GL_SetState(GLSTATE_CULL, 1);
-    GL_SetDefaultCombiner();
-
-    // villsa 12152013 - make sure we're using the default blend function
-    dglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	// Restore states
+	dglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	GL_SetState(GLSTATE_BLEND, 0);
+	dglEnable(GL_ALPHA_TEST);
+	dglDepthMask(GL_TRUE);
+	dglDisable(GL_FOG);
+	dglDisable(GL_DEPTH_TEST);
+	GL_SetOrthoScale(1.0f);
+	GL_SetDefaultCombiner();
+	I_ShaderUnBind();
 }

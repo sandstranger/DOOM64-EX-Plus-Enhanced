@@ -20,19 +20,23 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "doomstat.h"
+#include <stdarg.h> // for va_* stuff
+
 #include "con_console.h"
+#include "con_cvar.h"
+#include "doomstat.h"
 #include "z_zone.h"
 #include "st_stuff.h"
 #include "g_actions.h"
 #include "m_shift.h"
 #include "gl_draw.h"
-#include "r_main.h"
 #include "i_system.h"
-#include "gl_texture.h"
+#include "dgl.h"
+#include "i_video.h"
+#include "i_shaders.h"
+
 
 #define SDL_MAIN_HANDLED
-#include <SDL3/SDL.h>
 
 #define CONSOLE_PROMPTCHAR      '>'
 #define MAX_CONSOLE_LINES       256//must be power of 2
@@ -59,7 +63,7 @@ static conline_t** console_buffer;
 static int          console_head;
 static int          console_lineoffset;
 static int          console_minline;
-static boolean     console_enabled = false;
+boolean			    console_enabled = false;
 static char         console_linebuffer[CON_BUFFERSIZE];
 static int          console_linelength;
 static boolean     console_state = CST_UP;
@@ -243,7 +247,7 @@ void CON_DPrintf(const char* s, ...) {
 static boolean shiftdown = false;
 
 void CON_ParseKey(unsigned char c) {
-	if (c < ' ') {
+	if (c < KEY_SPACEBAR || c > KEY_BACKSPACE) {
 		return;
 	}
 
@@ -283,6 +287,11 @@ void CON_Ticker(void) {
 	if (keyheld && ((gametic - ticpressed) >= 15)) {
 		CON_ParseKey(lastkey);
 	}
+}
+
+void CON_dismiss(void) {
+	console_state = CST_UP;
+	console_enabled = false;
 }
 
 //
@@ -326,14 +335,8 @@ boolean CON_Responder(event_t* ev) {
 	case CST_LOWER:
 		if (ev->type == ev_keydown) {
 			switch (c) {
-			case '`':
-				console_state = CST_UP;
-				console_enabled = false;
-				break;
-
-			case '~':
-				console_state = CST_UP;
-				console_enabled = false;
+			case KEY_CONSOLE:
+				CON_dismiss();
 				break;
 
 			case KEY_ESCAPE:
@@ -432,11 +435,7 @@ boolean CON_Responder(event_t* ev) {
 
 	case CST_UP:
 	case CST_RAISE:
-		// AB (GIB) - Oh Kaiser...  you plumb! :)
-		// Why the hell do this?  It only works on UK/US keyboards
-		// Gibbon fixes it!
-		//if(c == '`') { <-- BOO!
-		if (c == '~' || c == '`') {
+		if (c == KEY_CONSOLE) {
 			if (ev->type == ev_keydown) {
 				console_state = CST_DOWN;
 				console_enabled = true;
@@ -454,8 +453,6 @@ boolean CON_Responder(event_t* ev) {
 // CON_Draw
 //
 
-extern float display_scale; // set in i_video.c
-
 #define CONFONT_SCALE   ((display_scale * SCREENHEIGHT) / video_height)
 
 #define CONFONT_YPAD    (16 * CONFONT_SCALE)
@@ -465,6 +462,8 @@ void CON_Draw(void) {
 	float   y = 0;
 	float   x = 0;
 	float   inputlen;
+
+	I_ShaderUnBind();
 
 	if (!console_initialized) {
 		return;
@@ -508,4 +507,6 @@ void CON_Draw(void) {
 
 	inputlen = Draw_ConsoleText(x, y, WHITE, CONFONT_SCALE, "%s", console_inputbuffer);
 	Draw_ConsoleText(x + inputlen, y, WHITE, CONFONT_SCALE, "_");
+
+	I_ShaderBind();
 }

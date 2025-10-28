@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include "p_inter.h"
 #include "doomdef.h"
 #include "d_englsh.h"
 #include "sounds.h"
@@ -37,19 +38,17 @@
 #include "p_local.h"
 #include "p_macros.h"
 #include "s_sound.h"
-#include "r_local.h"
 #include "con_console.h"
+#include "con_cvar.h"
 #include "st_stuff.h"
-
-#ifdef __GNUG__
-#pragma implementation "p_inter.h"
-#endif
-#include "p_inter.h"
-
 #include "tables.h"
 #include "info.h"
+#include "r_lights.h"
+#include "r_main.h"
+#include "i_shaders.h"
 
 CVAR_EXTERNAL(p_damageindicator);
+CVAR_EXTERNAL(r_weaponswitch);
 CVAR(m_obituaries, 0);
 CVAR_EXTERNAL(m_brutal);
 CVAR_EXTERNAL(m_secretsound);
@@ -214,7 +213,9 @@ boolean P_GiveWeapon(player_t* player, mobj_t* item, weapontype_t weapon, int dr
 	{
 		gaveweapon = true;
 		player->weaponowned[weapon] = true;
-		player->pendingweapon = weapon;
+		if (r_weaponswitch.value) {
+			player->pendingweapon = weapon;
+		}
 	}
 
 	return gaveweapon || gaveammo;
@@ -298,7 +299,7 @@ static boolean P_GiveCard(player_t* player, mobj_t* item, card_t card) {
 		player->message = GOTREDSKULL;
 		player->messagepic = 30;
 		break;
-default:
+	default:
 		break;
 	}
 
@@ -618,7 +619,7 @@ void P_TouchSpecialThing(mobj_t* special, mobj_t* toucher) {
 		if (!P_GiveAmmo(player, am_shell, 1)) {
 			return;
 		}
-		player->message = (gameskill == sk_baby) ? GOTSHELLS2 : GOTSHELLS;    //villsa
+		player->message = (gameskill == sk_baby || gameskill == sk_nightmare || gameskill == sk_ultranightmare) ? GOTSHELLS2 : GOTSHELLS;    //villsa
 		player->messagepic = 13;
 		break;
 
@@ -799,8 +800,8 @@ static void P_Obituary(mobj_t* source, mobj_t* target) {
 	}
 
 	// Init the random generator
-	srand((unsigned int)time(NULL));
-	int z = rand() % 500;
+	unsigned int seed = (unsigned int)((leveltime * 1664525u) ^ ((source ? source->type : 0) * 1013904223u) ^ 0x9E3779B9u);
+	int z = (int)((seed >> 16) % 500);
 
 	if (source != NULL) {
 		switch (source->type) {
@@ -1152,11 +1153,10 @@ void P_DamageMobj(mobj_t* target, mobj_t* inflictor, mobj_t* source, int damage)
 
 	target->reactiontime = 0; /* we're awake now...	 */
 	// styd: fixes the bug where Arch Vile attacks himself when taking splash damage from his fire attack
-	if ((!target->threshold || target->type == MT_VILE)
-		&& source && (source->flags & MF_SHOOTABLE) && !(target->flags & MF_NOINFIGHTING)
+	if ((!target->threshold || target->type == MT_VILE) && source && (source->flags & MF_SHOOTABLE) && !(target->flags & MF_NOINFIGHTING)
 		&& source->type != MT_VILE)
 	{	/* if not intent on another player, chase after this one */
-		target->target = source;
+		P_SetTarget(&target->target, source);
 		target->threshold = BASETHRESHOLD;
 		if (target->state == &states[target->info->spawnstate] && target->info->seestate != S_NULL)
 		{

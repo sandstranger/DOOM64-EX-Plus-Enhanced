@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C -*-
+﻿// Emacs style mode select   -*- C -*-
 //-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1997 Id Software, Inc.
@@ -23,62 +23,62 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
-
-#ifdef _MSC_VER
-#include "i_opndir.h"
-#else
-#include <dirent.h>
-#endif
-
-#include <ctype.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
-#ifdef _WIN32
-#include <io.h>
-#include <windows.h>
-#endif
-
-#include "doomtype.h"
-#include "doomstat.h"
-#include "i_swap.h"
-#include "i_system.h"
-#include "z_zone.h"
-#include "con_console.h"
-#include "m_misc.h"
-
-#include "md5.h"
+#include <stdint.h>   // for intptr_t
+#include <SDL3/SDL_stdinc.h>
+#include <SDL3/SDL_timer.h>
+#include <SDL3/SDL_storage.h>
 
 #include "w_wad.h"
+#include "w_merge.h"
 #include "w_file.h"
+#include "doomstat.h"
+#include "i_system.h"
+#include "i_system_io.h"
+#include "i_video.h"
+#include "z_zone.h"
+#include "m_misc.h"
+#include "md5.h"
+#include "i_swap.h"
+#include "kpf.h"
+#include "i_png.h"
 
-//
-// GLOBALS
-//
+#define KPF_PNG_CAP_BYTES (40 * 1024 * 1024)
+#define WADFILE_MEM ((wad_file_t*)(intptr_t)-1)
 
-#ifdef _MSC_VER
-#pragma pack(push, 1)
+typedef struct memlump_s {
+	unsigned char* data;
+	int size;
+	char name[8];
+} memlump_t;
+
+#ifndef MAX_MEMLUMPS
+#define MAX_MEMLUMPS 16
 #endif
+
+static memlump_t g_memlumps[MAX_MEMLUMPS];
+static int g_nmemlumps = 0;
+
+static char* g_kpf_files[8]; // "8 kpf ought to be enough for anybody"
+static int g_num_kpf = 0;
+
+#pragma pack(push, 1)
 
 //
 // TYPES
 //
 typedef struct {
-	// Should be "IWAD" or "PWAD".
 	char        identification[4];
 	int            numlumps;
 	int            infotableofs;
-} PACKEDATTR wadinfo_t;
+} wadinfo_t;
 
 typedef struct {
 	int            filepos;
 	int            size;
 	char        name[8];
-} PACKEDATTR filelump_t;
+} filelump_t;
 
-#ifdef _MSC_VER
 #pragma pack(pop)
-#endif
 
 #define MAX_MEMLUMPS    16
 
@@ -88,6 +88,8 @@ int            numlumps;
 
 #define CopyLumps(dest, src, count) dmemcpy(dest, src, (count)*sizeof(lumpinfo_t))
 #define CopyLump(dest, src) CopyLumps(dest, src, 1)
+
+static void W_KPFInit(void);
 
 void ExtractFileBase(char* path, char* dest) {
 	char* src;
@@ -111,8 +113,14 @@ void ExtractFileBase(char* path, char* dest) {
 			I_Error("Filename base of %s >8 chars", path);
 		}
 
-		*dest++ = toupper((int)*src++);
+		*dest++ = SDL_toupper((int)*src++);
 	}
+}
+
+//
+
+boolean W_LumpNameEq(lumpinfo_t* lump, const char* name) {
+	return dstrnicmp(lump->name, name, 8) == 0;
 }
 
 //
@@ -124,7 +132,7 @@ unsigned int W_HashLumpName(const char* str) {
 	unsigned int i = 0;
 
 	for (i = 0; i < 8 && *str != '\0'; str++, i++) {
-		hash ^= ((hash << 5) + toupper((int)*str) + (hash >> 2));
+		hash ^= ((hash << 5) + SDL_toupper((int)*str) + (hash >> 2));
 	}
 
 	return hash;
@@ -133,6 +141,27 @@ unsigned int W_HashLumpName(const char* str) {
 //
 // W_HashLumps
 //
+
+//
+// W_CheckNumForName
+// Returns -1 if name not found.
+//
+
+int W_CheckNumForName(const char* name) {
+	int i = -1;
+
+	if (numlumps) {
+		i = lumpinfo[W_HashLumpName(name) % numlumps].index;
+	}
+
+	while (i >= 0 && !W_LumpNameEq(&lumpinfo[i], name)) {
+		i = lumpinfo[i].next;
+	}
+
+
+	return i;
+}
+
 
 static void W_HashLumps(void) {
 	int i;
@@ -182,7 +211,7 @@ wad_file_t* W_AddFile(char* filename) {
 
 	startlump = numlumps;
 
-	if (strcasecmp(filename + dstrlen(filename) - 3, "wad")) {
+	if (dstricmp(filename + dstrlen(filename) - 3, "wad")) {
 		// single lump file
 
 		// fraggle: Swap the filepos and size here.  The WAD directory
@@ -242,9 +271,129 @@ wad_file_t* W_AddFile(char* filename) {
 
 	Z_Free(fileinfo);
 
-	W_HashLumps();
-
 	return wadfile;
+}
+
+// return fully qualified mod directory if any or NULL otherwise. Must NOT be freed by caller
+// if a mod directory is specified an cannot be found exit program with descriptive message box
+char * W_HandleModParam(void) {
+	char* mod_dir = NULL;
+
+	int p = M_CheckParm("-mod");
+
+	if (p) {
+		p++;
+		if (p < myargc) {
+			mod_dir = myargv[p];
+			if (!M_DirExists(mod_dir)) {
+				mod_dir = I_FindDataFile(mod_dir);
+			}
+			if (!mod_dir) {
+				I_Error("W_Init: failed to find mod directory: %s", myargv[p]);
+			}
+		}
+	}
+
+	if (mod_dir) {
+
+		SDL_Storage* storage = SDL_OpenFileStorage(mod_dir);
+		char* kpf_dir;
+
+		if (storage) {
+			// find wad with larger size in mod dir
+
+			long maxsize = 0;
+			char* wad_filepath = NULL;
+			int count = 0;
+			char** matches = SDL_GlobStorageDirectory(storage, NULL, "*.wad", SDL_GLOB_CASEINSENSITIVE, &count);
+
+			if (matches) {
+				for (int i = 0; i < count; i++) {
+					filepath_t filepath;
+					SDL_snprintf(filepath, sizeof(filepath), "%s/%s", mod_dir, matches[i]);
+					long size = M_FileLengthFromPath(filepath);
+					if (size > maxsize) {
+						maxsize = size;
+						free(wad_filepath);
+						wad_filepath = M_StringDuplicate(filepath);
+					}
+				}
+				SDL_free(matches);
+			}
+
+			SDL_CloseStorage(storage);
+
+			if (wad_filepath) {
+				W_MergeFile(wad_filepath);
+				free(wad_filepath);
+			}
+			else {
+				I_Error("W_Init: cannot find a WAD in mod directory: %s", mod_dir);
+			}
+		}
+		else {
+			// should never happen at this point, but the impossible is known to always happen anyway
+			I_Error("W_Init: failed to access mod directory: %s", mod_dir);
+		}
+
+		kpf_dir = M_FileOrDirExistsInDirectory(mod_dir, "kpf/Doom64", false);
+		if (kpf_dir) {
+			g_kpf_files[g_num_kpf++] = kpf_dir;
+		}
+	}
+	return mod_dir;
+
+}
+
+// if a specified file cannot be found, exit program with descriptive message box
+void W_HandleFileParam(char *mod_dir) {
+
+	int p = M_CheckParm("-file");
+	if (p)
+	{
+		// the parms after p are wadfile/lump names,
+		// until end of parms or another - preceded parm
+		while (++p != myargc && myargv[p][0] != '-')
+		{
+			char* argpath = myargv[p];
+			char* wad_filepath = NULL;
+
+			if (M_FileExists(argpath)) {
+				wad_filepath = M_StringDuplicate(argpath);
+			}
+			else {
+				if (mod_dir) {
+					wad_filepath = M_FileOrDirExistsInDirectory(mod_dir, argpath, true);
+				}
+				if (!wad_filepath) {
+					wad_filepath = M_StringDuplicate(I_FindDataFile(argpath));
+				}
+			}
+
+			if (wad_filepath) {
+				W_MergeFile(wad_filepath);
+				free(wad_filepath);
+			}
+			else {
+				I_Error("W_Init: failed to find file: %s", argpath);
+			}
+		}
+	}
+	// 20120724 villsa - find drag & drop wad files
+	else {
+		for (int i = 1; i < myargc; i++) {
+			if (strstr(myargv[i], ".wad") || strstr(myargv[i], ".WAD")) {
+				char* argpath = myargv[i];
+				if (M_FileExists(argpath)) {
+					W_MergeFile(argpath);
+				}
+				else {
+					I_Error("W_Init: failed to find file: %s", argpath);
+				}
+			}
+		}
+	}
+
 }
 
 //
@@ -256,8 +405,7 @@ wad_file_t* W_AddFile(char* filename) {
 //
 
 void W_Init(void) {
-	char* iwad;
-	char* doom64explusenhancedwad;
+	char* doom64expluswad;
 	wadinfo_t       header;
 	lumpinfo_t* lump_p;
 	int             i;
@@ -266,18 +414,13 @@ void W_Init(void) {
 	int             startlump;
 	filelump_t* fileinfo;
 	filelump_t* filerover;
-	int             p;
-
-	// open the file and add to directory
-	iwad = W_FindIWAD();
-
-	if (iwad == NULL) {
-		I_Error("W_Init: IWAD not found");
+	char* mod_dir;
+	
+	wadfile = W_OpenFile(W_FindIWAD()); // W_FindIWAD() guaranteed non-NULL
+	if (!wadfile) {
+		I_Error("W_Init: failed to open IWAD file");
 	}
-
-	wadfile = W_OpenFile(iwad);
-	free(iwad);
-
+    
 	W_Read(wadfile, 0, &header, sizeof(header));
 
 	if (dstrnicmp(header.identification, "IWAD", 4)) {
@@ -324,38 +467,21 @@ void W_Init(void) {
 
 	Z_Free(fileinfo);
 
-	if ((doom64explusenhancedwad = I_FindDataFile("doom64ex-plus-enhanced.wad"))) {
-		W_MergeFile(doom64explusenhancedwad);
-		free(doom64explusenhancedwad);
+	if ((doom64expluswad = I_FindDataFile("doom64ex-plus-enhanced.wad"))) {
+		W_MergeFile(doom64expluswad);
 	}
 	else {
 		I_Error("W_Init: doom64ex-plus-enhanced.wad not found");
 	}
 
-	p = M_CheckParm("-file");
-	if (p)
-	{
-		// the parms after p are wadfile/lump names,
-		// until end of parms or another - preceded parm
-		while (++p != myargc && myargv[p][0] != '-')
-		{
-			char* filename;
-			filename = W_TryFindWADByName(myargv[p]);
-			W_MergeFile(filename);
-		}
-	}
-	// 20120724 villsa - find drag & drop wad files
-	else {
-		for (i = 1; i < myargc; i++) {
-			if (strstr(myargv[i], ".wad") || strstr(myargv[i], ".WAD")) {
-				char* filename;
-				if ((filename = W_TryFindWADByName(myargv[i]))) {
-					W_MergeFile(filename);
-				}
-			}
-		}
-	}
+	mod_dir = W_HandleModParam();
+
+	W_HandleFileParam(mod_dir);
+
+	// only need to hash lumps when they are all loaded and before W_KPFInit()
 	W_HashLumps();
+		
+	W_KPFInit();
 }
 
 static boolean nonmaplump = false;
@@ -378,7 +504,7 @@ void W_CacheMapLump(int map) {
 	lump = W_GetNumForName(name8);
 
 	// check if non-lump map, aka standard doom map storage
-	if (!((lump + 1) >= numlumps) && !dstrncmp(lumpinfo[lump + 1].name, "THINGS", 8)) {
+	if (!((lump + 1) >= numlumps) && W_LumpNameEq(&lumpinfo[lump + 1], "THINGS")) {
 		nonmaplump = true;
 		return;
 	}
@@ -458,24 +584,6 @@ void* W_GetMapLump(int lump) {
 	return (mapLumpData + LONG(mapLump[lump].filepos));
 }
 
-//
-// W_CheckNumForName
-// Returns -1 if name not found.
-//
-
-int W_CheckNumForName(const char* name) {
-	int i = -1;
-
-	if (numlumps) {
-		i = lumpinfo[W_HashLumpName(name) % numlumps].index;
-	}
-
-	while (i >= 0 && dstrncmp(lumpinfo[i].name, name, 8)) {
-		i = lumpinfo[i].next;
-	}
-
-	return i;
-}
 
 //
 // W_GetNumForName
@@ -488,7 +596,7 @@ int W_GetNumForName(const char* name) {
 	i = W_CheckNumForName(name);
 
 	if (i == -1) {
-		I_Error("W_GetNumForName: %s not found!", name);
+		I_Warning("W_GetNumForName: %s not found!\n", name);
 	}
 
 	return i;
@@ -513,7 +621,8 @@ int W_LumpLength(int lump) {
 //  which must be >= W_LumpLength().
 //
 
-void W_ReadLump(int lump, void* dest) {
+void W_ReadLump(int lump, void* dest)
+{
 	int c;
 	lumpinfo_t* l;
 
@@ -523,13 +632,319 @@ void W_ReadLump(int lump, void* dest) {
 
 	l = lumpinfo + lump;
 
+	if (l->wadfile == WADFILE_MEM) {
+		int idx = l->position;
+		if (idx < 0 || idx >= g_nmemlumps) {
+			I_Error("W_ReadLump: bad mem lump index %d", idx);
+		}
+		dmemcpy(dest, g_memlumps[idx].data, l->size);
+		return;
+	}
+
 	I_BeginRead();
-
 	c = W_Read(l->wadfile, l->position, dest, l->size);
-
 	if (c < l->size) {
 		I_Error("W_ReadLump: only read %i of %i on lump %i", c, l->size, lump);
 	}
+}
+
+static int W_AddMemoryLump(const char name8[8], unsigned char* data, int size)
+{
+    if (size <= 0 || data == NULL)
+        return 0;
+
+    int existing = W_CheckNumForName(name8);
+    if (existing >= 0) {
+        if (g_nmemlumps >= MAX_MEMLUMPS) {
+            free(data);
+            I_Warning("W_AddMemoryLump: out of memlump slots for %8.8s\n", name8);
+            return 0;
+        }
+        int idx = g_nmemlumps++;
+        dmemcpy(g_memlumps[idx].name, name8, 8);
+        g_memlumps[idx].data = data;
+        g_memlumps[idx].size = size;
+
+        lumpinfo_t* L = &lumpinfo[existing];
+
+        if (L->cache) {
+            Z_Free(L->cache);
+            L->cache = NULL;
+        }
+
+        L->wadfile  = WADFILE_MEM;
+        L->position = idx;   // index
+        L->size     = size;
+        dmemcpy(L->name, name8, 8);
+
+        W_HashLumps();
+
+        I_Printf("KPF: Overrode %8.8s in-place with memory lump (%d bytes)\n", name8, size);
+        return 1;
+    }
+
+    if (g_nmemlumps >= MAX_MEMLUMPS) {
+        free(data);
+        I_Warning("W_AddMemoryLump: out of memlump slots for %8.8s\n", name8);
+        return 0;
+    }
+
+    lumpinfo = (lumpinfo_t*)realloc(lumpinfo, (numlumps + 1) * sizeof(lumpinfo_t));
+    if (!lumpinfo) {
+        free(data);
+        I_Error("W_AddMemoryLump: Couldn't realloc lumpinfo");
+        return 0;
+    }
+
+    int idx = g_nmemlumps++;
+    dmemcpy(g_memlumps[idx].name, name8, 8);
+    g_memlumps[idx].data = data;
+    g_memlumps[idx].size = size;
+
+    lumpinfo_t* L = &lumpinfo[numlumps];
+    L->wadfile  = WADFILE_MEM;
+    L->position = idx;
+    L->size     = size;
+    dmemcpy(L->name, name8, 8);
+    L->cache    = NULL;
+
+    numlumps++;
+    W_HashLumps();
+    I_Printf("KPF: Added new memory lump %8.8s (%d bytes)\n", name8, size);
+    return 1;
+}
+
+// kpf can point to:
+//   - a file path (either absolute or releative) to a .kpf file 
+//   - a directory path containing kpf data with the same folder structure than a file .kpf
+//   - a filename (will be searched in the data dirs)
+// return true if data loaded successfully, false if kpf does not exist or failure to load (inner not found or other error)
+static boolean KPFLoadInner(char* kpf, const char* inner, unsigned char** data, int* size, int max_uncompressed, unsigned int *kpf_key) {
+
+	*data = NULL;
+	*size = 0;
+	if (kpf_key) {
+		*kpf_key = 0;
+	}
+
+	if (M_DirExists(kpf)) {
+		char* path = M_FileOrDirExistsInDirectory(kpf, (char *)inner, false);
+		if (path) {
+			unsigned char *tmp_data;
+			int tmp_size = M_ReadFileEx(path, &tmp_data, true);
+			if (tmp_size > 0) {
+				*size = tmp_size;
+				*data = tmp_data;
+				if (kpf_key) {
+					*kpf_key = M_StringHash(path);
+				}
+			}
+			free(path);
+		}
+	}
+	else {
+		char* path = M_FileExists(kpf) ? kpf : I_FindDataFile((char*)kpf);
+		if (path) {
+			int ret = max_uncompressed > 0 ?
+				KPF_ExtractFileCapped(path, inner, data, size, max_uncompressed) :
+				KPF_ExtractFile(path, inner, data, size);
+
+			if (ret && kpf_key) {
+				*kpf_key = M_FileLengthFromPath(path);
+			}
+		}
+		else {
+			I_Error("Failed to find kpf: %s", kpf);
+		}
+	}
+
+	return *data && *size > 0;
+}
+
+boolean W_KPFLoadInner(const char* inner, unsigned char** data, int* size) {
+	for (int i = 0; i < g_num_kpf; i++) {
+		if (KPFLoadInner(g_kpf_files[i], inner, data, size, 0, NULL)) return true;
+	}
+	return false;
+}
+
+static void W_KPFInit(void)
+{
+	Uint64 start_ticks = SDL_GetTicks();
+
+	// this param be useful to disable kpf cache for benchmarking
+	boolean use_cache = !M_CheckParm("-no-kpf-cache"); 
+
+	// -kpf can be followed with up to 7 arguments pointing to a KPF file or a directory 
+	// root of a KPF arborescence with just overriden files:
+	// Some remaster mods (eg BETA64 Remastered, DOOM64 Reloaded) have such folder containing kpf override files that 
+	// are patched into the stock Doom64.kpf with a .BAT script that only works on Windows
+	int p = M_CheckParm("-kpf");
+
+	if (p) {
+		// the parms after p are kpf names,
+		// until end of parms or another - preceded parm
+		while (++p != myargc && myargv[p][0] != '-' && g_num_kpf < SDL_arraysize(g_kpf_files) - 1) {
+			g_kpf_files[g_num_kpf++] = myargv[p];
+		}
+	}
+
+	// always add stock KPF last as fallback
+	g_kpf_files[g_num_kpf++] = KPF_FILENAME;
+
+	struct override_item {
+		char name8[8];
+		char* paths[4];
+		int  max_w, max_h;
+	};
+
+	// atsb: let's be strict, if these aren't present, then we bail out at 30,000ft without a parachute!
+	const struct override_item items[] = {
+		{ "TITLE",   { "gfx/Doom64_HiRes.png", NULL }, win_px_w, win_px_h },
+		{ "USLEGAL", { "gfx/legals.png",       NULL }, win_px_w, win_px_h },
+		{ PHSENSW_LUMPNAME, { "gfx/PhotosensitivityWarning.png", NULL }, win_px_w, win_px_h },
+		{ "CURSOR",  { "gfx/cursor.png",       NULL }, 33, 32 },
+	};
+
+	int need = SDL_arraysize(items);
+	int loaded = 0;
+
+	char missing[256];
+	missing[0] = 0;
+
+	for (size_t it = 0; it < need; ++it) {
+		const struct override_item* ov = &items[it];
+		int this_ok = 0;
+
+		for (int k = 0; k < g_num_kpf && !this_ok; ++k) {
+			char* kpf = g_kpf_files[k];
+
+			for (size_t p = 0; ov->paths[p] != NULL && !this_ok; ++p) {
+				const char* inner = ov->paths[p];
+
+				unsigned char* data = NULL;
+				int size = 0;
+				unsigned int kpf_key;
+
+				if (!KPFLoadInner(kpf, inner, &data, &size, KPF_PNG_CAP_BYTES, &kpf_key)) continue; 
+
+				if (ov->max_w > 0 && ov->max_h > 0) {
+					int w = 0, h = 0;
+					if (PNG_ReadDimensions(data, (size_t)size, &w, &h)) {
+						if (w > ov->max_w || h > ov->max_h) {
+							unsigned char* scaled = NULL; int scaled_sz = 0;
+
+							boolean in_cache = false;
+							filepath_t cache_filepath;
+
+							if (use_cache) {
+
+								char* cache_dir = I_GetUserFile("kpf_cache");
+								if (!M_DirExists(cache_dir)) {
+									use_cache = M_CreateDir(cache_dir);
+								}
+
+								if (use_cache) {
+
+									filepath_t cache_filename;
+
+									SDL_snprintf(cache_filename, MAX_PATH,
+										"%s_%d_%d_%d_%d",
+										ov->name8,
+										ov->max_w, ov->max_h,
+										size, kpf_key);
+
+									SDL_snprintf(cache_filepath, MAX_PATH, "%s/%s",	cache_dir, cache_filename);
+
+									if (M_FileExists(cache_filepath)) {
+
+										unsigned char* cache_data;
+										int cache_size = M_ReadFileEx(cache_filepath, &cache_data, true);
+										in_cache = cache_size > 0;
+										if (in_cache) {
+											I_Printf("W_KPFInit: %s loaded from %s\n", ov->name8, cache_filepath);
+											free(data);
+											data = cache_data;
+											size = cache_size;
+										}
+									}
+
+									// remove eventual old entries
+									SDL_Storage *storage = SDL_OpenFileStorage(cache_dir);
+									if (storage) {
+										int count;
+										char pattern[32];
+										char** matches;
+										SDL_snprintf(pattern, sizeof(pattern), "%s_*_%d", ov->name8, kpf_key);
+										matches = SDL_GlobStorageDirectory(storage, NULL, pattern, 0, &count);
+										if (matches) {
+											for (int i = 0; i < count; i++) {
+												if (!dstreq(matches[i], cache_filename)) {
+													SDL_RemoveStoragePath(storage, matches[i]);
+												}
+											}
+											SDL_free(matches);
+										}
+										SDL_CloseStorage(storage);
+									}
+
+								}
+								free(cache_dir);
+							}
+							
+							if (!use_cache || !in_cache) {
+								if (PNG_DownscaleToFit(data, size, ov->max_w, ov->max_h, &scaled, &scaled_sz)) {
+									free(data);
+									data = scaled;
+									size = scaled_sz;
+									I_Printf("W_KPFInit: %s too large (%dx%d) scaled to fit %dx%d\n",
+										ov->name8, w, h, ov->max_w, ov->max_h);
+
+									if (use_cache) {
+										M_WriteFile(cache_filepath, data, size);
+									}
+								}
+								else {
+									I_Printf("W_KPFInit: %s too large (%dx%d), keeping WAD version.\n",
+										ov->name8, w, h);
+									free(data);
+									data = NULL;
+									size = 0;
+								}
+							}
+						}
+					}
+				}
+				if (data && size > 0) {
+					if (W_AddMemoryLump(ov->name8, data, size)) {
+						I_Printf("W_KPFInit: Loaded %s from %s (%s, %d bytes)\n", ov->name8, kpf, inner, size);
+						this_ok = 1;
+						loaded++;
+					}
+					else {
+						I_Printf("W_KPFInit: Failed to add in-memory %s from %s (%s)\n", ov->name8, kpf, inner);
+						free(data);
+						data = NULL;
+					}
+				}
+			}
+		}
+		if (!this_ok) {
+			size_t cur = strlen(missing);
+			size_t left = sizeof(missing) - cur - 1;
+			if (left > 0) {
+				snprintf(missing + cur, left, "%s%s", cur ? "," : "", ov->name8);
+			}
+		}
+	}
+	// atsb: ONLY LOAD IF EVERYTHING IS FOUND!
+	if (loaded != need) {
+		I_Error("W_KPFInit: required assets missing or corrupt: %s. "
+			"Make sure %s is present and readable.", missing[0] ? missing : "(unknown)", KPF_FILENAME);
+	}
+
+	I_Printf("W_KPFInit: took %d ms\n", SDL_GetTicks() - start_ticks);
+
 }
 
 //

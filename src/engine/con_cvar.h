@@ -24,6 +24,8 @@
 #ifndef CON_CVAR_H
 #define CON_CVAR_H
 
+#include <stdint.h>
+
 #include "doomtype.h"
 
 typedef struct cvar_s cvar_t;
@@ -88,3 +90,4 @@ void CON_CvarSetValue(char *var_name, float value);
 cvar_t *CON_CvarGet(char *name);
 
 #endif
+

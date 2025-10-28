@@ -14,27 +14,23 @@
 // 
 //------------------------------------------------------------------------------
 
-#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "net_client.h"
 #include "doomdef.h"
 #include "doomstat.h"
 #include "g_demo.h"
 #include "i_system.h"
 #include "m_misc.h"
 #include "m_cheat.h"
-
-#include "net_client.h"
 #include "net_common.h"
 #include "net_defs.h"
 #include "net_io.h"
 #include "net_packet.h"
 #include "net_server.h"
 #include "net_structure.h"
-
 #include "st_stuff.h"
-#include "w_wad.h"
 
 CVAR_EXTERNAL(sv_nomonsters);
 CVAR_EXTERNAL(sv_fastmonsters);
@@ -325,6 +321,13 @@ static void NET_CL_ExpandFullTiccmd(net_full_ticcmd_t* cmd, unsigned int seq)
 
 // Advance the receive window
 
+#ifdef GCC_COMPILER
+// disable GCC overlapped memcpy warning in -Wall mode:
+// warning: ‘memcpy’ accessing 10668 bytes at offsets 0 and 84 overlaps 10584 bytes at offset 84 [-Wrestrict]
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wrestrict"
+#endif
+
 static void NET_CL_AdvanceWindow(void)
 {
 	while (recvwindow[0].active)
@@ -344,6 +347,10 @@ static void NET_CL_AdvanceWindow(void)
 		//printf("CL: advanced to %i\n", recvwindow_start);
 	}
 }
+
+#ifdef GCC_COMPILER
+#pragma GCC diagnostic pop
+#endif
 
 // Shut down the client code, etc.  Invoked after a disconnect.
 
@@ -1127,7 +1134,7 @@ static void NET_CL_SendSYN(void)
 	packet = NET_NewPacket(10);
 	NET_WriteInt16(packet, NET_PACKET_TYPE_SYN);
 	NET_WriteInt32(packet, NET_MAGIC_NUMBER);
-	NET_WriteString(packet, "Doom64EX+Enhanced");
+	NET_WriteString(packet, "Doom64EX+");
 	NET_WriteInt8(packet, drone);
 	NET_WriteMD5Sum(packet, net_local_wad_md5sum);
 	NET_WriteString(packet, net_player_name);
@@ -1268,7 +1275,7 @@ void NET_CL_Disconnect(void)
 		{
 			// time out after 5 seconds
 
-			client_state = NET_CONN_STATE_DISCONNECTED;
+			client_state = (net_clientstate_t)NET_CONN_STATE_DISCONNECTED;
 
 			fprintf(stderr, "NET_CL_Disconnect: Timeout while disconnecting from server\n");
 			break;

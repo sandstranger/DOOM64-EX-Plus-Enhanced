@@ -19,13 +19,22 @@
 //
 //-----------------------------------------------------------------------------
 
+#include <SDL3/SDL_stdinc.h>
+
+extern void I_ShaderUnBind(void);
+extern void I_ShaderBind(void);
+extern int game_world_shader_scope;
+extern void I_SectorCombiner_Unbind(void);
+
+int g_psprite_scope = 0;
+#include "r_things.h"
 #include "r_lights.h"
+#include "r_main.h"
 #include "i_system.h"
 #include "tables.h"
 #include "w_wad.h"
 #include "doomstat.h"
 #include "z_zone.h"
-#include "r_things.h"
 #include "gl_texture.h"
 #include "gl_main.h"
 #include "r_drawlist.h"
@@ -33,10 +42,8 @@
 #include "r_clipper.h"
 #include "m_misc.h"
 #include "con_console.h"
-#include "i_swap.h"
-
-#include <stdlib.h>
-
+#include "dgl.h"
+#include "i_shaders.h"
 
 #define MAX_SPRITES    999999
 
@@ -55,6 +62,8 @@ CVAR_EXTERNAL(st_flashoverlay);
 CVAR_EXTERNAL(i_interpolateframes);
 CVAR_EXTERNAL(v_accessibility);
 CVAR_EXTERNAL(r_rendersprites);
+CVAR_EXTERNAL(r_weaponFilter);
+CVAR_EXTERNAL(r_transparencynightmare);
 
 CVAR(r_changethecolorofthenightmare, 1);
 CVAR(m_reworkedzombieman, 1);
@@ -175,7 +184,7 @@ void R_InitSprites(char** namelist) {
 		//  filling in the frames for whatever is found
 
 		for (l = start + 1; l < end; l++)
-			if (!strncasecmp(lumpinfo[l].name, spritename, 4))
+			if (!dstrnicmp(lumpinfo[l].name, spritename, 4))
 			{
 				frame = lumpinfo[l].name[4] - 'A';
 				rotation = lumpinfo[l].name[5] - '0';
@@ -242,7 +251,7 @@ void R_AddSprites(subsector_t* sub) {
 		if (thing->flags & MF_NOSECTOR) {
 			continue;
 		}
-		
+
 		// styd: added an option to change some vanilla monsters sprites to reworked vanilla monsters sprites
 		if (m_reworkedzombieman.value == 1) {
 			// reworked vanilla monsters sprites
@@ -325,7 +334,7 @@ void R_AddSprites(subsector_t* sub) {
 		}
 
 		if (m_reworkedpinkyandspectre.value == 1) {
-			
+
 			// reworked vanilla monsters sprites
 			if (thing->type == MT_DEMON2) {
 				thing->info->palette = 0;
@@ -334,7 +343,7 @@ void R_AddSprites(subsector_t* sub) {
 				}
 			}
 			else if (thing->type == MT_DEMON1) {
-				
+
 				if (thing->sprite == SPR_SARG) {
 					thing->sprite = SPR_SAR1;
 				}
@@ -390,7 +399,7 @@ void R_AddSprites(subsector_t* sub) {
 				}
 			}
 		}
-		
+
 		if (vissprite - visspritelist >= MAX_SPRITES) {
 			CON_Warnf("R_AddSprites: Sprite overflow");
 			return;
@@ -508,75 +517,98 @@ static boolean R_GenerateSpritePlane(visspritelist_t* vissprite, vtx_t* vertex) 
 		offs = 0.0f;
 	}
 
+	int draw_alpha = thing->alpha;
+
+	if (thing->type == MT_DEMON2) {
+		if (draw_alpha < 0x60)
+			draw_alpha = 0x60;
+	}
+
+	if (r_transparencynightmare.value == 0)
+	{
+		if (thing->flags & MF_NIGHTMARE) {
+			draw_alpha = (draw_alpha * 5);
+			if (draw_alpha > 255)
+				draw_alpha = 255;
+		}
+	}
+
 	// [kex] nightmare things have a shade of dark green
 	if (thing->flags & MF_NIGHTMARE) {
-
 		// styd: add a new option to change the color of nightmares
 		if (r_changethecolorofthenightmare.value == 0)
 		{
 			// white Nightmare Color (off Nightmare Color)
-			dglSetVertexColor(vertex, D_RGBA(255, 255, 255, thing->alpha), 4);
+			dglSetVertexColor(vertex, D_RGBA(255, 255, 255, draw_alpha), 4);
 		}
 		else if (r_changethecolorofthenightmare.value == 1)
 		{
-		// Green Nightmare Color
-		dglSetVertexColor(vertex, D_RGBA(64, 255, 0, thing->alpha), 4);
+			// Green Nightmare Color
+			dglSetVertexColor(vertex, D_RGBA(64, 255, 0, draw_alpha), 4);
 		}
 		else if (r_changethecolorofthenightmare.value == 2)
 		{
 			// Red Nightmare Color
-			dglSetVertexColor(vertex, D_RGBA(255, 0, 0, thing->alpha), 4);
+			dglSetVertexColor(vertex, D_RGBA(255, 0, 0, draw_alpha), 4);
 		}
 		else if (r_changethecolorofthenightmare.value == 3)
 		{
 			// Yellow Nightmare Color
-			dglSetVertexColor(vertex, D_RGBA(255, 255, 0, thing->alpha), 4);
+			dglSetVertexColor(vertex, D_RGBA(255, 255, 0, draw_alpha), 4);
 		}
 		else if (r_changethecolorofthenightmare.value == 4)
 		{
 			// Blue Nightmare Color
-			dglSetVertexColor(vertex, D_RGBA(0, 0, 255, thing->alpha), 4);
+			dglSetVertexColor(vertex, D_RGBA(0, 0, 255, draw_alpha), 4);
 		}
 		else if (r_changethecolorofthenightmare.value == 5)
 		{
 			// Pink Nightmare Color
 			//dglSetVertexColor(vertex, D_RGBA(255, 128, 192, thing->alpha), 4);
-			dglSetVertexColor(vertex, D_RGBA(255, 0, 255, thing->alpha), 4);
+			dglSetVertexColor(vertex, D_RGBA(255, 0, 255, draw_alpha), 4);
 		}
 		else if (r_changethecolorofthenightmare.value == 6)
 		{
 			// Purple Nightmare Color
-			dglSetVertexColor(vertex, D_RGBA(128, 0, 255, thing->alpha), 4);
+			dglSetVertexColor(vertex, D_RGBA(128, 0, 255, draw_alpha), 4);
 			//dglSetVertexColor(vertex, D_RGBA(64, 0, 128, thing->alpha), 4);
 		}
 		else if (r_changethecolorofthenightmare.value == 7)
 		{
 			// Orange Nightmare Color
-			dglSetVertexColor(vertex, D_RGBA(255, 128, 0, thing->alpha), 4);
-			
+			dglSetVertexColor(vertex, D_RGBA(255, 128, 0, draw_alpha), 4);
+
 		}
 		else if (r_changethecolorofthenightmare.value == 8)
 		{
 			// Cyan Nightmare Color
-			dglSetVertexColor(vertex, D_RGBA(0, 255, 255, thing->alpha), 4);
+			dglSetVertexColor(vertex, D_RGBA(0, 255, 255, draw_alpha), 4);
 
 		}
 		else if (r_changethecolorofthenightmare.value == 9)
 		{
 			// Black Nightmare Color
-			dglSetVertexColor(vertex, D_RGBA(0, 0, 0, thing->alpha), 4);
+			dglSetVertexColor(vertex, D_RGBA(0, 0, 0, draw_alpha), 4);
 
 		}
+
 	}
 	else if ((thing->frame & FF_FULLBRIGHT)) {
-		dglSetVertexColor(vertex, D_RGBA(255, 255, 255, thing->alpha), 4);
+		dglSetVertexColor(vertex, D_RGBA(255, 255, 255, draw_alpha), 4);
 	}
 	else {
 		R_LightToVertex(vertex,
 			thing->subsector->sector->colors[LIGHT_THING], 4);
+
+		float brightness_multiplier = 1.6f;
+		for (int i = 0; i < 4; i++) {
+			vertex[i].r = (byte)fmin(255.0f, (float)vertex[i].r * brightness_multiplier);
+			vertex[i].g = (byte)fmin(255.0f, (float)vertex[i].g * brightness_multiplier);
+			vertex[i].b = (byte)fmin(255.0f, (float)vertex[i].b * brightness_multiplier);
+		}
 	}
 
-	vertex[0].a = vertex[1].a = vertex[2].a = vertex[3].a = thing->alpha;
+	vertex[0].a = vertex[1].a = vertex[2].a = vertex[3].a = draw_alpha;
 
 	// setup texture mapping
 	vertex[0].tu = vertex[1].tu = offs;
@@ -731,9 +763,9 @@ static void AddSpriteDrawlist(drawlist_t* dl, visspritelist_t* vis, int texid) {
 	}
 
 	// hack to include info on palette indexes
-	list->texid =
-		(texid | ((mobj->player ? mobj->player->palette : mobj->info->palette) << 24)
-			| (list->flags << 16));
+	list->texid = (int)(((unsigned int)texid)
+		| (((unsigned int)((mobj->player ? mobj->player->palette : mobj->info->palette) & 0xFF)) << 24)
+		| (((unsigned int)(list->flags & 0xFFFF)) << 16));
 }
 
 //
@@ -786,6 +818,13 @@ void R_SetupSprites(void) {
 //
 
 void R_DrawPSprite(pspdef_t* psp, sector_t* sector, player_t* player) {
+	int prev_scope = game_world_shader_scope;
+	if (prev_scope) {
+		I_ShaderUnBind();
+		game_world_shader_scope = 0;
+	}
+	I_SectorCombiner_Unbind();
+
 	spritedef_t* sprdef;
 	spriteframe_t* sprframe;
 	int             spritenum;
@@ -802,28 +841,46 @@ void R_DrawPSprite(pspdef_t* psp, sector_t* sector, player_t* player) {
 	float           v2;
 	vtx_t           v[4];
 
+	// atsb: this prevents the 3-point shader from hitting the player weapons
+	I_ShaderUnBind();
+
 	alpha = (player->mo->alpha * psp->alpha) / 0xff;
 
 	// get sprite frame/defs
 	sprdef = &spriteinfo[psp->state->sprite];
 	sprframe = &sprdef->spriteframes[psp->state->info_frame & FF_FRAMEMASK];
 
-	if (psp->state->info_frame & FF_FULLBRIGHT || nolights) {
+	if (nolights) {
 		color = D_RGBA(255, 255, 255, alpha);
 	}
 	else {
 		color = R_GetSectorLight(alpha, sector->colors[LIGHT_THING]);
+
+		float weapon_brightness = 1.4f;
+		byte r = (byte)fmin(255.0f, ((color >> 0) & 0xFF) * weapon_brightness);
+		byte g = (byte)fmin(255.0f, ((color >> 8) & 0xFF) * weapon_brightness);
+		byte b = (byte)fmin(255.0f, ((color >> 16) & 0xFF) * weapon_brightness);
+		byte a = (color >> 24) & 0xFF;
+
+		color = D_RGBA(r, g, b, a);
 	}
 
 	spritenum = sprframe->lump[0];
 	flip = sprframe->flip[0];
 
 	// setup render states
+	g_psprite_scope = 1;
 	GL_BindSpriteTexture(spritenum, 0);
+	g_psprite_scope = 0;
+
+	// Disable 3-point filter for HUD weapon
+	I_ShaderSetTextureSize(0, 0);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
 	GL_SetState(GLSTATE_BLEND, 1);
 
 	// setup vertex data
-
 	x = (F2D3D(R_Interpolate(psp->sx, psp->frame_x, (int)i_interpolateframes.value))
 		- spriteoffset[spritenum]);
 
@@ -842,48 +899,63 @@ void R_DrawPSprite(pspdef_t* psp, sector_t* sector, player_t* player) {
 	v1 = (rfloat)flip;
 	v2 = (rfloat)1 - flip;
 
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (int)r_weaponFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (int)r_weaponFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
+
 	GL_SetOrtho(0);
 	GL_Set2DQuad(v, x, y, width, height, u1, u2, v1, v2, color);
 	GL_SetTextureUnit(0, true);
+
+	// Apply weapon filter from menu (last touch before draw)
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (int)r_weaponFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (int)r_weaponFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
 	GL_CheckFillMode();
 
-    //
-    // setup texture environment for effects
-    //
-    if(r_texturecombiner.value) {
-        float f[4];
+	//
+	// setup texture environment for effects
+	//
+	if (r_texturecombiner.value) {
+		float f[4];
 
-        f[0] = f[1] = f[2] = ((float)sector->lightlevel / 255.0f);
+		f[0] = f[1] = f[2] = ((float)sector->lightlevel / 255.0f);
 
-        dglTexCombColorf(GL_TEXTURE0_ARB, f, GL_ADD);
+		dglTexCombColorf(GL_TEXTURE0_ARB, f, GL_ADD);
 
-        if(!nolights) {
-            GL_UpdateEnvTexture(WHITE);
-            GL_SetTextureUnit(1, true);
-            dglTexCombModulate(GL_PREVIOUS, GL_PRIMARY_COLOR);
-        }
+		if (!nolights) {
+			GL_UpdateEnvTexture(WHITE);
+			GL_SetTextureUnit(1, true);
+			dglTexCombModulate(GL_PREVIOUS, GL_PRIMARY_COLOR);
+		}
 
-        if(st_flashoverlay.value <= 0) {
-            GL_SetTextureUnit(2, true);
-            dglTexCombColor(GL_PREVIOUS, flashcolor, GL_ADD);
-        }
+		if (st_flashoverlay.value <= 0) {
+			GL_SetTextureUnit(2, true);
+			dglTexCombColor(GL_PREVIOUS, flashcolor, GL_ADD);
+		}
 
-        dglTexCombReplaceAlpha(GL_TEXTURE0_ARB);
+		dglTexCombReplaceAlpha(GL_TEXTURE0_ARB);
 
-        GL_SetTextureUnit(0, true);
-    }
-    else {
-        int l = (sector->lightlevel >> 1);
+		GL_SetTextureUnit(0, true);
 
-        GL_SetTextureUnit(1, true);
-        GL_SetTextureMode(GL_ADD);
-        GL_UpdateEnvTexture(D_RGBA(l, l, l, 0xff));
-        GL_SetTextureUnit(0, true);
+		// Apply weapon filter from menu (last touch before draw)
+		dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (int)r_weaponFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
+		dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (int)r_weaponFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
+	}
+	else {
+		int l = (sector->lightlevel >> 1);
 
-        if(nolights) {
-            GL_SetTextureMode(GL_REPLACE);
-        }
-    }
+		GL_SetTextureUnit(1, true);
+		GL_SetTextureMode(GL_ADD);
+		GL_UpdateEnvTexture(D_RGBA(l, l, l, 0xff));
+		GL_SetTextureUnit(0, true);
+
+		// Apply weapon filter from menu (last touch before draw)
+		dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (int)r_weaponFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
+		dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (int)r_weaponFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
+
+		if (nolights) {
+			GL_SetTextureMode(GL_REPLACE);
+		}
+	}
 
 	// render
 	dglSetVertex(v);
@@ -899,6 +971,12 @@ void R_DrawPSprite(pspdef_t* psp, sector_t* sector, player_t* player) {
 
 	GL_SetDefaultCombiner();
 	GL_SetState(GLSTATE_BLEND, 0);
+	I_ShaderBind();
+
+	if (prev_scope) {
+		I_ShaderBind();
+		game_world_shader_scope = 1;
+	}
 }
 
 //

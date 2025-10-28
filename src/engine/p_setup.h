@@ -18,9 +18,8 @@
 #ifndef __P_SETUP__
 #define __P_SETUP__
 
-#ifdef __GNUG__
-#pragma interface
-#endif
+#include "doomstat.h"
+#include "gl_main.h"
 
 // NOT called by W_Ticker. Fixme.
 void P_SetupLevel(int map, int playermask, skill_t skill);
@@ -37,6 +36,11 @@ mapdef_t* P_GetMapInfo(int map);
 clusterdef_t* P_GetCluster(int map);
 episodedef_t* P_GetEpisode(int episode);
 int P_GetNumEpisodes(void);
+void P_InitMapInfo(void);
+void P_ListMaps(void);
+
+// 
+void LOC_RegisterCvars(void);
 
 //
 // [kex] sky definitions

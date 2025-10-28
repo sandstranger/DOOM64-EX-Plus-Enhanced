@@ -21,8 +21,10 @@
 //
 //-----------------------------------------------------------------------------
 
-
+#include <stdlib.h>
 #include <time.h> // [kex] - for saving the date and time
+
+#include "p_saveg.h"
 #include "i_system.h"
 #include "g_game.h"
 #include "z_zone.h"
@@ -31,7 +33,7 @@
 #include "doomstat.h"
 #include "info.h"
 #include "m_password.h"
-#include "p_saveg.h"
+
 #include "d_englsh.h"
 #include "m_misc.h"
 #include "doomdef.h" // added just so MSVC would shut up about warning C4761
@@ -54,6 +56,7 @@ static uint64_t save_offset = 0;
 // P_GetSaveGameName
 //
 
+// must be freed by caller
 char* P_GetSaveGameName(int num) {
     char name[256];
 
@@ -1203,7 +1206,7 @@ static void saveg_write_marker(int marker) {
 boolean P_WriteSaveGame(char* description, int slot) {
 
     // setup game save file
-    char* filename = P_GetSaveGameName(slot);
+    char *filename = P_GetSaveGameName(slot);
     save_stream = fopen(filename, "wb");
     free(filename);
 

@@ -3,7 +3,7 @@
 //
 // Copyright(C) 1993-1997 Id Software, Inc.
 // Copyright(C) 2007-2012 Samuel Villarreal
-// 
+//
 // This source is available for distribution and/or modification
 // only under the terms of the DOOM Source Code License as
 // published by id Software. All rights reserved.
@@ -24,8 +24,8 @@
 #define __I_SDLINPUT__
 
 #include <SDL3/SDL.h>
+
 #include "doomtype.h"
-////////////Input//////////////
 
 extern int UseMouse[2];
 extern int UseJoystick;
@@ -45,12 +45,12 @@ void I_StartTic(void);
 void I_FinishUpdate(void);
 int I_ShutdownWait(void);
 void I_CenterMouse(void);
+void I_SetMousePos(float x, float y);
 boolean I_UpdateGrab(void);
 
 const char* I_KeycodeToName_All(int keycode);
 int I_NameToKeycode_All(const char* name);
 void I_RegisterGamepadKeyNames(void);
-
 
 typedef struct {
 	SDL_Gamepad* gamepad;
@@ -58,7 +58,7 @@ typedef struct {
 	SDL_JoystickID active_id;
 
 	bool player_forward, player_backwards, player_left, player_right;
-	bool player_fire, player_next_weapon, player_previous_weapon, player_jump, player_use, player_pause, player_run, player_automap;
+	bool player_fire, player_next_weapon, player_previous_weapon, player_use, player_pause, player_run, player_automap;
 
 	bool mouse_up, mouse_down, mouse_left, mouse_right;
 	bool mouse_accept, mouse_back, mouse_scroll_up, mouse_scroll_down;

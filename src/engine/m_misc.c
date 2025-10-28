@@ -25,27 +25,32 @@
 //-----------------------------------------------------------------------------
 
 #include <stdbool.h>
+#include <limits.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <SDL3/SDL_platform_defines.h>
+#include <SDL3/SDL_stdinc.h>
+#include <fcntl.h>
 
-#ifdef _WIN32
-#include <io.h>
-#else
-#include <unistd.h> 
+// for mkdir/_mkdir
+#ifdef SDL_PLATFORM_WIN32
+#include <direct.h> 
+#else 
+#include <sys/stat.h>
 #endif
 
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <errno.h>
-
-#include "doomstat.h"
 #include "m_misc.h"
+#include "doomstat.h"
 #include "z_zone.h"
-#include "g_local.h"
-#include "st_stuff.h"
 #include "i_png.h"
-#include "gl_texture.h"
+#include "i_system.h"
 #include "p_saveg.h"
+#include "g_actions.h"
+#include "g_settings.h"
+#include "gl_main.h"
+#include "doomdef.h"
+#include "i_system_io.h"
+
 
 int      myargc;
 char**   myargv;
@@ -69,50 +74,21 @@ int M_CheckParm(const char* check) {
 	return 0;
 }
 
-// Safe, portable vsnprintf().
-int M_vsnprintf(char* buf, unsigned int buf_len, const char* s, va_list args)
+// NULL-safe
+char* M_StringDuplicate(char* s)
 {
-	unsigned int result;
+	if (!s) return NULL;
+#ifdef _MSC_VER
+	return _strdup(s);
+#else
+	// don't use strdup because it requires > C 2011
+	// don't use SDL_strdup() because it must be free'd with SDL_Free() (not interchangeable with free()), which is confusing
 
-	if (buf_len < 1)
-	{
-		return 0;
-	}
-
-	// Windows (and other OSes?) has a vsnprintf() that doesn't always
-	// append a trailing \0. So we must do it, and write into a buffer
-	// that is one byte shorter; otherwise this function is unsafe.
-	result = vsnprintf(buf, buf_len, s, args);
-
-	// If truncated, change the final char in the buffer to a \0.
-	// A negative result indicates a truncated buffer on Windows.
-	if (result < 0 || result >= buf_len)
-	{
-		buf[buf_len - 1] = '\0';
-		result = buf_len - 1;
-	}
-
-	return result;
-}
-
-//
-// Safe version of strdup() that checks the string was successfully
-// allocated.
-//
-
-char* M_StringDuplicate(const char* orig)
-{
-	char* result;
-
-	result = strdup(orig);
-
-	if (result == NULL)
-	{
-		I_Error("Failed to duplicate string (length %i)\n",
-			strlen(orig));
-	}
-
-	return result;
+	size_t len = strlen(s) + 1; // include terminal NULL
+	char* dup = malloc(len);
+	memcpy(dup, s, len); 
+	return dup;
+#endif
 }
 
 //
@@ -147,13 +123,11 @@ void M_AddToBox(fixed_t* box, fixed_t x, fixed_t y) {
 // M_WriteFile
 //
 
-boolean M_WriteFile(char const* name, void* source, int length) {
+boolean M_WriteFile(char* filepath, void* source, int length) {
 	FILE* fp;
 	boolean result;
 
-	errno = 0;
-
-	if (!(fp = fopen(name, "wb"))) {
+	if (!(fp = fopen(filepath, "wb"))) {
 		return 0;
 	}
 
@@ -162,7 +136,7 @@ boolean M_WriteFile(char const* name, void* source, int length) {
 	fclose(fp);
 
 	if (!result) {
-		remove(name);
+		M_RemoveFile(filepath);
 	}
 
 	return result;
@@ -172,25 +146,16 @@ boolean M_WriteFile(char const* name, void* source, int length) {
 // M_WriteTextFile
 //
 
-boolean M_WriteTextFile(char const* name, char* source, int length) {
+boolean M_WriteTextFile(char* filepath, char* source, int length) {
 	int handle;
 	int count;
-#ifdef _WIN32
-	handle = _open(name, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-#else
-	handle = open(name, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-#endif
+	handle = open(filepath, O_WRONLY | O_CREAT | O_TRUNC, 0666);
 
 	if (handle == -1) {
 		return false;
 	}
-#ifdef _WIN32
-	count = _write(handle, source, length);
-	_close(handle);
-#else
 	count = write(handle, source, length);
 	close(handle);
-#endif
 
 	if (count < length) {
 		return false;
@@ -203,39 +168,92 @@ boolean M_WriteTextFile(char const* name, char* source, int length) {
 // M_ReadFile
 //
 
-int M_ReadFile(char const* name, byte** buffer) {
+
+int M_ReadFileEx(char* filepath, byte** buffer, boolean use_malloc) {
 	FILE* fp;
+	int length = M_FileLengthFromPath(filepath);
 
-	errno = 0;
+	*buffer = NULL;
 
-	if ((fp = fopen(name, "rb"))) {
-		unsigned int length;
+	if (length == -1) return -1;
+
+	fp = fopen(filepath, "rb");
+	if (!fp) return -1;
+
+	*buffer = use_malloc ? malloc(length) : Z_Malloc(length, PU_STATIC, 0);
+	if (*buffer) {
 
 		I_BeginRead();
 
-		fseek(fp, 0, SEEK_END);
-		length = ftell(fp);
-		fseek(fp, 0, SEEK_SET);
+		if (fread(*buffer, 1, length, fp) != length) {
+			length = -1;
 
-		*buffer = Z_Malloc(length, PU_STATIC, 0);
-
-		if (fread(*buffer, 1, length, fp) == length) {
-			fclose(fp);
-			return length;
+			if (use_malloc) {
+				free(*buffer);
+			}
+			else {
+				Z_Free(*buffer);
+			}
+			*buffer = NULL;
 		}
-
-		fclose(fp);
+	}
+	else {
+		length = -1;
 	}
 
-	//I_Error("M_ReadFile: Couldn't read file %s: %s", name,
-	//errno ? strerror(errno) : "(Unknown Error)");
+	fclose(fp);
 
-	return -1;
+	return length;
+}
+
+// move filename in src_dirpath to dst_dirpath
+// return false if file already exists or other error, true on success
+boolean M_MoveFile(char* filename, char* src_dirpath, char* dst_dirpath) {
+
+	filepath_t src_filepath, dst_filepath;
+	byte* data;
+	int data_len;
+	boolean ret;
+
+	SDL_snprintf(dst_filepath, MAX_PATH, "%s%s", dst_dirpath, filename);
+
+	if (M_FileExists(dst_filepath)) {
+		return false;
+	}
+
+	SDL_snprintf(src_filepath, MAX_PATH, "%s%s", src_dirpath, filename);
+
+	if ((data_len = M_ReadFileEx(src_filepath, &data, true)) == -1) {
+		return false;
+	}
+	
+	if ((ret = M_WriteFile(dst_filepath, data, data_len))) {
+		M_RemoveFile(src_filepath);
+	}
+
+	free(data);
+
+	return ret;
+
+}
+
+
+int M_ReadFile(char* name, byte** buffer) {
+	return M_ReadFileEx(name, buffer, false);
+}
+
+long M_FileLengthFromPath(char* filepath) {
+	struct stat st;
+	return stat(filepath, &st) == 0 ? st.st_size : -1;
 }
 
 //
 // M_FileLength
 //
+
+boolean M_RemoveFile(char* filepath) {
+	return remove(filepath) == 0;
+}
 
 long M_FileLength(FILE* handle) {
 	long savedpos;
@@ -254,58 +272,56 @@ long M_FileLength(FILE* handle) {
 	return length;
 }
 
-//
-// M_NormalizeSlashes
-//
-// Remove trailing slashes, translate backslashes to slashes
-// The string to normalize is passed and returned in str
-//
-// killough 11/98: rewritten
-//
 
-void M_NormalizeSlashes(char* str) {
-	char* p;
+boolean M_CreateDir(char* dirpath) {
+	int ret;
+#ifdef SDL_PLATFORM_WIN32
+	ret = _mkdir(dirpath);
+#else 
+	ret = mkdir(dirpath, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+#endif
+	return !ret;
+}
 
-	// Convert all slashes/backslashes to DIR_SEPARATOR
-	for (p = str; *p; p++) {
-		if ((*p == '/' || *p == '\\') && *p != DIR_SEPARATOR) {
-			*p = DIR_SEPARATOR;
-		}
-	}
+// return true if path is non-NULL and a regular file that exists
+boolean M_FileExists(const char* path)
+{
+	struct stat st;
+	return path && !stat(path, &st) && S_ISREG(st.st_mode);
+}
 
-	// Collapse multiple slashes
-	for (p = str; (*str++ = *p);)
-		if (*p++ == DIR_SEPARATOR)
-			while (*p == DIR_SEPARATOR) {
-				p++;
+
+// return true if path is non-NULL and a directory that exists
+boolean M_DirExists(const char* path)
+{
+	struct stat st;
+	return path && !stat(path, &st) && S_ISDIR(st.st_mode);
+}
+
+// Returns full path to filename if filename (as a file or dir) exists within dir
+// Returns NULL if dirpath is NULL or empty string
+// Must be freed by caller
+char* M_FileOrDirExistsInDirectory(char* dirpath, char* filename, boolean log) {
+
+	filepath_t path;
+
+	if (!dstrisempty(dirpath)) {
+		// not strictly necessary but avoid funky looking paths in the console
+		char last_char = dirpath[dstrlen(dirpath) - 1];
+		char* separator = last_char == '/' || last_char == '\\' ? "" : "/";
+
+		SDL_snprintf(path, MAX_PATH, "%s%s%s", dirpath, separator, filename);
+		if (M_FileExists(path) || M_DirExists(path)) {
+			if (log) {
+				I_Printf("Found %s\n", path);
 			}
-}
-
-//
-// W_FileExists
-// Check if a wad file exists
-//
-
-int M_FileExists(char* filename) {
-	FILE* fstream;
-
-	fstream = fopen(filename, "r");
-
-	if (fstream != NULL) {
-		fclose(fstream);
-		return 1;
-	}
-	else {
-		// If we can't open because the file is a directory, the
-		// "file" exists at least!
-
-		if (errno == 21) {
-			return 2;
+			return M_StringDuplicate(path);
 		}
 	}
 
-	return 0;
+	return NULL;
 }
+
 
 //
 // M_SaveDefaults
@@ -314,11 +330,9 @@ int M_FileExists(char* filename) {
 void M_SaveDefaults(void) {
 	FILE* fh;
 
-	char* filename = G_GetConfigFileName();
-		fh = fopen(filename, "wt");
-	free(filename);
+	fh = fopen(G_GetConfigFileName(), "wt");
 	if (fh) {
-		G_OutputBindings(fh);
+        G_OutputBindings(fh);
 		fclose(fh);
 	}
 }
@@ -335,73 +349,32 @@ void M_LoadDefaults(void) {
 // M_ScreenShot
 //
 
+#
+
 void M_ScreenShot(void) {
-	char    name[13];
-	int     shotnum = 0;
-	FILE* fh;
+	filepath_t name;
 	byte* buff;
 	byte* png;
-	int     size;
+	int size = 0;
 
-	while (shotnum < 1000) {
-		sprintf(name, "sshot%03d.png", shotnum);
-#ifdef _WIN32
-		if (_access(name, 0) != 0)
-#else
-		if (access(name, 0) != 0)
-#endif
-		{
-			break;
-		}
-		shotnum++;
-	}
-
-	if (shotnum >= 1000) {
-		return;
-	}
-
-	fh = fopen(name, "wb");
-	if (!fh) {
-		return;
-	}
-
-	if ((video_height % 2)) {  // height must be power of 2
-		return;
+	for (int i = 0; ; i++) {
+		if (i == 1000) return;
+		SDL_snprintf(name, MAX_PATH, "%ssshot%03d.png", I_GetUserDir(), i);
+		if (!M_FileExists(name)) break;
 	}
 
 	buff = GL_GetScreenBuffer(0, 0, video_width, video_height);
-	size = 0;
+	png = I_PNGCreate(video_width, video_height, buff, &size); // buff is freed by I_PNGCreate
 
-	// Get PNG image
-
-	png = I_PNGCreate(video_width, video_height, buff, &size);
-	fwrite(png, size, 1, fh);
+	if (png && M_WriteFile(name, png, size)) {
+		I_Printf("Saved screenshot: %s\n", name);
+		players[consoleplayer].message = "Saved screenshot";
+	} else {
+		players[consoleplayer].message = "Failed to create screenshot";
+	}
 
 	Z_Free(png);
-	fclose(fh);
-
-	I_Printf("Saved Screenshot %s\n", name);
-}
-
-// Safe string copy function that works like OpenBSD's strlcpy().
-// Returns true if the string was not truncated.
-
-bool M_StringCopy(char* dest, const char* src, unsigned int dest_size)
-{
-	unsigned int len;
-
-	if (dest_size >= 1)
-	{
-		dest[dest_size - 1] = '\0';
-		strncpy(dest, src, dest_size - 1);
-	}
-	else
-	{
-		return false;
-	}
-
-	len = strlen(dest);
-	return src[len] == '\0';
+	
 }
 
 //
@@ -421,4 +394,15 @@ int M_CacheThumbNail(byte** data) {
 
 	*data = tbn;
 	return SAVEGAMETBSIZE;
+}
+
+
+unsigned int M_StringHash(char* str) {
+	unsigned int hash = 1315423911;
+
+	for ( ; *str != '\0'; str++) {
+		hash ^= ((hash << 5) + SDL_toupper((int)*str) + (hash >> 2));
+	}
+
+	return hash;
 }

@@ -23,15 +23,12 @@
 //
 //-----------------------------------------------------------------------------
 
+#include <stddef.h> // for NULL
+
 // Data.
+#include "info.h"
 #include "sounds.h"
 #include "m_fixed.h"
-
-#ifdef __GNUG__
-#pragma implementation "info.h"
-#endif
-#include "info.h"
-
 #include "p_mobj.h"
 
 char* sprnames[NUMSPRITES + 1] = {  //0x5FA30
@@ -57,7 +54,7 @@ char* sprnames[NUMSPRITES + 1] = {  //0x5FA30
 	"S029", "S031", "S032", "S027", "S036", "S037", "S038", "S040",
 	"S041", "S026", "S002", "S030", "CPOS", "SKEL", "ARCR", "POW1",
 	"SPID", "VFIR", "VILE", "TEST", "BLUG", "BLUP", "SH1R", "SH2R",
-	"PUNR", "POS1", "POS2", "SAR1", "SAR2", "TRO1", "TRO2", "TROM", 
+	"PUNR", "POS1", "POS2", "SAR1", "SAR2", "TRO1", "TRO2", "TROM",
 	"BOS1", "BOS2", "GECH", "A64A", "SAR3", "HEA2", "NCAC", "PAI2",
 	 NULL
 };
@@ -156,8 +153,14 @@ void A_HellhoundMelee();
 void A_AnnihilatorAttack();
 void A_CheckVanillaAnimationsOrReworked();
 
+#ifdef _MSC_VER
+// disable "identifier1' differs in parameter lists from 'identifier2'":
+// A function pointer is assigned to another function pointer, but the formal parameter lists of
+// the functions do not agree. The assignment is compiled without modification.
 #pragma warning(push)
 #pragma warning(disable:4113)
+#endif
+
 state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_NULL*/              { SPR_SPOT, 0, -1, {NULL}, S_NULL },
 
@@ -174,7 +177,7 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_PLAY_DIE2*/         { SPR_PLAY, 8, 10, {A_Scream}, S_PLAY_DIE3 },
 	/*S_PLAY_DIE3*/         { SPR_PLAY, 9, 10, {A_Fall}, S_PLAY_DIE4 },
 	/*S_PLAY_DIE4*/         { SPR_PLAY, 10, 10, {NULL}, S_PLAY_DIE5 },
-	/*S_PLAY_DIE5*/         { SPR_PLAY, 11, 10, {NULL}, S_PLAY_DIE6 },
+	/*S_PLAY_DIE5*/         { SPR_PLAY, 11, 10, {A_OnDeathTrigger}, S_PLAY_DIE6 },
 	/*S_PLAY_DIE6*/         { SPR_PLAY, 12, -1, {NULL}, S_NULL },
 	/*S_PLAY_XDIE1*/        { SPR_PLAY, 13, 5, {NULL}, S_PLAY_XDIE2 },
 	/*S_PLAY_XDIE2*/        { SPR_PLAY, 14, 5, {A_XScream}, S_PLAY_XDIE3 },
@@ -183,7 +186,7 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_PLAY_XDIE5*/        { SPR_PLAY, 17, 5, {NULL}, S_PLAY_XDIE6 },
 	/*S_PLAY_XDIE6*/        { SPR_PLAY, 18, 5, {NULL}, S_PLAY_XDIE7 },
 	/*S_PLAY_XDIE7*/        { SPR_PLAY, 19, 5, {NULL}, S_PLAY_XDIE8 },
-	/*S_PLAY_XDIE8*/        { SPR_PLAY, 20, 5, {NULL}, S_PLAY_XDIE9 },
+	/*S_PLAY_XDIE8*/        { SPR_PLAY, 20, 5, {A_OnDeathTrigger}, S_PLAY_XDIE9 },
 	/*S_PLAY_XDIE9*/        { SPR_PLAY, 21, -1, {NULL}, S_NULL },
 
 	/*S_PBOT_STND*/         { SPR_PLAY, 4, 10, {A_Look}, S_PBOT_STND },
@@ -372,7 +375,7 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_POSS2_RAISE3*/		{ SPR_POSS, 9, 5, {NULL}, S_POSS2_RAISE4 },
 	/*S_POSS2_RAISE4*/		{ SPR_POSS, 8, 5, {NULL}, S_POSS2_RAISE5 },
 	/*S_POSS2_RAISE5*/		{ SPR_POSS, 7, 5, {NULL}, S_POSS2_RUN1 },
-	
+
 	/*S_TROO_STND*/         { SPR_TROO, 0, 10, {A_Look}, S_TROO_STND2 },
 	/*S_TROO_STND2*/        { SPR_TROO, 1, 10, {A_Look}, S_TROO_STND },
 	/*S_TROO_RUN1*/         { SPR_TROO, 0, 3, {A_Chase}, S_TROO_RUN2 },
@@ -1179,6 +1182,10 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_ROCKETLLIGHT3*/     { SPR_ROCK, 32772, 4, {NULL}, S_ROCKETLLIGHT4 },
 	/*S_ROCKETLLIGHT4*/     { SPR_ROCK, 32773, 4, {NULL}, S_NULL },
 
+	/*S_ROCKETL1REWORK*/{ SPR_ROCK, 1, 8, {A_GunFlash}, S_ROCKETL2REWORK },
+	/*S_ROCKETL2REWORK*/{ SPR_ROCK, 0, 10, {A_FireMissile}, S_ROCKETL3REWORK },
+	/*S_ROCKETL3REWORK*/{ SPR_ROCK, 1, 0, {A_ReFire}, S_ROCKETL },
+
 	/*S_PLASMAG*/           { SPR_PLAS, 0, 1, {A_WeaponReady}, S_PLASMAG },
 	/*S_PLASMAGDOWN*/       { SPR_PLAS, 0, 1, {A_Lower}, S_PLASMAGDOWN },
 	/*S_PLASMAGUP1*/        { SPR_PLAS, 0, 0, {A_PlasmaAnimate}, S_PLASMAGUP2 },
@@ -1316,19 +1323,19 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_CPOS_RAISE6*/		{ SPR_CPOS, 7, 5, {NULL}, S_CPOS_RUN1 },
 
 	/*S_SKEL_STND*/			{ SPR_SKEL, 0, 10, {A_Look}, S_SKEL_STND2 },
-	/*S_SKEL_STND2*/		{ SPR_SKEL, 1, 10, {A_Look}, S_SKEL_STND },	
-	/*S_SKEL_RUN1*/			{ SPR_SKEL, 0, 2, {A_Chase}, S_SKEL_RUN2 },	
-	/*S_SKEL_RUN2*/			{ SPR_SKEL, 0, 2, {A_Chase}, S_SKEL_RUN3 },	
-	/*S_SKEL_RUN3*/			{ SPR_SKEL, 1, 2, {A_Chase}, S_SKEL_RUN4 },	
-	/*S_SKEL_RUN4*/			{ SPR_SKEL, 1, 2, {A_Chase}, S_SKEL_RUN5 },	
-	/*S_SKEL_RUN5*/			{ SPR_SKEL, 2, 2, {A_Chase}, S_SKEL_RUN6 },	
-	/*S_SKEL_RUN6*/			{ SPR_SKEL, 2, 2, {A_Chase}, S_SKEL_RUN7 },	
-	/*S_SKEL_RUN7*/			{ SPR_SKEL, 3, 2, {A_Chase}, S_SKEL_RUN8 },	
-	/*S_SKEL_RUN8*/			{ SPR_SKEL, 3, 2, {A_Chase}, S_SKEL_RUN9 },	
+	/*S_SKEL_STND2*/		{ SPR_SKEL, 1, 10, {A_Look}, S_SKEL_STND },
+	/*S_SKEL_RUN1*/			{ SPR_SKEL, 0, 2, {A_Chase}, S_SKEL_RUN2 },
+	/*S_SKEL_RUN2*/			{ SPR_SKEL, 0, 2, {A_Chase}, S_SKEL_RUN3 },
+	/*S_SKEL_RUN3*/			{ SPR_SKEL, 1, 2, {A_Chase}, S_SKEL_RUN4 },
+	/*S_SKEL_RUN4*/			{ SPR_SKEL, 1, 2, {A_Chase}, S_SKEL_RUN5 },
+	/*S_SKEL_RUN5*/			{ SPR_SKEL, 2, 2, {A_Chase}, S_SKEL_RUN6 },
+	/*S_SKEL_RUN6*/			{ SPR_SKEL, 2, 2, {A_Chase}, S_SKEL_RUN7 },
+	/*S_SKEL_RUN7*/			{ SPR_SKEL, 3, 2, {A_Chase}, S_SKEL_RUN8 },
+	/*S_SKEL_RUN8*/			{ SPR_SKEL, 3, 2, {A_Chase}, S_SKEL_RUN9 },
 	/*S_SKEL_RUN9*/			{ SPR_SKEL, 4, 2, {A_Chase}, S_SKEL_RUN10 },
 	/*S_SKEL_RUN10*/		{ SPR_SKEL, 4, 2, {A_Chase}, S_SKEL_RUN11 },
 	/*S_SKEL_RUN11*/		{ SPR_SKEL, 5, 2, {A_Chase}, S_SKEL_RUN12 },
-	/*S_SKEL_RUN12*/		{ SPR_SKEL, 5, 2, {A_Chase}, S_SKEL_RUN1 },	
+	/*S_SKEL_RUN12*/		{ SPR_SKEL, 5, 2, {A_Chase}, S_SKEL_RUN1 },
 	/*S_SKEL_FIST1*/		{ SPR_SKEL, 6, 0, {A_FaceTarget}, S_SKEL_FIST2 },
 	/*S_SKEL_FIST2*/		{ SPR_SKEL, 6, 6, {A_SkelWhoosh}, S_SKEL_FIST3 },
 	/*S_SKEL_FIST3*/		{ SPR_SKEL, 7, 6, {A_FaceTarget}, S_SKEL_FIST4 },
@@ -1338,11 +1345,11 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_SKEL_MISS3*/		{ SPR_SKEL, 10, 10, {A_SkelAttack}, S_SKEL_MISS4 },
 	/*S_SKEL_MISS4*/		{ SPR_SKEL, 10, 10, {A_FaceTarget}, S_SKEL_RUN1 },
 	/*S_SKEL_PAIN*/			{ SPR_SKEL, 11, 4, {NULL}, S_SKEL_PAIN2 },
-	/*S_SKEL_PAIN2*/		{ SPR_SKEL, 11, 4, {A_Pain}, S_SKEL_RUN1 },	
+	/*S_SKEL_PAIN2*/		{ SPR_SKEL, 11, 4, {A_Pain}, S_SKEL_RUN1 },
 	/*S_SKEL_DIE1*/			{ SPR_SKEL, 11, 6, {NULL}, S_SKEL_DIE2 },
 	/*S_SKEL_DIE2*/			{ SPR_SKEL, 12, 6, {NULL}, S_SKEL_DIE3 },
 	/*S_SKEL_DIE3*/			{ SPR_SKEL, 13, 6, {A_Scream}, S_SKEL_DIE4 },
-	/*S_SKEL_DIE4*/			{ SPR_SKEL, 14, 6, {A_Fall}, S_SKEL_DIE5 },	
+	/*S_SKEL_DIE4*/			{ SPR_SKEL, 14, 6, {A_Fall}, S_SKEL_DIE5 },
 	/*S_SKEL_DIE5*/			{ SPR_SKEL, 15, 6, {A_OnDeathTrigger}, S_SKEL_DIE6 },
 	/*S_SKEL_DIE6*/			{ SPR_SKEL, 16, -1, {NULL}, S_NULL },
 	/*S_SKEL_RAISE1*/		{ SPR_SKEL, 16, 6, {NULL}, S_SKEL_RAISE2 },
@@ -1501,7 +1508,7 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_HEAD_RAISE3*/{ SPR_TEST, 9, 8, {NULL}, S_TEST_RAISE2 },
 	/*S_HEAD_RAISE2*/{ SPR_TEST, 8, 8, {A_Scream}, S_TEST_RAISE1 },
 	/*S_HEAD_RAISE1*/{ SPR_TEST, 7, 8, {NULL}, S_TEST_RUN1 },
-	
+
 	// GREEN BLOOD
 	/*S_BLOOD96*/{ SPR_BLUG, 0, 6, {NULL}, S_BLOOD97 },
 	/*S_BLOOD97*/{ SPR_BLUG, 1, 6, {NULL}, S_BLOOD98 },
@@ -1656,7 +1663,9 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	
 };
 
+#ifdef _MSC_VER
 #pragma warning(pop)
+#endif
 
 mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 	{
@@ -2160,7 +2169,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] = {      //0x51E38
 		sfx_None/*sfx_000*/,        //painsound
 		S_NULL,        //meleestate
 		S_CYBR_TITLE2,        //missilestate
-		S_NULL,        //deathstate
+		S_CYBR_DIE1,        //deathstate
 		S_NULL,        //xdeathstate
 		sfx_None/*sfx_000*/,        //deathsound
 		0,        //speed
@@ -6666,7 +6675,7 @@ MF_SOLID,// flags
 		MF_NOBLOCKMAP | MF_GRAVITY | MF_SHADOW,       //flags
 		0,        //palette
 		255        //alpha
-    },
+	},
 
 	{
 		/*MT_HELLHOUND*/

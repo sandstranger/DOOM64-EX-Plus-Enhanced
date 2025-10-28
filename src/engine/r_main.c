@@ -21,26 +21,27 @@
 
 #include <math.h>
 
+#include "r_main.h"
 #include "doomdef.h"
 #include "doomstat.h"
-#include "i_video.h"
-#include "d_devstat.h"
-#include "r_local.h"
+#include "r_lights.h"
 #include "r_sky.h"
+#include "r_things.h"
 #include "r_clipper.h"
 #include "gl_texture.h"
 #include "gl_main.h"
 #include "m_fixed.h"
 #include "tables.h"
 #include "i_system.h"
-#include "m_random.h"
 #include "d_net.h"
+#include "d_main.h"
 #include "p_local.h"
 #include "z_zone.h"
 #include "con_console.h"
 #include "r_drawlist.h"
 #include "gl_draw.h"
-#include "g_actions.h"
+#include "w_wad.h"
+#include "dgl.h"
 
 lumpinfo_t* lumpinfo;
 int             skytexture;
@@ -80,7 +81,7 @@ CVAR(r_fog, 1);
 CVAR(r_wipe, 1);
 CVAR(r_drawmobjbox, 0);
 CVAR(r_rendersprites, 1);
-CVAR(r_skybox, 0);
+CVAR(r_weaponswitch, 1);
 CVAR(hud_disablesecretmessages, 0);
 
 CVAR_CMD(r_colorscale, 0) {
@@ -92,7 +93,19 @@ CVAR_CMD(r_filter, 0) {
 	GL_SetTextureFilter();
 }
 
+CVAR_CMD(r_weaponFilter, 0) {
+	GL_DumpTextures();
+}
+
 CVAR_CMD(r_hudFilter, 0) {
+	GL_DumpTextures();
+}
+
+CVAR_CMD(r_skyFilter, 0) {
+	GL_DumpTextures();
+}
+
+CVAR_CMD(r_objectFilter, 0) {
 	GL_DumpTextures();
 }
 
@@ -336,6 +349,8 @@ void R_PrecacheLevel(void) {
 	int num;
 	mobj_t* mo;
 
+	I_ShaderUnBind();
+
 	CON_DPrintf("--------R_PrecacheLevel--------\n");
 	GL_DumpTextures();
 
@@ -435,6 +450,7 @@ void R_PrecacheLevel(void) {
 	}
 
 	GL_SetDefaultCombiner();
+	I_ShaderBind();
 }
 
 //
@@ -793,12 +809,15 @@ void R_RegisterCvars(void) {
     CON_CvarRegister(&r_fillmode);
 	CON_CvarRegister(&r_fog);
 	CON_CvarRegister(&r_filter);
+    CON_CvarRegister(&r_objectFilter);
+	CON_CvarRegister(&r_weaponFilter);
 	CON_CvarRegister(&r_hudFilter);
+	CON_CvarRegister(&r_skyFilter);
 	CON_CvarRegister(&r_anisotropic);
 	CON_CvarRegister(&r_wipe);
 	CON_CvarRegister(&r_drawmobjbox);
     CON_CvarRegister(&r_rendersprites);
-	CON_CvarRegister(&r_skybox);
+	CON_CvarRegister(&r_weaponswitch);
 	CON_CvarRegister(&r_colorscale);
 	CON_CvarRegister(&r_texturecombiner);
 	CON_CvarRegister(&hud_disablesecretmessages);

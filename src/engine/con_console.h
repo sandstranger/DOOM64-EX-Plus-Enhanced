@@ -26,12 +26,12 @@
 
 #include "d_event.h"
 #include "gl_main.h"
-#include "con_cvar.h"
 
 #define MAX_CONSOLE_INPUT_LEN    80
 extern char     console_inputbuffer[];
 extern int      console_inputlength;
-extern boolean console_initialized;
+extern boolean  console_initialized;
+extern boolean	console_enabled;
 
 #define CONCLEARINPUT() (dmemset(console_inputbuffer+1, 0, MAX_CONSOLE_INPUT_LEN-1))
 
@@ -43,6 +43,7 @@ void CON_DPrintf(const char *s, ...);
 void CON_Draw(void);
 void CON_AddLine(char *line, int len);
 void CON_Ticker(void);
+void CON_dismiss(void);
 
 boolean CON_Responder(event_t* ev);
 

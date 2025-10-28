@@ -21,28 +21,17 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <ctype.h>
-#include "i_system.h"
-#include "z_zone.h"
-#include "w_wad.h"
+#include "f_finale.h"
 #include "s_sound.h"
 #include "d_englsh.h"
+#include "d_event.h"
 #include "sounds.h"
 #include "doomstat.h"
-#include "t_bsp.h"
-#include "g_local.h"
 #include "info.h"
-#include "r_local.h"
-#include "st_stuff.h"
 #include "r_wipe.h"
 #include "gl_draw.h"
-
-CVAR_EXTERNAL(m_reworkedzombieman);
-CVAR_EXTERNAL(m_reworkedzombieshotgun);
-CVAR_EXTERNAL(m_reworkedimp);
-CVAR_EXTERNAL(m_reworkedpinkyandspectre);
-CVAR_EXTERNAL(m_reworkedBaronofHell);
-CVAR_EXTERNAL(m_reworkedHellKnight);
+#include "g_controls.h"
+#include "con_cvar.h"
 
 static int          castrotation = 0;
 static int          castnum;
@@ -108,6 +97,13 @@ castinfo_t extendedorder[] = {
 castinfo_t *castorder;
 
 CVAR(m_extendedcast, 0);
+
+CVAR_EXTERNAL(m_reworkedzombieman);
+CVAR_EXTERNAL(m_reworkedzombieshotgun);
+CVAR_EXTERNAL(m_reworkedimp);
+CVAR_EXTERNAL(m_reworkedpinkyandspectre);
+CVAR_EXTERNAL(m_reworkedBaronofHell);
+CVAR_EXTERNAL(m_reworkedHellKnight);
 
 //
 // F_Start
@@ -234,7 +230,6 @@ int F_Ticker(void) {
 				sound = sfx_sht2fire;
 				break;
 			case S_SARG_ATK2:                           // demon
-			case S_SARG2_ATK2:                          // spectre
 				sound = sfx_sargatk;
 				break;
 			case S_FATT_ATK2:                           // mancubus
@@ -368,7 +363,7 @@ void F_Drawer(void) {
 	if (caststate == &states[S_POSS1_RUN1] || caststate == &states[S_POSS1_RUN2] || caststate == &states[S_POSS1_RUN3] || caststate == &states[S_POSS1_RUN4] || caststate == &states[S_POSS1_RUN5] || caststate == &states[S_POSS1_RUN6] || caststate == &states[S_POSS1_RUN7] || caststate == &states[S_POSS1_RUN8] || caststate == &states[S_POSS1_ATK1] || caststate == &states[S_POSS1_ATK2] || caststate == &states[S_POSS1_ATK3] || caststate == &states[S_POSS1_DIE1] || caststate == &states[S_POSS1_DIE2] || caststate == &states[S_POSS1_DIE3] || caststate == &states[S_POSS1_DIE4] || caststate == &states[S_POSS1_DIE5]) {
 		if (m_reworkedzombieman.value == 1) {
 			// reworked vanilla monsters sprites
-		    caststate->sprite = SPR_POS1;
+			caststate->sprite = SPR_POS1;
 		}
 		else if (m_reworkedzombieman.value == 0) {
 			// vanilla monsters sprites

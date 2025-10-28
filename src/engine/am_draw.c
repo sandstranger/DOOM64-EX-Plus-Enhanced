@@ -19,20 +19,20 @@
 //
 //-----------------------------------------------------------------------------
 
+#include "am_draw.h"
 #include "r_lights.h"
 #include "m_fixed.h"
 #include "tables.h"
-#include "doomstat.h"
-#include "z_zone.h"
 #include "gl_main.h"
 #include "gl_texture.h"
 #include "am_map.h"
-#include "am_draw.h"
 #include "m_cheat.h"
 #include "r_sky.h"
-#include "p_local.h"
+#include "r_main.h"
+#include "r_things.h"
 #include "r_clipper.h"
 #include "r_drawlist.h"
+#include "dgl.h"
 
 extern fixed_t automappanx;
 extern fixed_t automappany;
@@ -49,16 +49,19 @@ CVAR_EXTERNAL(r_texturecombiner);
 //
 
 void AM_BeginDraw(angle_t view, fixed_t x, fixed_t y) {
+
+	I_ShaderUnBind();
+
 	am_viewangle = view;
 
 	    if(r_texturecombiner.value > 0 && am_overlay.value) {
-        GL_SetState(GLSTATE_BLEND, 1);
+		GL_SetState(GLSTATE_BLEND, 1);
 
         //
         // increase the rgb scale so the automap can look good while transparent (overlay mode)
         //
         GL_SetTextureMode(GL_COMBINE);
-        dglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE, 4);
+        dglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE, 1);
     }
 
 	dglDepthRange(0.0f, 0.0f);
@@ -76,24 +79,24 @@ void AM_BeginDraw(angle_t view, fixed_t x, fixed_t y) {
 
 	R_FrustrumSetup();
 	GL_ResetTextures();
-}
+	}
 
 //
 // AM_EndDraw
 //
 
 void AM_EndDraw(void) {
-    dglPopMatrix();
+	dglPopMatrix();
     dglDepthRange(0.0f, 1.0f);
 
     if(r_texturecombiner.value > 0 && am_overlay.value) {
-        GL_SetState(GLSTATE_BLEND, 0);
+		GL_SetState(GLSTATE_BLEND, 0);
         GL_SetTextureMode(GL_COMBINE);
         GL_SetColorScale();
     }
 
     GL_SetDefaultCombiner();
-}
+	}
 
 //
 // DL_ProcessAutomap
@@ -248,7 +251,7 @@ void AM_DrawLeafs(float scale) {
     DL_BeginDrawList(!am_ssect.value && r_fillmode.value, 0);
 
     if(r_texturecombiner.value > 0) {
-        if(!nolights) {
+		if(!nolights) {
             dglTexCombModulate(GL_TEXTURE0_ARB, GL_PRIMARY_COLOR);
         }
         else {
@@ -265,7 +268,8 @@ void AM_DrawLeafs(float scale) {
     }
 
 	DL_ProcessDrawList(DLT_AMAP, DL_ProcessAutomap);
-}
+
+	}
 
 //
 // AM_DrawLine
@@ -291,7 +295,8 @@ void AM_DrawLine(int x1, int x2, int y1, int y2, float scale, rcolor c) {
 	dglVertex3f(v[1].x, v[1].z, -v[1].y);
 	dglEnd();
 	dglEnable(GL_TEXTURE_2D);
-}
+
+	}
 
 //
 // AM_DrawTriangle
@@ -353,7 +358,8 @@ void AM_DrawTriangle(mobj_t* mobj, float scale, boolean solid, byte r, byte g, b
 	if (devparm) {
 		vertCount += 3;
 	}
-}
+
+	}
 
 //
 // AM_DrawSprite
@@ -487,11 +493,12 @@ void AM_DrawSprite(mobj_t* thing, float scale) {
 	//
 	// do the drawing
 	//
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, DGL_CLAMP);
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, DGL_CLAMP);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	dglTriangle(2, 1, 0);
 	dglTriangle(2, 0, 3);
 	dglDrawGeometry(4, vtx);
 
 	GL_SetState(GLSTATE_BLEND, 0);
-}
+
+	}

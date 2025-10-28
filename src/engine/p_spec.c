@@ -25,11 +25,11 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <stdlib.h>
+#include <SDL3/SDL_timer.h>
 
+#include "p_spec.h"
 #include "doomdef.h"
 #include "doomstat.h"
-#include "i_system.h"
 #include "z_zone.h"
 #include "m_random.h"
 #include "w_wad.h"
@@ -40,16 +40,15 @@
 #include "g_game.h"
 #include "s_sound.h"
 #include "d_englsh.h"
-#include "r_local.h"
 #include "sounds.h"
 #include "gl_texture.h"
 #include "m_misc.h"
 #include "con_console.h"
 #include "r_sky.h"
+#include "r_lights.h"
+#include "r_main.h"
 #include "sc_main.h"
 #include "p_setup.h"
-
-#include <SDL3/SDL.h>
 
 CVAR(m_secretsound, 1);
 
@@ -813,17 +812,10 @@ static void P_AlertTaggedMobj(mobj_t* activator, int tid) {
 			continue;
 		}
 
-		// 20120610 villsa - check for killable things only
-		if (!(mo->flags & MF_COUNTKILL)) {
-			continue;
-		}
-
 		// Styd: added a check if mobjs are dead to fix the bug where when a mobj is dead and alerted by the thing alert function, it returns to the "seestate" as if it was resurrected but in ghost mode, you do no damage to it, it cannot die, and you pass through it, but it continues to do damage to you
 		if (mo->health == 0) {
 			return;
 		}
-
-		st = &states[mo->info->seestate];
 
 		// Styd: fixes mobjs not making sound when alerted by the thing alert function
 		if (mo->type == MT_RESURRECTOR || mo->type == MT_CYBORG || mo->type == MT_SPIDER || mo->type == MT_ANNIHILATOR) {
@@ -833,6 +825,8 @@ static void P_AlertTaggedMobj(mobj_t* activator, int tid) {
 		else {
 			S_StartSound(mo, mo->info->seesound);
 		}
+
+		st = &states[mo->info->seestate];
 
 		// 03022014 villsa - handle checks if activator is not a player
 		if (activator->player) {
@@ -1836,7 +1830,7 @@ void P_PlayerInSpecialSector(player_t* player) {
 		sector->flags &= ~MS_SECRET;
 		// styd: adds a new option to play a sound when you find a secret
 		if (m_secretsound.value == 1) {
-		S_StartSound(NULL, sfx_secret);
+			S_StartSound(NULL, sfx_secret);
 		}
 	}
 

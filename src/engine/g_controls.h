@@ -18,8 +18,6 @@
 #ifndef G_CONTROLS_H
 #define G_CONTROLS_H
 
-#include "doomdef.h"
-
 // villsa 01052014 - changed to 420
 #define NUMKEYS         420
 #define NUMGAMEPADBTNS	60
@@ -39,7 +37,6 @@ typedef enum {
 	PCKEY_STRAFELEFT,
 	PCKEY_STRAFERIGHT,
 	PCKEY_RUN,
-	PCKEY_JUMP,
 	PCKEY_LOOKUP,
 	PCKEY_LOOKDOWN,
 	PCKEY_CENTER,

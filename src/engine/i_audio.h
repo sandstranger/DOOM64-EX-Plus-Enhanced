@@ -19,10 +19,10 @@
 #ifndef __I_AUDIO_H__
 #define __I_AUDIO_H__
 
-#include <fmod.h>
 #include <fmod_common.h>
-#include <fmod_errors.h>
+
 #include "m_fixed.h"
+#include "tables.h"
 
 typedef struct {
     fixed_t x;
@@ -40,7 +40,7 @@ struct Sound {
     FMOD_SYSTEM* fmod_studio_system_music;
 
     FMOD_SOUND* fmod_studio_sound[MAX_GAME_SFX];
-   
+
     FMOD_CHANNEL* fmod_studio_channel_music;
     FMOD_CHANNEL* fmod_studio_channel_loop;
     FMOD_CHANNEL* fmod_studio_channel_plasma_loop;
@@ -58,9 +58,9 @@ struct Sound {
     FMOD_CREATESOUNDEXINFO  extinfo;
 };
 
-struct Reverb {
+/*struct Reverb {
     FMOD_REVERB3D* fmod_reverb;
-};
+};*/
 
 int I_GetMaxChannels(void);
 int I_GetVoiceCount(void);

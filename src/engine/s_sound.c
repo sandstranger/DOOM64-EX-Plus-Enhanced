@@ -19,28 +19,21 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <stdlib.h>
-
-#include "i_system.h"
-#include "sounds.h"
 #include "s_sound.h"
-#include "z_zone.h"
+#include "sounds.h"
 #include "m_fixed.h"
-#include "m_random.h"
-#include "w_wad.h"
 #include "doomdef.h"
 #include "p_local.h"
 #include "doomstat.h"
 #include "tables.h"
-#include "r_local.h"
 #include "m_misc.h"
-#include "p_setup.h"
 #include "con_console.h"
+#include "con_cvar.h"
 #include "i_audio.h"
+#include "r_main.h"
 
 extern struct Sound sound;
-extern struct Reverb fmod_reverb;
+// extern struct Reverb fmod_reverb;
 
 // Adjustable by menu.
 #define NORM_VOLUME     127
@@ -358,9 +351,15 @@ void S_StartSound(mobj_t* origin, int sfx_id) {
     else {
         sep = NORM_SEP;
         volume = NORM_VOLUME;
+
+        if (origin == NULL && (sfx_id == sfx_itemup || sfx_id == sfx_powerup)) {
+            int boosted = volume + (volume / 50);
+            if (boosted > 255) boosted = 255;
+            volume = boosted;
+        }
     }
 
-    // reverb_sound = 0;
+    /* reverb_sound = 0;
 
     if (origin) {
         subsector_t* subsector;
@@ -368,12 +367,12 @@ void S_StartSound(mobj_t* origin, int sfx_id) {
         subsector = R_PointInSubsector(origin->x, origin->y);
 
         if (subsector->sector->flags & MS_REVERB) {
-            // reverb_sound = 16;
+            reverb_sound = 16;
         }
         else if (subsector->sector->flags & MS_REVERBHEAVY) {
-            // reverb_sound = 32;
+            reverb_sound = 32;
         }
-    }
+    }*/
 
     // Assigns the handle to one of the channels in the mix/output buffer.
     FMOD_StartSound(sfx_id, (sndsrc_t*)origin, volume, sep);
@@ -402,7 +401,7 @@ void S_StartPlasmaSound(mobj_t* origin, int sfx_id) {
         volume = NORM_VOLUME;
     }
 
-    // reverb_plasma = 0;
+    /* reverb_plasma = 0;
 
     if (origin) {
         subsector_t* subsector;
@@ -410,12 +409,12 @@ void S_StartPlasmaSound(mobj_t* origin, int sfx_id) {
         subsector = R_PointInSubsector(origin->x, origin->y);
 
         if (subsector->sector->flags & MS_REVERB) {
-            // reverb_plasma = 16;
+            reverb_plasma = 16;
         }
         else if (subsector->sector->flags & MS_REVERBHEAVY) {
-            // reverb_plasma = 32;
+            reverb_plasma = 32;
         }
-    }
+    }*/
 
     // Assigns the handle to one of the channels in the mix/output buffer.
     S_StartPlasmaGunLoop(origin, sfx_id, volume);
@@ -484,6 +483,3 @@ void S_RegisterCvars(void) {
     CON_CvarRegister(&s_musvol);
     CON_CvarRegister(&s_gain);
 }
-
-
-

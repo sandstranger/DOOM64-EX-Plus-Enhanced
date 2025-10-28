@@ -19,13 +19,9 @@
 #ifndef __W_WAD__
 #define __W_WAD__
 
-#ifdef __GNUG__
-#pragma interface
-#endif
-
-#include "d_main.h"
 #include "w_file.h"
-#include "w_merge.h"
+
+#define PHSENSW_LUMPNAME "PHSENSW"
 
 //
 // WADFILE I/O related stuff.
@@ -56,5 +52,10 @@ void            W_FreeMapLump(void);
 int             W_MapLumpLength(int lump);
 void* W_CacheLumpNum(int lump, int tag);
 void* W_CacheLumpName(const char* name, int tag);
+boolean W_LumpNameEq(lumpinfo_t* lump, const char* name);
+
+boolean W_KPFLoadInner(const char* inner, unsigned char** data, int* size);
+
+
 
 #endif

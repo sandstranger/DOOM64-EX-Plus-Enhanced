@@ -19,38 +19,76 @@
 //
 //-----------------------------------------------------------------------------
 
-#ifndef _WIN32
-// 20120105 bkw: G_GetConfigFileName() needs these, better safe than sorry
-#include <stdio.h>
 #include <stdlib.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#endif
 
-#include "g_local.h"
+#include <SDL3/SDL_storage.h>
+
+#include "g_settings.h"
 #include "z_zone.h"
 #include "m_misc.h"
-#include "con_console.h"
 #include "i_system.h"
+#include "g_actions.h"
 
-static char* ConfigFileName =
-#ifdef _WIN32
-"config.cfg"
-#else
-NULL
-#endif
-;
-
-char    DefaultConfig[] = 
+char    DefaultConfig[] =
 #include "defconfig.inc"    
 ;
+
+
 
 //
 // G_ExecuteMultipleCommands
 //
 
+#include "i_system_io.h"
+
+
+// move any existing data file present in SDL_GetBasePath() to I_GetUserDir()
+// that's necessary to migrate files from existing install prior or equal to v4.2.0.0 
+// to the new location, especially on Windows where data files where stored in the install directory (SDL_GetBasePath())
+static void MoveUserDataFiles() {
+	char* src_dirpath = (char *)SDL_GetBasePath();
+	if (!src_dirpath) return;
+
+	SDL_Storage* src_storage = SDL_OpenFileStorage(src_dirpath);
+	if (!src_storage) return;
+
+	char* patterns[] = {
+		"config.cfg",
+		"sshot???.png",
+		"doomsav*.dsg"
+	};
+
+	for (int i = 0; i < SDL_arraysize(patterns); i++) {
+		int count = 0;
+		char** matches = SDL_GlobStorageDirectory(src_storage, NULL, patterns[i], 0, &count);
+		
+		if (matches) {
+			for (int i = 0; i < count; i++) {
+				char* filename = matches[i];
+				if (!M_MoveFile(filename, src_dirpath, I_GetUserDir())) {
+					I_Printf("WARNING: failed to move %s to %s\n", filename, I_GetUserDir());
+				}
+			}
+			SDL_free(matches);
+		}
+	}
+		
+	SDL_CloseStorage(src_storage);
+}
+
+// return fully qualified non-NULL config file name. Must NOT be freed by caller
 char* G_GetConfigFileName(void) {
-	return I_GetUserFile("config.cfg");
+	static char* g_config_filename = NULL;
+
+	if (!g_config_filename) {
+
+		MoveUserDataFiles();
+
+		g_config_filename = I_GetUserFile("config.cfg");
+		I_Printf("Config file: %s\n", g_config_filename);
+	}
+
+	return g_config_filename;
 }
 
 void G_ExecuteMultipleCommands(char* data) {
@@ -122,16 +160,10 @@ void G_ExecuteFile(char* name) {
 // G_LoadSettings
 //
 
-void G_LoadSettings(void) {
-	int        p;
+boolean g_in_load_settings = false;
 
-	p = M_CheckParm("-config");
-	if (p && (p < myargc - 1)) {
-		if (myargv[p + 1][0] != '-') {
-			ConfigFileName = myargv[p + 1];
-		}
-	}
-	char* filename = G_GetConfigFileName();
-		G_ExecuteFile(filename);
-	free(filename);
+void G_LoadSettings(void) {
+	g_in_load_settings = true;
+	G_ExecuteFile(G_GetConfigFileName());
+	g_in_load_settings = false;
 }

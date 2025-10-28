@@ -18,11 +18,12 @@
 #ifndef __P_LOCAL__
 #define __P_LOCAL__
 
+#include <stdint.h>
+#include <limits.h>
+
 #include "doomdef.h"
 #include "d_player.h"
-#include "w_wad.h"
 #include "info.h"
-#include "m_menu.h"
 #include "t_bsp.h"
 
 #define FLOATSPEED      (FRACUNIT*4)
@@ -226,6 +227,12 @@ extern int     floatok;
 extern fixed_t      tmfloorz;
 extern fixed_t      tmceilingz;
 extern line_t* tmhitline;
+void P_TryMove2(void);
+boolean PIT_AddThingIntercepts(mobj_t* thing);
+boolean PIT_AddLineIntercepts(line_t* ld);
+boolean P_TraverseIntercepts(traverser_t func, fixed_t maxfrac);
+fixed_t P_InterceptLine(line_t* line, divline_t* trace);
+boolean P_TraverseIntercepts(traverser_t func, fixed_t maxfrac);
 
 boolean    P_CheckPosition(mobj_t* thing, fixed_t x, fixed_t y);
 boolean    P_TryMove(mobj_t* thing, fixed_t x, fixed_t y);

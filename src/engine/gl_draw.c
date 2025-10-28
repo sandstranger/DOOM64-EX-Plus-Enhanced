@@ -19,22 +19,22 @@
 //
 //-----------------------------------------------------------------------------
 
-#ifdef __APPLE__
-#include <ctype.h>
-#endif
-
-#ifndef _WIN32 // toupper for linux
-#include <ctype.h>
-#include <stdio.h>
-#endif
-
 #include <stdarg.h>
+#include <SDL3/SDL_stdinc.h>
+
+#include "gl_draw.h"
+extern void I_ShaderUnBind(void);
+extern void I_ShaderBind(void);
+extern int game_world_shader_scope;
+extern void I_SectorCombiner_Unbind(void);
+extern void I_ShaderSetUseTexture(int);
+extern void I_ShaderSetTextureSize(int,int);
+
 #include "doomtype.h"
 #include "doomstat.h"
 #include "dgl.h"
 #include "r_things.h"
 #include "gl_texture.h"
-#include "gl_draw.h"
 #include "r_main.h"
 
 CVAR_EXTERNAL(r_hudFilter);
@@ -42,81 +42,78 @@ CVAR_EXTERNAL(r_hudFilter);
 //
 // Draw_GfxImage
 //
+static const int nominal_width = 320.0f;
 
-void Draw_GfxImage(int x, int y, const char* name, rcolor color, boolean alpha) {
+static void Draw_GfxImageInternal(int x, int y, const char* name, 
+	float max_w, float offset_width, float offset_height, 
+	rcolor color, boolean alpha) {
+	
 	int gfxIdx = GL_BindGfxTexture(name, alpha);
+	if (gfxIdx < 0) { 
+		return; 
+	}
+	float imgWidth = gfxwidth[gfxIdx];
+	float imgHeight = gfxheight[gfxIdx];
+	float scale;
 
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, DGL_CLAMP);
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, DGL_CLAMP);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	if (max_w > 0.0f) {
+		float targetSize = fmin(max_w, fmin(imgWidth, imgHeight));
+		scale = targetSize / fmax(imgWidth, imgHeight);
+	} else {
+		scale = 1.0f;
+	}
 
 	GL_SetState(GLSTATE_BLEND, 1);
-	GL_SetupAndDraw2DQuad((float)x, (float)y,
-		gfxwidth[gfxIdx], gfxheight[gfxIdx], 0, 1.0f, 0, 1.0f, color, 0);
+	GL_SetupAndDraw2DQuad((float)x - offset_width, (float)y - offset_height,
+		imgWidth * scale, imgHeight * scale, 0, 1.0f, 0, 1.0f, color, 0);
 
 	GL_SetState(GLSTATE_BLEND, 0);
+}
+
+static void Draw_GfxImageInternalInter(int x, int y, const char* name,
+	float max_w, float offset_width, float offset_height,
+	rcolor color, boolean alpha) {
+
+	int gfxIdx = GL_BindGfxTexture(name, alpha);
+	if (gfxIdx < 0) {
+		return;
+	}
+	float imgWidth = gfxwidth[gfxIdx];
+	float imgHeight = gfxheight[gfxIdx];
+
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	float targetWidth = 196.0f;
+	float targetHeight = 192.0f;
+
+	GL_SetState(GLSTATE_BLEND, 1);
+	GL_SetupAndDraw2DQuad((float)x - offset_width, (float)y - offset_height,
+		targetWidth, targetHeight, 0, 1.0f, 0, 1.0f, color, 0);
+	GL_SetState(GLSTATE_BLEND, 0);
+}
+
+void Draw_GfxImage(int x, int y, const char* name, rcolor color, boolean alpha) {
+	Draw_GfxImageInternal(x, y, name, -1.0f, 0.0f, 0.0f, color, alpha);
 }
 
 void Draw_GfxImageInter(int x, int y, const char* name, rcolor color, boolean alpha) {
-	int gfxIdx = GL_BindGfxTexture(name, alpha);
-
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, DGL_CLAMP);
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, DGL_CLAMP);
-
-	float imgWidth = gfxwidth[gfxIdx];
-	float imgHeight = gfxheight[gfxIdx];
-	float targetSize = fmin(250.0f, fmin(imgWidth, imgHeight));
-	float scale = targetSize / fmax(imgWidth, imgHeight);
-
-	float offset_width = 5.0f;
-	float offset_height = 5.0f;
-
-	GL_SetState(GLSTATE_BLEND, 1);
-	GL_SetupAndDraw2DQuad((float)x - offset_width, (float)y - offset_height,
-		imgWidth * scale, imgHeight * scale, 0, 1.0f, 0, 1.0f, color, 0);
-
-	GL_SetState(GLSTATE_BLEND, 0);
+	Draw_GfxImageInternalInter(x, y, name, 250.0f, 5.0f, 5.0f, color, alpha);
 }
 
 void Draw_GfxImageLegal(int x, int y, const char* name, rcolor color, boolean alpha) {
-	int gfxIdx = GL_BindGfxTexture(name, alpha);
+	Draw_GfxImageInternal(x, y, name, nominal_width, 30.0f, 40.0f, color, alpha);
+}
 
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, DGL_CLAMP);
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, DGL_CLAMP);
-
-	float imgWidth = gfxwidth[gfxIdx];
-	float imgHeight = gfxheight[gfxIdx];
-	float targetSize = fmin(320.0f, fmin(imgWidth, imgHeight));
-	float scale = targetSize / fmax(imgWidth, imgHeight);
-
-	float offset_width = 30.0f;
-	float offset_height = 40.0f;
-
-	GL_SetState(GLSTATE_BLEND, 1);
-	GL_SetupAndDraw2DQuad((float)x - offset_width, (float)y - offset_height,
-		imgWidth * scale, imgHeight * scale, 0, 1.0f, 0, 1.0f, color, 0);
-
-	GL_SetState(GLSTATE_BLEND, 0);
+void Draw_GfxImageIN(int x, int y, const char* name, rcolor color, boolean alpha) {
+	Draw_GfxImageInternal(x, y, name, nominal_width, 0.0f, 0.0f, color, alpha);
 }
 
 void Draw_GfxImageTitle(int x, int y, const char* name, rcolor color, boolean alpha) {
-	int gfxIdx = GL_BindGfxTexture(name, alpha);
-
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, DGL_CLAMP);
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, DGL_CLAMP);
-
-	float imgWidth = gfxwidth[gfxIdx];
-	float imgHeight = gfxheight[gfxIdx];
-	float targetSize = fmin(320.0f, fmin(imgWidth, imgHeight));
-	float scale = targetSize / fmax(imgWidth, imgHeight);
-
-	float offset_width = 60.0f;
-	float offset_height = 30.0f;
-
-	GL_SetState(GLSTATE_BLEND, 1);
-	GL_SetupAndDraw2DQuad((float)x - offset_width, (float)y - offset_height,
-		imgWidth * scale, imgHeight * scale, 0, 1.0f, 0, 1.0f, color, 0);
-
-	GL_SetState(GLSTATE_BLEND, 0);
+	Draw_GfxImageInternal(x, y, name, nominal_width, 60.0f, 30.0f, color, alpha);
 }
 
 //
@@ -210,8 +207,8 @@ int Draw_Text(int x, int y, rcolor color, float scale,
 
 	GL_BindGfxTexture("SFONT", true);
 
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, DGL_CLAMP);
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, DGL_CLAMP);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (int)r_hudFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
 	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (int)r_hudFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
 
@@ -221,7 +218,7 @@ int Draw_Text(int x, int y, rcolor color, float scale,
 	dglSetVertex(vtxstring);
 
 	for (i = 0, vi = 0; i < dstrlen(msg); i++, vi += 4) {
-		c = toupper(msg[i]);
+		c = SDL_toupper(msg[i]);
 		if (c == '\t') {
 			while (x % 64) {
 				x++;
@@ -289,6 +286,121 @@ int Draw_Text(int x, int y, rcolor color, float scale,
         dglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         r_fillmode.value = 0.0f;
     }
+
+	GL_SetState(GLSTATE_BLEND, 0);
+	GL_SetOrthoScale(1.0f);
+
+	return x;
+}
+
+int Draw_TextSecret(int x, int y, rcolor color, float scale,
+	boolean wrap, const char* string, ...) {
+	int c;
+	int i;
+	int vi = 0;
+	int    col;
+	const float size = 0.03125f;
+	float fcol, frow;
+	int start = 0;
+	char msg[MAX_MESSAGE_SIZE];
+	va_list    va;
+	const int ix = x;
+	boolean fill = false;
+
+	va_start(va, string);
+	vsprintf(msg, string, va);
+	va_end(va);
+
+	GL_SetState(GLSTATE_BLEND, 1);
+
+	if (!r_fillmode.value) {
+		dglEnable(GL_TEXTURE_2D);
+		dglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		r_fillmode.value = 1.0f;
+		fill = true;
+	}
+
+	GL_BindGfxTexture("SFONT", true);
+
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (int)r_hudFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (int)r_hudFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
+
+	GL_SetOrthoScale(scale);
+	GL_SetOrtho(0);
+
+	dglSetVertex(vtxstring);
+
+	for (i = 0, vi = 0; i < dstrlen(msg); i++, vi += 4) {
+		c = SDL_toupper(msg[i]);
+		if (c == '\t') {
+			while (x % 64) {
+				x++;
+			}
+			continue;
+		}
+		if (c == '\n') {
+			y += ST_FONTWHSIZE;
+			x = ix;
+			continue;
+		}
+		if (c == 0x20) {
+			if (wrap) {
+				if (x > 192) {
+					y += ST_FONTWHSIZE;
+					x = ix;
+					continue;
+				}
+			}
+		}
+		else {
+			start = (c - ST_FONTSTART);
+			col = start & (ST_FONTNUMSET - 1);
+
+			fcol = (col * size);
+			frow = (start >= ST_FONTNUMSET) ? 0.5f : 0.0f;
+
+			vtxstring[vi + 0].x = (float)x;
+			vtxstring[vi + 0].y = (float)y;
+			vtxstring[vi + 0].tu = fcol + 0.0015f;
+			vtxstring[vi + 0].tv = frow + size;
+			vtxstring[vi + 1].x = (float)x + ST_FONTWHSIZE;
+			vtxstring[vi + 1].y = (float)y;
+			vtxstring[vi + 1].tu = (fcol + size) - 0.0015f;
+			vtxstring[vi + 1].tv = frow + size;
+			vtxstring[vi + 2].x = (float)x + ST_FONTWHSIZE;
+			vtxstring[vi + 2].y = (float)y + ST_FONTWHSIZE;
+			vtxstring[vi + 2].tu = (fcol + size) - 0.0015f;
+			vtxstring[vi + 2].tv = frow + 0.5f;
+			vtxstring[vi + 3].x = (float)x;
+			vtxstring[vi + 3].y = (float)y + ST_FONTWHSIZE;
+			vtxstring[vi + 3].tu = fcol + 0.0015f;
+			vtxstring[vi + 3].tv = frow + 0.5f;
+
+			dglSetVertexColor(vtxstring + vi, color, 4);
+
+			dglTriangle(vi + 0, vi + 1, vi + 2);
+			dglTriangle(vi + 0, vi + 2, vi + 3);
+
+			if (devparm) {
+				vertCount += 4;
+			}
+		}
+		x += ST_FONTWHSIZE;
+	}
+
+	if (vi) {
+		dglDrawGeometry(vi, vtxstring);
+	}
+
+	GL_ResetViewport();
+
+	if (fill) {
+		dglDisable(GL_TEXTURE_2D);
+		dglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		r_fillmode.value = 0.0f;
+	}
 
 	GL_SetState(GLSTATE_BLEND, 0);
 	GL_SetOrthoScale(1.0f);
@@ -495,8 +607,11 @@ int Draw_BigText(int x, int y, rcolor color, const char* string) {
 	smbwidth = (float)gfxwidth[pic];
 	smbheight = (float)gfxheight[pic];
 
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, DGL_CLAMP);
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, DGL_CLAMP);
+	const float ueps = 0.5f / smbwidth;
+	const float veps = 0.5f / smbheight;
+
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (int)r_hudFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
 	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (int)r_hudFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
 
@@ -511,113 +626,56 @@ int Draw_BigText(int x, int y, rcolor color, const char* string) {
 
 		c = string[i];
 		if (c == '\n' || c == '\t') {
-			continue;    // villsa: safety check
+			continue;
 		}
 		else if (c == 0x20) {
 			x += 8;
 			continue;
 		}
 		else {
-			if (c >= '0' && c <= '9') {
-				index = (c - '0') + SM_NUMBERS;
-			}
-			if (c >= 'A' && c <= 'Z') {
-				index = (c - 'A') + SM_FONT1;
-			}
-			if (c >= 'a' && c <= 'z') {
-				index = (c - 'a') + SM_FONT2;
-			}
-			if (c == '-') {
-				index = SM_MISCFONT;
-			}
-			if (c == '%') {
-				index = SM_MISCFONT + 1;
-			}
-			if (c == '!') {
-				index = SM_MISCFONT + 2;
-			}
-			if (c == '.') {
-				index = SM_MISCFONT + 3;
-			}
-			if (c == '?') {
-				index = SM_MISCFONT + 4;
-			}
-			if (c == ':') {
-				index = SM_MISCFONT + 5;
-			}
+			if (c >= '0' && c <= '9') index = (c - '0') + SM_NUMBERS;
+			if (c >= 'A' && c <= 'Z') index = (c - 'A') + SM_FONT1;
+			if (c >= 'a' && c <= 'z') index = (c - 'a') + SM_FONT2;
+			if (c == '-') index = SM_MISCFONT;
+			if (c == '%') index = SM_MISCFONT + 1;
+			if (c == '!') index = SM_MISCFONT + 2;
+			if (c == '.') index = SM_MISCFONT + 3;
+			if (c == '?') index = SM_MISCFONT + 4;
+			if (c == ':') index = SM_MISCFONT + 5;
 
-			// [kex] use 'printf' style formating for special symbols
 			if (c == '/') {
 				c = string[++i];
-
 				switch (c) {
-					// up arrow
-				case 'u':
-					index = SM_MICONS + 17;
-					break;
-					// down arrow
-				case 'd':
-					index = SM_MICONS + 16;
-					break;
-					// right arrow
-				case 'r':
-					index = SM_MICONS + 18;
-					break;
-					// left arrow
-				case 'l':
-					index = SM_MICONS;
-					break;
-					// cursor box
-				case 'b':
-					index = SM_MICONS + 1;
-					break;
-					// thermbar
-				case 't':
-					index = SM_THERMO;
-					break;
-					// thermcursor
-				case 's':
-					index = SM_THERMO + 1;
-					break;
-				default:
-					return 0;
+				case 'u': index = SM_MICONS + 17; break; // up
+				case 'd': index = SM_MICONS + 16; break; // down
+				case 'r': index = SM_MICONS + 18; break; // right
+				case 'l': index = SM_MICONS + 0;  break; // left
+				case 'b': index = SM_MICONS + 1;  break; // box
+				case 't': index = SM_THERMO + 0;  break; // thermbar
+				case 's': index = SM_THERMO + 1;  break; // thermcursor
+				default: return 0;
 				}
 			}
 
 			vx2 = vx1 + symboldata[index].w;
 			vy2 = vy1 - symboldata[index].h;
 
-			tx1 = ((float)symboldata[index].x / smbwidth) + 0.001f;
-			tx2 = (tx1 + (float)symboldata[index].w / smbwidth) - 0.002f;
+			tx1 = ((float)symboldata[index].x / smbwidth) + ueps;
+			tx2 = ((float)(symboldata[index].x + symboldata[index].w) / smbwidth) - ueps;
+			ty1 = ((float)symboldata[index].y / smbheight) + veps;
+			ty2 = ((float)(symboldata[index].y + symboldata[index].h) / smbheight) - veps;
 
-			ty1 = ((float)symboldata[index].y / smbheight);
-			ty2 = ty1 + (((float)symboldata[index].h / smbheight));
-
-			vtxstring[vi + 0].x = vx1;
-			vtxstring[vi + 0].y = vy1;
-			vtxstring[vi + 0].tu = tx1;
-			vtxstring[vi + 0].tv = ty2;
-			vtxstring[vi + 1].x = vx2;
-			vtxstring[vi + 1].y = vy1;
-			vtxstring[vi + 1].tu = tx2;
-			vtxstring[vi + 1].tv = ty2;
-			vtxstring[vi + 2].x = vx2;
-			vtxstring[vi + 2].y = vy2;
-			vtxstring[vi + 2].tu = tx2;
-			vtxstring[vi + 2].tv = ty1;
-			vtxstring[vi + 3].x = vx1;
-			vtxstring[vi + 3].y = vy2;
-			vtxstring[vi + 3].tu = tx1;
-			vtxstring[vi + 3].tv = ty1;
+			vtxstring[vi + 0].x = vx1; vtxstring[vi + 0].y = vy1; vtxstring[vi + 0].tu = tx1; vtxstring[vi + 0].tv = ty2;
+			vtxstring[vi + 1].x = vx2; vtxstring[vi + 1].y = vy1; vtxstring[vi + 1].tu = tx2; vtxstring[vi + 1].tv = ty2;
+			vtxstring[vi + 2].x = vx2; vtxstring[vi + 2].y = vy2; vtxstring[vi + 2].tu = tx2; vtxstring[vi + 2].tv = ty1;
+			vtxstring[vi + 3].x = vx1; vtxstring[vi + 3].y = vy2; vtxstring[vi + 3].tu = tx1; vtxstring[vi + 3].tv = ty1;
 
 			dglSetVertexColor(vtxstring + vi, color, 4);
 
 			dglTriangle(vi + 2, vi + 1, vi + 0);
 			dglTriangle(vi + 3, vi + 2, vi + 0);
 
-			if (devparm) {
-				vertCount += 4;
-			}
+			if (devparm) { vertCount += 4; }
 
 			x += symboldata[index].w;
 		}
@@ -654,22 +712,24 @@ int Draw_SmallText(int x, int y, rcolor color, const char* string) {
 	float smbheight;
 	int pic;
 
-	// Scale factor for symbols
-	float scale_factor = 0.7f;
+	const float scale_factor = 0.7f;
 
 	if (x <= -1) {
 		x = Center_Text(string);
 	}
 
-	y += 14; // Adjust for smaller text
+	y += 14;
 
 	pic = GL_BindGfxTexture("SYMBOLS", true);
 
 	smbwidth = (float)gfxwidth[pic];
 	smbheight = (float)gfxheight[pic];
 
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, DGL_CLAMP);
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, DGL_CLAMP);
+	const float ueps = 0.5f / smbwidth;
+	const float veps = 0.5f / smbheight;
+
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (int)r_hudFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
 	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (int)r_hudFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
 
@@ -684,116 +744,58 @@ int Draw_SmallText(int x, int y, rcolor color, const char* string) {
 
 		c = string[i];
 		if (c == '\n' || c == '\t') {
-			continue; // villsa: safety check
+			continue;
 		}
 		else if (c == 0x20) {
-			x += 4; // Adjust for smaller spacing
+			x += 4;
 			continue;
 		}
 		else {
-			if (c >= '0' && c <= '9') {
-				index = (c - '0') + SM_NUMBERS;
-			}
-			if (c >= 'A' && c <= 'Z') {
-				index = (c - 'A') + SM_FONT1;
-			}
-			if (c >= 'a' && c <= 'z') {
-				index = (c - 'a') + SM_FONT2;
-			}
-			if (c == '-') {
-				index = SM_MISCFONT;
-			}
-			if (c == '%') {
-				index = SM_MISCFONT + 1;
-			}
-			if (c == '!') {
-				index = SM_MISCFONT + 2;
-			}
-			if (c == '.') {
-				index = SM_MISCFONT + 3;
-			}
-			if (c == '?') {
-				index = SM_MISCFONT + 4;
-			}
-			if (c == ':') {
-				index = SM_MISCFONT + 5;
-			}
+			if (c >= '0' && c <= '9') index = (c - '0') + SM_NUMBERS;
+			if (c >= 'A' && c <= 'Z') index = (c - 'A') + SM_FONT1;
+			if (c >= 'a' && c <= 'z') index = (c - 'a') + SM_FONT2;
+			if (c == '-') index = SM_MISCFONT;
+			if (c == '%') index = SM_MISCFONT + 1;
+			if (c == '!') index = SM_MISCFONT + 2;
+			if (c == '.') index = SM_MISCFONT + 3;
+			if (c == '?') index = SM_MISCFONT + 4;
+			if (c == ':') index = SM_MISCFONT + 5;
 
-			// [kex] use 'printf' style formatting for special symbols
 			if (c == '/') {
 				c = string[++i];
-
 				switch (c) {
-					// up arrow
-				case 'u':
-					index = SM_MICONS + 17;
-					break;
-					// down arrow
-				case 'd':
-					index = SM_MICONS + 16;
-					break;
-					// right arrow
-				case 'r':
-					index = SM_MICONS + 18;
-					break;
-					// left arrow
-				case 'l':
-					index = SM_MICONS;
-					break;
-					// cursor box
-				case 'b':
-					index = SM_MICONS + 1;
-					break;
-					// thermbar
-				case 't':
-					index = SM_THERMO;
-					break;
-					// thermcursor
-				case 's':
-					index = SM_THERMO + 1;
-					break;
-				default:
-					return 0;
+				case 'u': index = SM_MICONS + 17; break;
+				case 'd': index = SM_MICONS + 16; break;
+				case 'r': index = SM_MICONS + 18; break;
+				case 'l': index = SM_MICONS + 0;  break;
+				case 'b': index = SM_MICONS + 1;  break;
+				case 't': index = SM_THERMO + 0;  break;
+				case 's': index = SM_THERMO + 1;  break;
+				default: return 0;
 				}
 			}
 
-			// Scale the symbol dimensions
 			vx2 = vx1 + symboldata[index].w * scale_factor;
 			vy2 = vy1 - symboldata[index].h * scale_factor;
 
-			// Adjust texture coordinates for scaling
-			tx1 = (float)symboldata[index].x / smbwidth;
-			tx2 = (float)(symboldata[index].x + symboldata[index].w) / smbwidth;
-			ty1 = (float)symboldata[index].y / smbheight;
-			ty2 = (float)(symboldata[index].y + symboldata[index].h) / smbheight;
+			tx1 = ((float)symboldata[index].x / smbwidth) + ueps;
+			tx2 = ((float)(symboldata[index].x + symboldata[index].w) / smbwidth) - ueps;
+			ty1 = ((float)symboldata[index].y / smbheight) + veps;
+			ty2 = ((float)(symboldata[index].y + symboldata[index].h) / smbheight) - veps;
 
-			vtxstring[vi + 0].x = vx1;
-			vtxstring[vi + 0].y = vy1;
-			vtxstring[vi + 0].tu = tx1;
-			vtxstring[vi + 0].tv = ty2;
-			vtxstring[vi + 1].x = vx2;
-			vtxstring[vi + 1].y = vy1;
-			vtxstring[vi + 1].tu = tx2;
-			vtxstring[vi + 1].tv = ty2;
-			vtxstring[vi + 2].x = vx2;
-			vtxstring[vi + 2].y = vy2;
-			vtxstring[vi + 2].tu = tx2;
-			vtxstring[vi + 2].tv = ty1;
-			vtxstring[vi + 3].x = vx1;
-			vtxstring[vi + 3].y = vy2;
-			vtxstring[vi + 3].tu = tx1;
-			vtxstring[vi + 3].tv = ty1;
+			vtxstring[vi + 0].x = vx1; vtxstring[vi + 0].y = vy1; vtxstring[vi + 0].tu = tx1; vtxstring[vi + 0].tv = ty2;
+			vtxstring[vi + 1].x = vx2; vtxstring[vi + 1].y = vy1; vtxstring[vi + 1].tu = tx2; vtxstring[vi + 1].tv = ty2;
+			vtxstring[vi + 2].x = vx2; vtxstring[vi + 2].y = vy2; vtxstring[vi + 2].tu = tx2; vtxstring[vi + 2].tv = ty1;
+			vtxstring[vi + 3].x = vx1; vtxstring[vi + 3].y = vy2; vtxstring[vi + 3].tu = tx1; vtxstring[vi + 3].tv = ty1;
 
 			dglSetVertexColor(vtxstring + vi, color, 4);
 
 			dglTriangle(vi + 2, vi + 1, vi + 0);
 			dglTriangle(vi + 3, vi + 2, vi + 0);
 
-			if (devparm) {
-				vertCount += 4;
-			}
+			if (devparm) { vertCount += 4; }
 
-			x += symboldata[index].w * scale_factor;
+			x += (int)(symboldata[index].w * scale_factor);
 		}
 	}
 
@@ -806,8 +808,6 @@ int Draw_SmallText(int x, int y, rcolor color, const char* string) {
 
 	return x;
 }
-
-
 
 //
 // Draw_Number
@@ -1161,8 +1161,8 @@ float Draw_ConsoleText(float x, float y, rcolor color,
 	width = (float)gfxwidth[pic];
 	height = (float)gfxheight[pic];
 
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, DGL_CLAMP);
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, DGL_CLAMP);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 

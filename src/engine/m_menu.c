@@ -21,52 +21,45 @@
 //
 //-----------------------------------------------------------------------------
 
-#ifdef _WIN32
-#include <io.h>
-#else
-#include <unistd.h>
-#endif
 
-#ifdef _MSC_VER
-#include "i_opndir.h"
-#else
-#include <dirent.h>
-#endif
-
+#include <stdlib.h>
 #include <fcntl.h>
 #include <ctype.h>
+#include <SDL3/SDL_platform_defines.h>
+
+#include "d_main.h"
+#include "m_menu.h"
 #include "doomdef.h"
-#include "i_video.h"
 #include "i_sdlinput.h"
 #include "d_englsh.h"
 #include "m_cheat.h"
 #include "m_misc.h"
-#include "d_main.h"
 #include "i_system.h"
+#include "i_system_io.h"
+#include "i_video.h"
 #include "z_zone.h"
-#include "w_wad.h"
 #include "st_stuff.h"
 #include "g_actions.h"
 #include "g_game.h"
 #include "s_sound.h"
 #include "doomstat.h"
 #include "sounds.h"
-#include "m_menu.h"
-#include "m_fixed.h"
-#include "d_devstat.h"
-#include "r_local.h"
 #include "m_shift.h"
 #include "m_password.h"
-#include "r_wipe.h"
-#include "st_stuff.h"
 #include "p_saveg.h"
 #include "p_setup.h"
 #include "gl_texture.h"
 #include "gl_draw.h"
+#include "r_lights.h"
+#include "r_main.h"
+#include "net_server.h"
+#include "dgl.h"
 
 //
 // definitions
 //
+
+//#define HAS_MENU_MOUSE_LOOK
 
 #define MENUSTRINGSIZE      32
 #define SKULLXOFF           -40    //villsa: changed from -32 to -40
@@ -102,6 +95,9 @@ static boolean     inputEnter = false;
 static int          inputCharIndex;
 static int          inputMax = 0;
 
+static float cursor_x;
+static float cursor_y;
+
 //
 // fade-in/out stuff
 //
@@ -117,10 +113,14 @@ void(*menufadefunc)(void) = NULL;
 static char     MenuBindBuff[256];
 static char     MenuBindMessage[256];
 static boolean MenuBindActive = false;
+
+static int MenuBindIgnoreUntilTic = 0;
+static boolean MenuBindEntryWasMouse = false;
+static int MenuBindIgnoreMouseButtons = 0;
 static boolean showfullitemvalue[3] = { false, false, false };
 static int      thermowait = 0;
-static int      m_aspectRatio = 0;
 static int      m_ScreenSize = 1;
+static int      levelwarp = 0;
 
 //------------------------------------------------------------------------
 //
@@ -197,7 +197,6 @@ extern menu_t ControlMenuDef;
 //------------------------------------------------------------------------
 
 void M_SetupNextMenu(menu_t* menudef);
-void M_ClearMenus(void);
 
 void M_QuickSave(void);
 void M_QuickLoad(void);
@@ -212,10 +211,10 @@ static void M_ReturnToOptions(int choice);
 static void M_SetCvar(cvar_t* cvar, float value);
 static void M_SetOptionValue(int choice, float min, float max, float inc, cvar_t* cvar);
 static void M_DrawSmbString(const char* text, menu_t* menu, int item);
+static void M_DrawSmbStringSmall(const char* text, menu_t* menu, int item);
 static void M_DrawSaveGameFrontend(menu_t* def);
 static void M_SetInputString(char* string, int len);
 static void M_Scroll(menu_t* menu, boolean up);
-static void M_DoVideoReset(int choice);
 
 static boolean M_SetThumbnail(int which);
 
@@ -233,7 +232,9 @@ CVAR_CMD(m_menumouse, 1) {
 	if (cvar->value <= 0) {
 		itemSelected = -1;
 	}
+	I_SetMenuCursorMouseRect();
 }
+
 
 CVAR_CMD(m_cursorscale, 8) {
 	if (cvar->value < 0) {
@@ -677,7 +678,7 @@ void M_NewGame(int choice) {
 		M_SetupNextMenu(&MapSelectDef);
 		return;
 	}
-	
+
 	M_SetupNextMenu(&NewDef);
 }
 
@@ -720,7 +721,7 @@ enum {
 	options_display,
 	options_video,
 	options_password,
-	options_network,
+	//options_network,
 	options_return,
 	opt_end
 } options_e;
@@ -732,7 +733,7 @@ menuitem_t OptionsMenu[] = {
 	{1,"HUD",M_Display, 'd'},
 	{1,"Video",M_Video, 'v'},
 	{1,"Password",M_Password, 'p'},
-	{1,"Network",M_Network, 'n'},
+	//{1,"Network",M_Network, 'n'},
 	{1,"/r Return",M_Return, 0x20}
 };
 
@@ -743,7 +744,7 @@ char* OptionHints[opt_end] = {
 	"settings for the heads-up display",
 	"configure video-specific options",
 	"enter a password to access a level",
-	"setup options for a hosted session",
+	//"setup options for a hosted session",
 	NULL
 };
 
@@ -788,8 +789,6 @@ void M_PlayerSetName(int choice);
 void M_DrawNetwork(void);
 
 CVAR_EXTERNAL(m_playername);
-CVAR_EXTERNAL(p_allowjump);
-//Andr�: remove autoaim and use the normal aim instead.  CVAR_EXTERNAL(p_autoaim);
 CVAR_EXTERNAL(sv_nomonsters);
 CVAR_EXTERNAL(sv_fastmonsters);
 CVAR_EXTERNAL(sv_respawnitems);
@@ -805,7 +804,6 @@ enum {
 	network_allowcheats,
 	network_friendlyfire,
 	network_keepitems,
-	network_allowjump,
 	network_header3,
 	network_nomonsters,
 	network_fastmonsters,
@@ -823,7 +821,6 @@ menuitem_t NetworkMenu[] = {
 	{2,"Allow Cheats:", M_NetworkChoice, 'c'},
 	{2,"Friendly Fire:", M_NetworkChoice, 'f'},
 	{2,"Keep Items:", M_NetworkChoice, 'k'},
-	{2,"Allow Jumping:", M_NetworkChoice, 'j'},
 	{-1,"Gameplay Rules",0 },
 	{2,"No Monsters:", M_NetworkChoice, 'n'},
 	{2,"Fast Monsters:", M_NetworkChoice, 'f'},
@@ -837,7 +834,6 @@ menudefault_t NetworkDefault[] = {
 	{ &sv_allowcheats, 0 },
 	{ &sv_friendlyfire, 0 },
 	{ &sv_keepitems, 0 },
-	{ &p_allowjump, 0 },
 	{ &sv_nomonsters, 0 },
 	{ &sv_fastmonsters, 0 },
 	{ &sv_respawn, 0 },
@@ -852,14 +848,13 @@ char* NetworkHints[network_end] = {
 	"allow clients and host to use cheats",
 	"allow players to damage other players",
 	"players keep items when respawned from death",
-	"allow players to jump",
 	NULL,
 	"no monsters will appear",
 	"increased speed for monsters and projectiles",
 	"monsters will respawn after death",
 	"items will respawn after pickup",
 	NULL,
-//	NULL
+	//	NULL
 };
 
 menu_t NetworkDef = {
@@ -873,7 +868,7 @@ menu_t NetworkDef = {
 	0,
 	false,
 	NetworkDefault,
-	15,
+	-1,
 	0,
 	0.5f,
 	NetworkHints,
@@ -899,9 +894,6 @@ void M_NetworkChoice(int choice) {
 		break;
 	case network_keepitems:
 		M_SetOptionValue(choice, 0, 1, 1, &sv_keepitems);
-		break;
-	case network_allowjump:
-		M_SetOptionValue(choice, 0, 1, 1, &p_allowjump);
 		break;
 	case network_nomonsters:
 		M_SetOptionValue(choice, 0, 1, 1, &sv_nomonsters);
@@ -947,7 +939,6 @@ void M_DrawNetwork(void) {
 	DRAWNETWORKITEM(network_allowcheats, sv_allowcheats.value, msgNames);
 	DRAWNETWORKITEM(network_friendlyfire, sv_friendlyfire.value, msgNames);
 	DRAWNETWORKITEM(network_keepitems, sv_keepitems.value, msgNames);
-	DRAWNETWORKITEM(network_allowjump, p_allowjump.value, msgNames);
 	DRAWNETWORKITEM(network_nomonsters, sv_nomonsters.value, msgNames);
 	DRAWNETWORKITEM(network_fastmonsters, sv_fastmonsters.value, msgNames);
 	DRAWNETWORKITEM(network_respawnmonsters, sv_respawn.value, msgNames);
@@ -983,7 +974,7 @@ CVAR_EXTERNAL(am_showkeymarkers);
 CVAR_EXTERNAL(am_showkeycolors);
 CVAR_EXTERNAL(am_drawobjects);
 CVAR_EXTERNAL(am_overlay);
-CVAR_EXTERNAL(r_skybox);
+CVAR_EXTERNAL(r_weaponswitch);
 CVAR_EXTERNAL(p_autorun);
 CVAR_EXTERNAL(p_usecontext);
 CVAR_EXTERNAL(compat_mobjpass);
@@ -998,6 +989,7 @@ CVAR_EXTERNAL(m_reworkedweaponsanimations);
 CVAR_EXTERNAL(r_changethecolorofthenightmare);
 CVAR_EXTERNAL(r_transparencynightmare);
 CVAR_EXTERNAL(m_reworkedvanillasounds);
+CVAR_EXTERNAL(m_revenantprojectilespeed);
 CVAR_EXTERNAL(m_reworkedzombieman);
 CVAR_EXTERNAL(m_reworkedzombieshotgun);
 CVAR_EXTERNAL(m_reworkedimp);
@@ -1016,12 +1008,11 @@ enum {
 	misc_cursorsize,
 	misc_empty2,
 	misc_header2,
-	misc_jump,
 	misc_autorun,
 	misc_context,
 	misc_header3,
 	misc_wipe,
-	misc_skybox,
+	misc_weaponswitch,
 	misc_header4,
 	misc_showkey,
 	misc_showlocks,
@@ -1037,6 +1028,7 @@ enum {
 	misc_changethecolorofthenightmare,
 	misc_transparencynightmare,
 	misc_reworkedvanillasounds,
+	misc_revenantprojectilespeed,
 	misc_reworkedzombieman,
 	misc_reworkedzombieshotgun,
 	misc_reworkedimp,
@@ -1062,12 +1054,11 @@ menuitem_t MiscMenu[] = {
 	{3,"Cursor Scale:",M_MiscChoice,'u'},
 	{-1,"",0 },
 	{-1,"Gameplay",0 },
-	{2,"Jumping:",M_MiscChoice, 'j'},
 	{2,"Always Run:",M_MiscChoice, 'z' },
 	{2,"Use Context:",M_MiscChoice, 'u'},
 	{-1,"Misc",0 },
 	{2,"Screen Melt:",M_MiscChoice, 's' },
-	{2,"Skybox:",M_MiscChoice,'k'},
+	{2,"Weapon Switch:",M_MiscChoice, 'a'},
 	{-1,"Automap",0 },
 	{2,"Key Pickups:",M_MiscChoice },
 	{2,"Locked Doors:",M_MiscChoice },
@@ -1083,6 +1074,7 @@ menuitem_t MiscMenu[] = {
 	{2,"Nightmare Color:",M_MiscChoice },
 	{2,"Nightmare Style:",M_MiscChoice },
 	{2,"Extra Sounds:",M_MiscChoice },
+	{2,"Revenant Tracer:",M_MiscChoice },
 	{2,"Zombie Man:",M_MiscChoice },
 	{2,"Zombie Shotgun:",M_MiscChoice },
 	{2,"Imp:",M_MiscChoice },
@@ -1107,12 +1099,11 @@ char* MiscHints[misc_end] = {
 	"set the size of the menu cursor",
 	NULL,
 	NULL,
-	"toggle the ability to jump",
 	"enable autorun",
 	"if enabled interactive objects will highlight when near",
 	NULL,
 	"enable the melt effect when completing a level",
-	"toggle skies to render either normally or as skyboxes",
+	"auto switch to a newly picked up weapon",
 	NULL,
 	"display key pickups in automap",
 	"colorize locked doors accordingly to the key in automap",
@@ -1128,6 +1119,7 @@ char* MiscHints[misc_end] = {
 	"change the color of monsters in nightmare mode",
 	"changes the transparency of nightmare",
 	"change sounds to vanilla or reworked vanilla sounds",
+	"changes the speed of the Revenant projectile",
 	"enable reworked vanilla sprites for the zombie man",
 	"enable reworked vanilla sprites for the zombie shotgun",
 	"enable reworked vanilla sprites for the imp and imp nightmare",
@@ -1148,11 +1140,10 @@ menudefault_t MiscDefault[] = {
 	{ &m_menufadetime, 0 },
 	{ &m_menumouse, 1 },
 	{ &m_cursorscale, 8 },
-	{ &p_allowjump, 0 },
 	{ &p_autorun, 1 },
 	{ &p_usecontext, 0 },
 	{ &r_wipe, 1 },
-	{ &r_skybox, 0 },
+	{ &r_weaponswitch, 1 },
 	{ &hud_disablesecretmessages, 0 },
 	{ &am_showkeymarkers, 0 },
 	{ &am_showkeycolors, 0 },
@@ -1167,6 +1158,7 @@ menudefault_t MiscDefault[] = {
 	{ &r_changethecolorofthenightmare, 0 },
 	{ &r_transparencynightmare, 0 },
 	{ &m_reworkedvanillasounds, 0 },
+	{ &m_revenantprojectilespeed, 0 },
 	{ &m_reworkedzombieman, 0 },
 	{ &m_reworkedzombieshotgun, 0 },
 	{ &m_reworkedimp, 0 },
@@ -1252,10 +1244,6 @@ void M_MiscChoice(int choice) {
 		M_SetOptionValue(choice, 0, 1, 1, &m_menumouse);
 		break;
 
-	case misc_jump:
-		M_SetOptionValue(choice, 0, 1, 1, &p_allowjump);
-		break;
-
 	case misc_context:
 		M_SetOptionValue(choice, 0, 1, 1, &p_usecontext);
 		break;
@@ -1268,8 +1256,8 @@ void M_MiscChoice(int choice) {
 		M_SetOptionValue(choice, 0, 1, 1, &p_autorun);
 		break;
 
-	case misc_skybox:
-		M_SetOptionValue(choice, 0, 1, 1, &r_skybox);
+	case misc_weaponswitch:
+		M_SetOptionValue(choice, 0, 1, 1, &r_weaponswitch);
 		break;
 
 	case misc_disablesecretmessages:
@@ -1328,6 +1316,10 @@ void M_MiscChoice(int choice) {
 		M_SetOptionValue(choice, 0, 1, 1, &m_reworkedvanillasounds);
 		break;
 
+	case misc_revenantprojectilespeed:
+		M_SetOptionValue(choice, 0, 1, 1, &m_revenantprojectilespeed);
+		break;
+
 	case misc_reworkedzombieman:
 		M_SetOptionValue(choice, 0, 1, 1, &m_reworkedzombieman);
 		break;
@@ -1380,6 +1372,7 @@ void M_DrawMisc(void) {
 	static const char* enchancedvanillaimptype[3] = { "Vanilla", "Enhanced", "Mouth" };
 	static const char* alphavanillatype[2] = { "Vanilla", "Alpha" };
 	static const char* transparencynightmaretype[2] = { "EX", "Enhanced" };
+	static const char* revenantprojectilespeedtype[2] = { "PSX", "Classic" };
 	int y;
 
 	if (currentMenu->menupageoffset <= misc_menufade + 1 &&
@@ -1404,11 +1397,10 @@ void M_DrawMisc(void) {
     }
 
 	DRAWMISCITEM(misc_menumouse, m_menumouse.value, msgNames);
-	DRAWMISCITEM(misc_jump, p_allowjump.value, msgNames);
 	DRAWMISCITEM(misc_context, p_usecontext.value, mapdisplaytype);
 	DRAWMISCITEM(misc_wipe, r_wipe.value, msgNames);
 	DRAWMISCITEM(misc_autorun, p_autorun.value, autoruntype);
-	DRAWMISCITEM(misc_skybox, r_skybox.value, msgNames);
+	DRAWMISCITEM(misc_weaponswitch, r_weaponswitch.value, msgNames);
 	DRAWMISCITEM(misc_showkey, am_showkeymarkers.value, mapdisplaytype);
 	DRAWMISCITEM(misc_showlocks, am_showkeycolors.value, mapdisplaytype);
 	DRAWMISCITEM(misc_amobjects, am_drawobjects.value, objectdrawtype);
@@ -1422,6 +1414,7 @@ void M_DrawMisc(void) {
 	DRAWMISCITEM(misc_changethecolorofthenightmare, r_changethecolorofthenightmare.value, nightmarecolorstype);
 	DRAWMISCITEM(misc_transparencynightmare, r_transparencynightmare.value, transparencynightmaretype);
 	DRAWMISCITEM(misc_reworkedvanillasounds, m_reworkedvanillasounds.value, enchancedvanillatype);
+	DRAWMISCITEM(misc_revenantprojectilespeed, m_revenantprojectilespeed.value, revenantprojectilespeedtype);
 	DRAWMISCITEM(misc_reworkedzombieman, m_reworkedzombieman.value, enchancedvanillatype);
 	DRAWMISCITEM(misc_reworkedzombieshotgun, m_reworkedzombieshotgun.value, enchancedvanillatype);
 	DRAWMISCITEM(misc_reworkedimp, m_reworkedimp.value, enchancedvanillaimptype);
@@ -1451,16 +1444,20 @@ void M_DrawMisc(void) {
 
 void M_ChangeSensitivity(int choice);
 void M_ChangeMouseAccel(int choice);
+#ifdef HAS_MENU_MOUSE_LOOK
 void M_ChangeMouseLook(int choice);
 void M_ChangeMouseInvert(int choice);
+#endif
 void M_ChangeYAxisMove(int choice);
 void M_ChangeXAxisMove(int choice);
 void M_DrawMouse(void);
 
 CVAR_EXTERNAL(v_msensitivityx);
 CVAR_EXTERNAL(v_msensitivityy);
+#ifdef HAS_MENU_MOUSE_LOOK
 CVAR_EXTERNAL(v_mlook);
 CVAR_EXTERNAL(v_mlookinvert);
+#endif
 CVAR_EXTERNAL(v_yaxismove);
 CVAR_EXTERNAL(v_xaxismove);
 CVAR_EXTERNAL(v_macceleration);
@@ -1472,8 +1469,10 @@ enum {
 	mouse_empty2,
 	mouse_accel,
 	mouse_empty3,
+#ifdef HAS_MENU_MOUSE_LOOK
 	mouse_look,
 	mouse_invert,
+#endif
 	mouse_yaxismove,
 	mouse_xaxismove,
 	mouse_default,
@@ -1488,10 +1487,12 @@ menuitem_t MouseMenu[] = {
 	{-1,"",0},
 	{3, "Mouse Acceleration",M_ChangeMouseAccel, 'a'},
 	{-1, "",0},
+#ifdef HAS_MENU_MOUSE_LOOK
 	{2,"Mouse Look:",M_ChangeMouseLook,'l'},
 	{2,"Invert Look:",M_ChangeMouseInvert, 'i'},
+#endif
 	{2,"Y-Axis Move:",M_ChangeYAxisMove, 'y'},
-        {2, "X-Axis Move:", M_ChangeXAxisMove, 'x'},
+		{2, "X-Axis Move:", M_ChangeXAxisMove, 'x'},
 	{-2,"Default",M_DoDefaults,'d'},
 	{1,"/r Return",M_Return, 0x20}
 };
@@ -1500,8 +1501,10 @@ menudefault_t MouseDefault[] = {
 	{ &v_msensitivityx, 5 },
 	{ &v_msensitivityy, 5 },
 	{ &v_macceleration, 0 },
+#ifdef HAS_MENU_MOUSE_LOOK
 	{ &v_mlook, 0 },
 	{ &v_mlookinvert, 0 },
+#endif
 	{ &v_yaxismove, 0 },
 	{ &v_xaxismove },
 	{ NULL, -1 }
@@ -1537,11 +1540,12 @@ void M_DrawMouse(void) {
 	M_DrawThermo(MouseDef.x, MouseDef.y + LINEHEIGHT * (mouse_sensy + 1), MAXSENSITIVITY, v_msensitivityy.value);
 
 	M_DrawThermo(MouseDef.x, MouseDef.y + LINEHEIGHT * (mouse_accel + 1), 20, v_macceleration.value);
-
+#ifdef HAS_MENU_MOUSE_LOOK
 	Draw_BigText(MouseDef.x + 144, MouseDef.y + LINEHEIGHT * mouse_look, MENUCOLORRED,
 		msgNames[(int)v_mlook.value]);
 	Draw_BigText(MouseDef.x + 144, MouseDef.y + LINEHEIGHT * mouse_invert, MENUCOLORRED,
 		msgNames[(int)v_mlookinvert.value]);
+#endif
 	Draw_BigText(MouseDef.x + 144, MouseDef.y + LINEHEIGHT * mouse_yaxismove, MENUCOLORRED,
 		msgNames[(int)v_yaxismove.value]);
 	Draw_BigText(MouseDef.x + 144, MouseDef.y + LINEHEIGHT * mouse_xaxismove, MENUCOLORRED,
@@ -1618,6 +1622,7 @@ void M_ChangeMouseAccel(int choice)
 	I_MouseAccelChange();
 }
 
+#ifdef HAS_MENU_MOUSE_LOOK
 void M_ChangeMouseLook(int choice) {
 	M_SetOptionValue(choice, 0, 1, 1, &v_mlook);
 }
@@ -1625,13 +1630,14 @@ void M_ChangeMouseLook(int choice) {
 void M_ChangeMouseInvert(int choice) {
 	M_SetOptionValue(choice, 0, 1, 1, &v_mlookinvert);
 }
+#endif
 
 void M_ChangeYAxisMove(int choice) {
 	M_SetOptionValue(choice, 0, 1, 1, &v_yaxismove);
 }
 
 void M_ChangeXAxisMove(int choice) {
-        M_SetOptionValue(choice, 0, 1, 1, &v_xaxismove);
+	M_SetOptionValue(choice, 0, 1, 1, &v_xaxismove);
 }
 //------------------------------------------------------------------------
 //
@@ -1711,6 +1717,7 @@ char* DisplayHints[display_end] = {
 	"display level stats in-game",
 	"change the hud text colour",
 	"change the field of view",
+	NULL,
 	"toggle crosshair",
 	"change opacity for crosshairs",
 	NULL,
@@ -1734,7 +1741,7 @@ menudefault_t DisplayDefault[] = {
 
 menuthermobar_t DisplayBars[] = {
 	{ display_empty1, 255, &st_crosshairopacity },
-	{ display_empty2, 75, &r_fov },
+	{ display_empty2, 255, &r_fov },
 	{ -1, 0 }
 };
 
@@ -1784,7 +1791,7 @@ void M_DrawDisplay(void) {
 
 	M_DrawThermo(DisplayDef.x, DisplayDef.y + LINEHEIGHT * (display_fov + 1),
 		255, r_fov.value);
-	
+
 	if (st_crosshair.value <= 0) {
 		Draw_BigText(DisplayDef.x + 140, DisplayDef.y + LINEHEIGHT * display_crosshair, MENUCOLORRED,
 			msgNames[0]);
@@ -1898,9 +1905,14 @@ void M_ChangeHUDColor(int choice) {
 
 void M_ChangeBrightness(int choice);
 void M_ChangeGammaLevel(int choice);
+#ifdef HAS_FULLSCREEN_BORDERLESS
+void M_ChangeFullscreen(int choice);
+#endif
 void M_ChangeFilter(int choice);
-void M_ChangehudFilter(int choice);
-void M_ChangeWindowed(int choice);
+void M_ChangeWeaponFilter(int choice);
+void M_ChangeObjectFilter(int choice);
+void M_ChangeHUDFilter(int choice);
+void M_ChangeSkyFilter(int choice);
 void M_ChangeAnisotropic(int choice);
 void M_ChangeInterpolateFrames(int choice);
 void M_ChangeAccessibility(int choice);
@@ -1909,12 +1921,17 @@ void M_DrawVideo(void);
 void M_ChangeVsync(int choice);
 
 CVAR_EXTERNAL(v_checkratio);
-CVAR_EXTERNAL(v_windowed);
 CVAR_EXTERNAL(i_brightness);
 CVAR_EXTERNAL(i_gamma);
 CVAR_EXTERNAL(i_brightness);
+#ifdef HAS_FULLSCREEN_BORDERLESS
+CVAR_EXTERNAL(v_fullscreen);
+#endif
 CVAR_EXTERNAL(r_filter);
+CVAR_EXTERNAL(r_weaponFilter);
 CVAR_EXTERNAL(r_hudFilter);
+CVAR_EXTERNAL(r_objectFilter);
+CVAR_EXTERNAL(r_skyFilter);
 CVAR_EXTERNAL(r_anisotropic);
 CVAR_EXTERNAL(i_interpolateframes);
 CVAR_EXTERNAL(v_accessibility);
@@ -1926,16 +1943,20 @@ enum {
 	video_empty1,
 	video_dgamma,
 	video_empty2,
+#ifdef HAS_FULLSCREEN_BORDERLESS
+	video_fullscreen,
+#endif
 	filter,
+	weapon_filter,
+	object_filter,
 	hud_filter,
+	sky_filter,
 	anisotropic,
-	windowed,
 	interpolate_frames,
 	vsync,
 	accessibility,
 	fadein,
 	v_default,
-	v_videoreset,
 	video_return,
 	video_end
 } video_e;
@@ -1945,15 +1966,19 @@ menuitem_t VideoMenu[] = {
 	{-1,"",0},
 	{3,"Gamma Correction",M_ChangeGammaLevel, 'g'},
 	{-1,"",0},
+#ifdef HAS_FULLSCREEN_BORDERLESS
+	{2,"Fullscreen:",M_ChangeFullscreen, 'f'},
+#endif
 	{2,"Filter:",M_ChangeFilter, 'f'},
-	{2,"HUD Filter:",M_ChangehudFilter, 't'},
+	{2,"Weapon Filter:",M_ChangeWeaponFilter, 't'},
+	{2,"Object Filter:",M_ChangeObjectFilter, 't'},
+	{2,"HUD Filter:",M_ChangeHUDFilter, 't'},
+	{2,"Sky Filter:",M_ChangeSkyFilter, 's'},
 	{2,"Anisotropy:",M_ChangeAnisotropic, 'a'},
-	{2,"Windowed:",M_ChangeWindowed, 'w'},
 	{2,"Interpolation:",M_ChangeInterpolateFrames, 'i'},
 	{2,"VSync:",M_ChangeVsync, 'v'},
 	{2,"Accessibility:",M_ChangeAccessibility, 'y'},
 	{2,"Fade In:",M_ChangeFadeIn, 'd'},
-	{2,"Apply Settings",M_DoVideoReset, 's'},
 	{-2,"Default",M_DoDefaults, 'e'},
 	{1,"/r Return",M_Return, 0x20}
 };
@@ -1963,24 +1988,33 @@ char* VideoHints[video_end] = {
 	NULL,
 	"adjust screen gamma",
 	NULL,
-	"toggle texture filtering",
+#ifdef HAS_FULLSCREEN_BORDERLESS
+	"toggle fullscreen mode - requires restart",
+#endif
+	"toggle texture filtering - requires restart",
+	"toggle texture filtering on the weapon",
+	"toggle texture filtering on world objects",
 	"toggle texture filtering on hud and text",
+	"toggle texture filtering on skies",
 	"toggle blur reduction on textures",
-	"toggle windowed mode",
 	"toggle frame interpolation to\n achieve smooth framerates",
 	"toggle vsync on or off to prevent screen tearing",
 	"toggle accessibility to\n remove flashing lights",
-	"toggle fade in animation that plays when starting a level",
-	"apply video settings"
+	"toggle fade in animation that plays when starting a level"
 };
 
 menudefault_t VideoDefault[] = {
 	{ &i_brightness, 0 },
 	{ &i_gamma, 0 },
+#ifdef HAS_FULLSCREEN_BORDERLESS
+	{ &v_fullscreen, 0 },
+#endif
 	{ &r_filter, 0 },
+	{ &r_weaponFilter, 0 },
+	{ &r_objectFilter, 0 },
 	{ &r_hudFilter, 0 },
+	{ &r_skyFilter, 0 },
 	{ &r_anisotropic, 1 },
-	{ &v_windowed, 0 },
 	{ &i_interpolateframes, 1 },
 	{ &v_vsync, 1 },
 	{ &v_accessibility, 0 },
@@ -1989,7 +2023,8 @@ menudefault_t VideoDefault[] = {
 };
 
 menuthermobar_t VideoBars[] = {
-	{ video_empty1, 20, &i_gamma },
+	{ video_empty1, 300, &i_brightness },
+	{ video_empty2, 20,  &i_gamma },
 	{ -1, 0 }
 };
 
@@ -2036,14 +2071,15 @@ static char gammamsg[21][28] = {
 };
 
 void M_Video(int choice) {
-
 	M_SetupNextMenu(&VideoDef);
 	m_ScreenSize = 1;
 }
 
 void M_DrawVideo(void) {
-	static const char* filterType[2] = { "Linear", "Nearest" };
+	static const char* filterType1[3] = { "N64", "Linear", "Nearest" };
+	static const char* filterType2[2] = { "Linear", "Nearest" };
 	static const char* onofftype[2] = { "Off", "On" };
+	static const char* fullscreenType[2] = { "Borderless", "Exclusive" };
 	int y;
 
 	if (currentMenu->menupageoffset <= video_dbrightness + 1 &&
@@ -2068,10 +2104,15 @@ void M_DrawVideo(void) {
 
 #define DRAWVIDEOITEM2(a, b, c) DRAWVIDEOITEM(a, c[(int)b])
 
-	DRAWVIDEOITEM2(filter, r_filter.value, filterType);
-	DRAWVIDEOITEM2(hud_filter, r_hudFilter.value, filterType);
+#ifdef HAS_FULLSCREEN_BORDERLESS
+	DRAWVIDEOITEM2(video_fullscreen, v_fullscreen.value, fullscreenType);
+#endif
+	DRAWVIDEOITEM2(filter, r_filter.value, filterType1);
+	DRAWVIDEOITEM2(object_filter, r_objectFilter.value, filterType2);
+	DRAWVIDEOITEM2(weapon_filter, r_weaponFilter.value, filterType2);
+	DRAWVIDEOITEM2(hud_filter, r_hudFilter.value, filterType2);
+	DRAWVIDEOITEM2(sky_filter, r_skyFilter.value, filterType2);
 	DRAWVIDEOITEM2(anisotropic, r_anisotropic.value, msgNames);
-	DRAWVIDEOITEM2(windowed, v_windowed.value, msgNames);
 	DRAWVIDEOITEM2(interpolate_frames, i_interpolateframes.value, onofftype);
 	DRAWVIDEOITEM2(vsync, v_vsync.value, onofftype);
 	DRAWVIDEOITEM2(accessibility, v_accessibility.value, onofftype);
@@ -2148,20 +2189,34 @@ void M_ChangeGammaLevel(int choice)
 	}
 }
 
+#ifdef HAS_FULLSCREEN_BORDERLESS
+void M_ChangeFullscreen(int choice) {
+	M_SetOptionValue(choice, 0, 1, 1, &v_fullscreen);
+}
+#endif
+
 void M_ChangeFilter(int choice) {
-	M_SetOptionValue(choice, 0, 1, 1, &r_filter);
+	M_SetOptionValue(choice, 0, 2, 1, &r_filter);
 }
 
-void M_ChangehudFilter(int choice) {
+void M_ChangeWeaponFilter(int choice) {
+	M_SetOptionValue(choice, 0, 1, 1, &r_weaponFilter);
+}
+
+void M_ChangeObjectFilter(int choice) {
+	M_SetOptionValue(choice, 0, 1, 1, &r_objectFilter);
+}
+
+void M_ChangeHUDFilter(int choice) {
 	M_SetOptionValue(choice, 0, 1, 1, &r_hudFilter);
+}
+
+void M_ChangeSkyFilter(int choice) {
+	M_SetOptionValue(choice, 0, 1, 1, &r_skyFilter);
 }
 
 void M_ChangeAnisotropic(int choice) {
 	M_SetOptionValue(choice, 0, 1, 1, &r_anisotropic);
-}
-
-void M_ChangeWindowed(int choice) {
-	M_SetOptionValue(choice, 0, 1, 1, &v_windowed);
 }
 
 void M_ChangeInterpolateFrames(int choice)
@@ -2233,13 +2288,8 @@ void M_DrawPassword(void) {
 	byte* passData;
 	int i = 0;
 
-#if defined(_WIN32) && defined(USE_XINPUT)  // XINPUT
-	if (!xgamepad.connected)
-#endif
-	{
-		Draw_BigText(-1, 240 - 48, MENUCOLORWHITE, "Press Delete To Change");
-		Draw_BigText(-1, 240 - 32, MENUCOLORWHITE, "Press Escape To Return");
-	}
+	Draw_BigText(-1, 240 - 48, MENUCOLORWHITE, "Press Delete To Change");
+	Draw_BigText(-1, 240 - 32, MENUCOLORWHITE, "Press Escape To Return");
 
 	if (passInvalid) {
 		if (!passInvalidTic--) {
@@ -2454,6 +2504,8 @@ void M_DrawFeaturesMenu(void);
 CVAR_EXTERNAL(sv_lockmonsters);
 
 enum {
+	features_levels = 0,
+	features_newline,
 	features_invulnerable,
 	features_healthboost,
 	features_securitykeys,
@@ -2465,6 +2517,8 @@ enum {
 } features_e;
 
 menuitem_t FeaturesMenu[] = {
+	{2,"Warp To Level " ,M_DoFeature,'l'},
+	{2, "" },
 	{2,"Invulnerable",M_DoFeature,'i'},
 	{2,"Health Boost",M_DoFeature,'h'},
 	{2,"Security Keys",M_DoFeature,'k'},
@@ -2499,6 +2553,21 @@ void M_Features(int choice) {
 }
 
 void M_DrawFeaturesMenu(void) {
+	mapdef_t* map = P_GetMapInfo(levelwarp + 1);
+
+	/*Warp To Level*/
+	char levelDisplay[64];
+	char mapNameDisplay[64];
+
+	sprintf(levelDisplay, "MAP%02d", map->mapid);
+	sprintf(mapNameDisplay, "%s", map->mapname);
+
+	M_DrawSmbString(levelDisplay, &featuresDef, features_levels);
+
+	menu_t secondLine = featuresDef;
+	secondLine.y += 10;
+	M_DrawSmbStringSmall(mapNameDisplay, &secondLine, features_levels);
+
 	/*Lock Monsters Mode*/
 	M_DrawSmbString(msgNames[(int)sv_lockmonsters.value], &featuresDef, features_lockmonsters);
 
@@ -2527,6 +2596,27 @@ void M_DoFeature(int choice) {
 	int i = 0;
 
 	switch (itemOn) {
+
+	case features_levels:
+		if (choice) {
+			int testWarp = levelwarp + 1;
+			mapdef_t* testMap = P_GetMapInfo(testWarp + 1);
+
+			if (testMap) {
+				levelwarp = testWarp;
+			}
+			else {
+				if (choice == 2) {
+					levelwarp = 0;
+				}
+			}
+		}
+		else {
+			if (levelwarp > 0) {
+				levelwarp--;
+			}
+		}
+		break;
 
 	case features_invulnerable:
 		if (choice) {
@@ -2598,132 +2688,6 @@ void M_DoFeature(int choice) {
 	S_StartSound(NULL, sfx_switch2);
 }
 
-#if defined(_WIN32) && defined(USE_XINPUT)  // XINPUT
-
-#include "g_controls.h"
-
-//------------------------------------------------------------------------
-//
-// GAMEPAD CONTROLLER MENU
-//
-//------------------------------------------------------------------------
-
-void M_XGamePadChoice(int choice);
-void M_DrawXGamePad(void);
-
-CVAR_EXTERNAL(i_rsticksensitivity);
-CVAR_EXTERNAL(i_rstickthreshold);
-CVAR_EXTERNAL(i_xinputscheme);
-
-enum {
-	xgp_sensitivity,
-	xgp_empty1,
-	xgp_threshold,
-	xgp_empty2,
-	xgp_look,
-	xgp_invert,
-	xgp_default,
-	xgp_return,
-	xgp_end
-} xgp_e;
-
-menuitem_t XGamePadMenu[] = {
-	{3,"Stick Sensitivity",M_XGamePadChoice,'s'},
-	{-1,"",0},
-	{3,"Turn Threshold",M_XGamePadChoice,'t'},
-	{-1,"",0},
-	{2,"Y Axis Look:",M_ChangeMouseLook,'l'},
-	{2,"Invert Look:",M_ChangeMouseInvert, 'i'},
-	{-2,"Default",M_DoDefaults,'d'},
-	{1,"/r Return",M_Return, 0x20}
-};
-
-menudefault_t XGamePadDefault[] = {
-	{ &i_rsticksensitivity, 0.0080f },
-	{ &i_rstickthreshold, 20 },
-	{ &v_mlook, 0 },
-	{ &v_mlookinvert, 0 },
-	{ NULL, -1 }
-};
-
-menu_t XGamePadDef = {
-	xgp_end,
-	false,
-	&ControlMenuDef,
-	XGamePadMenu,
-	M_DrawXGamePad,
-	"Gamepad Menu",
-	88,48,
-	0,
-	false,
-	XGamePadDefault,
-	-1,
-	0,
-	1.0f,
-	NULL,
-	NULL
-};
-
-void M_XGamePadChoice(int choice) {
-	float slope1 = 0.0125f / 100.0f;
-	float slope2 = 100.0f / 50.0f;
-
-	switch (itemOn) {
-	case xgp_sensitivity:
-		if (choice) {
-			if (i_rsticksensitivity.value < 0.0125f) {
-				M_SetCvar(&i_rsticksensitivity, i_rsticksensitivity.value + slope1);
-			}
-			else {
-				CON_CvarSetValue(i_rsticksensitivity.name, 0.0125f);
-			}
-		}
-		else {
-			if (i_rsticksensitivity.value > 0.001f) {
-				M_SetCvar(&i_rsticksensitivity, i_rsticksensitivity.value - slope1);
-			}
-			else {
-				CON_CvarSetValue(i_rsticksensitivity.name, 0.001f);
-			}
-		}
-		break;
-
-	case xgp_threshold:
-		if (choice) {
-			if (i_rstickthreshold.value < 100) {
-				M_SetCvar(&i_rstickthreshold, i_rstickthreshold.value + slope2);
-			}
-			else {
-				CON_CvarSetValue(i_rstickthreshold.name, 100);
-			}
-		}
-		else {
-			if (i_rstickthreshold.value > 1) {
-				M_SetCvar(&i_rstickthreshold, i_rstickthreshold.value - slope2);
-			}
-			else {
-				CON_CvarSetValue(i_rstickthreshold.name, 1);
-			}
-		}
-		break;
-	}
-}
-
-void M_DrawXGamePad(void) {
-	M_DrawThermo(XGamePadDef.x, XGamePadDef.y + LINEHEIGHT * (xgp_sensitivity + 1),
-		100, i_rsticksensitivity.value * 8000.0f);
-
-	M_DrawThermo(XGamePadDef.x, XGamePadDef.y + LINEHEIGHT * (xgp_threshold + 1),
-		50, i_rstickthreshold.value * 0.5f);
-
-	Draw_BigText(XGamePadDef.x + 128, XGamePadDef.y + LINEHEIGHT * xgp_look, MENUCOLORRED,
-		msgNames[(int)v_mlook.value]);
-
-	Draw_BigText(XGamePadDef.x + 128, XGamePadDef.y + LINEHEIGHT * xgp_invert, MENUCOLORRED,
-		msgNames[(int)v_mlookinvert.value]);
-}
-
-#endif  // XINPUT
 
 //------------------------------------------------------------------------
 //
@@ -2735,7 +2699,7 @@ void M_ChangeKeyBinding(int choice);
 void M_BuildControlMenu(void);
 void M_DrawControls(void);
 
-#define NUM_CONTROL_ACTIONS     48
+#define NUM_CONTROL_ACTIONS     51
 #define NUM_CONTROL_ITEMS       NUM_CONTROL_ACTIONS
 
 menuaction_t* PlayerActions;
@@ -2755,14 +2719,13 @@ static menuaction_t mPlayerActionsDef[NUM_CONTROL_ITEMS] = {
 	{"Fire", "+fire"},
 	{"Use", "+use"},
 	{"Run", "+run"},
-	{"Jump", "+jump"},
 	{"Look Up", "+lookup"},
 	{"Look Down", "+lookdown"},
 	{"Center View", "+center"},
 	{"Weapons", NULL},
 	{"Next Weapon", "nextweap"},
 	{"Previous Weapon", "prevweap"},
-	{"Fist", "weapon 2"},
+	{"Fist/Chainsaw", "weapon 2"},
 	{"Pistol", "weapon 3"},
 	{"Shotgun(s)", "weapon 4"},
 	{"Chaingun", "weapon 6"},
@@ -2770,7 +2733,10 @@ static menuaction_t mPlayerActionsDef[NUM_CONTROL_ITEMS] = {
 	{"Plasma Rifle", "weapon 8"},
 	{"BFG 9000", "weapon 9"},
 	{"Unmaker", "weapon 10"},
+	{"Fist", "weapon 14"},
 	{"Chainsaw", "weapon 1"},
+	{"Shotgun", "weapon 13"},
+	{"Super Shotgun", "weapon 5"},
 	{"Automap", NULL},
 	{"Toggle", "automap"},
 	{"Zoom In", "+automap_in"},
@@ -2855,6 +2821,7 @@ void M_ChangeKeyBinding(int choice) {
 	messageBindCommand = MenuBindBuff;
 	sprintf(MenuBindMessage, "%s", PlayerActions[choice].name);
 	MenuBindActive = true;
+	MenuBindIgnoreUntilTic = gametic + 1;
 }
 
 void M_DrawControls(void) {
@@ -2874,9 +2841,6 @@ void M_DrawControlMenu(void);
 enum {
 	controls_keyboard,
 	controls_mouse,
-#if defined(_WIN32) && defined(USE_XINPUT)  // XINPUT
-	controls_gamepad,
-#endif
 	controls_return,
 	controls_end
 } controls_e;
@@ -2884,18 +2848,12 @@ enum {
 menuitem_t ControlsMenu[] = {
 	{1,"Bindings",M_ControlChoice, 'k'},
 	{1,"Mouse",M_ControlChoice, 'm'},
-#if defined(_WIN32) && defined(USE_XINPUT)  // XINPUT
-	{1,"Gamepad",M_ControlChoice, 'g'},
-#endif
 	{1,"/r Return",M_Return, 0x20}
 };
 
 char* ControlsHints[controls_end] = {
 	"configure bindings",
 	"configure mouse functionality",
-#if defined(_WIN32) && defined(USE_XINPUT)  // XINPUT
-	"configure gamepad functionality",
-#endif
 	NULL
 };
 
@@ -2926,11 +2884,6 @@ void M_ControlChoice(int choice) {
 	case controls_mouse:
 		M_SetupNextMenu(&MouseDef);
 		break;
-#if defined(_WIN32) && defined(USE_XINPUT)  // XINPUT
-	case controls_gamepad:
-		M_SetupNextMenu(&XGamePadDef);
-		break;
-#endif
 	}
 }
 
@@ -3218,7 +3171,7 @@ void M_LoadSelect(int choice) {
 	// sprintf(name, SAVEGAMENAME"%d.dsg", choice);
 	// G_LoadGame(name);
 	char* filename = P_GetSaveGameName(choice);
-		G_LoadGame(filename);
+	G_LoadGame(filename);
 	free(filename);
 	M_ClearMenus();
 }
@@ -3258,24 +3211,16 @@ void M_ReadSaveStrings(void) {
 
 		// handle = open(name, O_RDONLY | 0, 0666);
 		char* filename = P_GetSaveGameName(i);
-#ifdef _WIN32
-		handle = _open(filename, O_RDONLY | 0, 0666);
-#else
 		handle = open(filename, O_RDONLY | 0, 0666);
-#endif
+
 		free(filename);
 		if (handle == -1) {
 			dstrcpy(&savegamestrings[i][0], EMPTYSTRING);
 			DoomLoadMenu[i].status = 0;
 			continue;
 		}
-#ifdef _WIN32
-		_read(handle, &savegamestrings[i], MENUSTRINGSIZE);
-		_close(handle);
-#else
 		read(handle, &savegamestrings[i], MENUSTRINGSIZE);
 		close(handle);
-#endif
 		DoomLoadMenu[i].status = 1;
 	}
 }
@@ -3351,15 +3296,6 @@ static void M_DoDefaults(int choice) {
 }
 
 //
-// M_DoVideoReset
-//
-static void M_DoVideoReset(int choice) {
-	I_Init();
-	R_Init();
-	GL_Init();
-}
-
-//
 // M_ReturnToOptions
 //
 
@@ -3426,6 +3362,15 @@ static void M_DrawSmbString(const char* text, menu_t* menu, int item) {
 	Draw_Text(x, y, MENUCOLORWHITE, 1.0f, false, text);
 }
 
+static void M_DrawSmbStringSmall(const char* text, menu_t* menu, int item) {
+	int x;
+	int y;
+
+	x = menu->x + 206;
+	y = menu->y + 28;
+	Draw_Text(x, y, MENUCOLORWHITE, 0.7f, false, text);
+}
+
 //
 // M_StringWidth
 // Find string width from hu_font chars
@@ -3437,7 +3382,7 @@ static int M_StringWidth(const char* string) {
 	int c;
 
 	for (i = 0; i < dstrlen(string); i++) {
-		c = toupper(string[i]) - ST_FONTSTART;
+		c = SDL_toupper(string[i]) - ST_FONTSTART;
 		if (c < 0 || c >= ST_FONTSIZE) {
 			w += 4;
 		}
@@ -3579,8 +3524,8 @@ static void M_CheckDragThermoBar(event_t* ev, menu_t* menu) {
 	bar = menu->thermobars;
 	x = menu->x;
 	y = menu->y;
-	mx = mouse_x;
-	my = mouse_y;
+	mx = cursor_x;
+	my = cursor_y;
 	scalex = ((float)video_width /
 		((float)SCREENHEIGHT * video_ratio)) * menu->scale;
 	scaley = ((float)video_height /
@@ -3650,8 +3595,8 @@ static boolean M_CursorHighlightItem(menu_t* menu) {
 	max = (menu->numpageitems == -1) ? menu->numitems : menu->numpageitems;
 	x = menu->x;
 	y = menu->y;
-	mx = (float)mouse_x;
-	my = (float)mouse_y;
+	mx = cursor_x;
+	my = cursor_y;
 	scalex = ((float)video_width /
 		((float)SCREENHEIGHT * video_ratio)) * menu->scale;
 	scaley = ((float)video_height /
@@ -3746,14 +3691,13 @@ void M_QuickSave(void)
 
 void M_QuickLoad(void)
 {
-	if (M_FileExists(QUICKSAVEFILE))
-	{
-		G_LoadGame(QUICKSAVEFILE);
+	char* filepath = I_GetUserFile(QUICKSAVEFILE);
+
+	if (M_FileExists(filepath)) {
+		G_LoadGame(filepath);
 	}
-	else
-	{
-		printf("no save file");
-	}
+
+	free(filepath);
 }
 
 //
@@ -3882,134 +3826,6 @@ static void M_DrawSaveGameFrontend(menu_t* def) {
 //
 //------------------------------------------------------------------------
 
-#if defined(_WIN32) && defined(USE_XINPUT)  // XINPUT
-
-const symboldata_t xinputbutons[12] = {
-	{ 0, 0, 15, 16 },   // B
-	{ 15, 0, 15, 16 },  // A
-	{ 30, 0, 15, 16 },  // Y
-	{ 45, 0, 15, 16 },  // X
-	{ 60, 0, 19, 16 },  // LB
-	{ 79, 0, 19, 16 },  // RB
-	{ 98, 0, 15, 16 },  // LEFT
-	{ 113, 0, 15, 16 }, // RIGHT
-	{ 128, 0, 15, 16 }, // UP
-	{ 143, 0, 15, 16 }, // DOWN
-	{ 158, 0, 12, 16 }, // START
-	{ 170, 0, 12, 16 }  // SELECT
-};
-
-//
-// M_DrawXInputButton
-//
-
-void M_DrawXInputButton(int x, int y, int button) {
-	int index = 0;
-	float vx1 = 0.0f;
-	float vy1 = 0.0f;
-	float tx1 = 0.0f;
-	float tx2 = 0.0f;
-	float ty1 = 0.0f;
-	float ty2 = 0.0f;
-	float width;
-	float height;
-	int pic;
-	vtx_t vtx[4];
-	const rcolor color = MENUCOLORWHITE;
-
-	switch (button) {
-	case XINPUT_GAMEPAD_B:
-		index = 0;
-		break;
-	case XINPUT_GAMEPAD_A:
-		index = 1;
-		break;
-	case XINPUT_GAMEPAD_Y:
-		index = 2;
-		break;
-	case XINPUT_GAMEPAD_X:
-		index = 3;
-		break;
-	case XINPUT_GAMEPAD_LEFT_SHOULDER:
-		index = 4;
-		break;
-	case XINPUT_GAMEPAD_RIGHT_SHOULDER:
-		index = 5;
-		break;
-	case XINPUT_GAMEPAD_DPAD_LEFT:
-		index = 6;
-		break;
-	case XINPUT_GAMEPAD_DPAD_RIGHT:
-		index = 7;
-		break;
-	case XINPUT_GAMEPAD_DPAD_UP:
-		index = 8;
-		break;
-	case XINPUT_GAMEPAD_DPAD_DOWN:
-		index = 9;
-		break;
-	case XINPUT_GAMEPAD_START:
-		index = 10;
-		break;
-	case XINPUT_GAMEPAD_BACK:
-		index = 11;
-		break;
-	case XINPUT_GAMEPAD_LEFT_TRIGGER:
-		index = 4;
-		break;
-	case XINPUT_GAMEPAD_RIGHT_TRIGGER:
-		index = 5;
-		break;
-		//
-		// [kex] TODO: finish adding remaining buttons?
-		//
-	default:
-		return;
-	}
-
-	pic = GL_BindGfxTexture("BUTTONS", true);
-
-	width = (float)gfxwidth[pic];
-	height = (float)gfxheight[pic];
-
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, DGL_CLAMP);
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, DGL_CLAMP);
-
-	dglEnable(GL_BLEND);
-	dglSetVertex(vtx);
-
-	GL_SetOrtho(0);
-
-	vx1 = (float)x;
-	vy1 = (float)y;
-
-	tx1 = ((float)xinputbutons[index].x / width) + 0.001f;
-	tx2 = (tx1 + (float)xinputbutons[index].w / width) - 0.001f;
-	ty1 = ((float)xinputbutons[index].y / height) + 0.005f;
-	ty2 = (ty1 + (((float)xinputbutons[index].h / height))) - 0.008f;
-
-	GL_Set2DQuad(
-		vtx,
-		vx1,
-		vy1,
-		xinputbutons[index].w,
-		xinputbutons[index].h,
-		tx1,
-		tx2,
-		ty1,
-		ty2,
-		color
-	);
-
-	dglTriangle(0, 1, 2);
-	dglTriangle(3, 2, 1);
-	dglDrawGeometry(4, vtx);
-
-	GL_ResetViewport();
-	dglDisable(GL_BLEND);
-}
-
-#endif
 
 //
 // M_Responder
@@ -4059,15 +3875,39 @@ boolean M_Responder(event_t* ev) {
 		}
 	}
 
+	// atsb fixes a long time EX bug where the mouse didn't allow binding as it swallowed the inputs
 	if (MenuBindActive == true) { //key Bindings
-		if (ch == KEY_ESCAPE) {
+
+		if (gametic <= MenuBindIgnoreUntilTic) {
+			return true;
+		}
+		if (ev->type == ev_mouse) {
+			if (MenuBindEntryWasMouse) {
+				if ((ev->data1 & MenuBindIgnoreMouseButtons) == 0) {
+					MenuBindEntryWasMouse = false;
+				}
+			}
+			return true;
+		}
+		if (MenuBindEntryWasMouse && ev->type == ev_mousedown && (ev->data1 & MenuBindIgnoreMouseButtons)) {
+			return true;
+		}
+
+		switch (ch) {
+		case KEY_ESCAPE:
 			MenuBindActive = false;
 			M_BuildControlMenu();
+			break;
+		case KEY_CONSOLE:
+			// cannot bind reserved console key
+			break;
+		default:
+			if (G_BindActionByEvent(ev, messageBindCommand)) {
+				MenuBindActive = false;
+				M_BuildControlMenu();
+			}
 		}
-		else if (G_BindActionByEvent(ev, messageBindCommand)) {
-			MenuBindActive = false;
-			M_BuildControlMenu();
-		}
+
 		return true;
 	}
 
@@ -4252,7 +4092,17 @@ boolean M_Responder(event_t* ev) {
 				}
 
 				currentMenu->lastOn = itemOn;
-				if (currentMenu->menuitems[itemOn].status >= 2 ||
+				if (currentMenu == &featuresDef) {
+					if (currentMenu->menuitems[itemOn].routine == M_DoFeature &&
+						itemOn == features_levels) {
+						gameaction = ga_warplevel;
+						gamemap = nextmap = levelwarp + 1;
+						M_ClearMenus();
+						dmemset(passwordData, 0xff, 16);
+						return true;
+					}
+				}
+				else if (currentMenu->menuitems[itemOn].status >= 2 ||
 					currentMenu->menuitems[itemOn].status == -2) {
 					currentMenu->menuitems[itemOn].routine(2);
 				}
@@ -4332,6 +4182,16 @@ boolean M_Responder(event_t* ev) {
 	return false;
 }
 
+// restore mouse position to current cursor position so cursor is not displayed at a random position depending of current in-game mouse position
+// cursor start initially centered
+static void M_SetCursorPos() {
+	if (m_menumouse.value) {
+		I_SetMousePos(cursor_x, cursor_y);
+		itemSelected = -1; // remove mouse hover item menu
+	}
+}
+
+
 //
 // M_StartControlPanel
 //
@@ -4358,6 +4218,10 @@ void M_StartControlPanel(boolean forcenext) {
 	itemOn = currentMenu->lastOn;
 
 	S_PauseSound();
+
+	if (!forcenext) {
+		M_SetCursorPos();
+	}
 }
 
 //
@@ -4370,7 +4234,7 @@ void M_StartMainMenu(void) {
 	allowmenu = true;
 	menuactive = true;
 	mainmenuactive = true;
-	M_StartControlPanel(false);
+	M_SetCursorPos();
 }
 
 //
@@ -4390,28 +4254,14 @@ static void M_DrawMenuSkull(int x, int y) {
 	float ty2 = 0.0f;
 	float smbwidth;
 	float smbheight;
-	int pic, parama, paramr;
+	int pic;
 	vtx_t vtx[4];
 	const rcolor color = MENUCOLORWHITE;
 
-	parama = M_CheckParm("-alpha");
-	paramr = M_CheckParm("-reloaded");
+	pic = GL_BindGfxTexture("SYMBOLS", true);
 
-	if (parama)
-	{
-		pic = GL_BindGfxTexture("SKULLM", true);
-	}
-	else if (paramr)
-	{
-		pic = GL_BindGfxTexture("SKULLM", true);
-	}
-	else
-	{
-		pic = GL_BindGfxTexture("SYMBOLS", true);
-	}
-
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, DGL_CLAMP);
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, DGL_CLAMP);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 	dglEnable(GL_BLEND);
 	dglSetVertex(vtx);
@@ -4426,10 +4276,13 @@ static void M_DrawMenuSkull(int x, int y) {
 	smbwidth = (float)gfxwidth[pic];
 	smbheight = (float)gfxheight[pic];
 
-	tx1 = ((float)symboldata[index].x / smbwidth) + 0.001f;
-	tx2 = (tx1 + (float)symboldata[index].w / smbwidth) - 0.001f;
-	ty1 = ((float)symboldata[index].y / smbheight) + 0.005f;
-	ty2 = (ty1 + (((float)symboldata[index].h / smbheight))) - 0.008f;
+	const float ueps = 0.5f / smbwidth;
+	const float veps = 0.5f / smbheight;
+
+	tx1 = ((float)symboldata[index].x / smbwidth) + ueps;
+	tx2 = ((float)(symboldata[index].x + symboldata[index].w) / smbwidth) - ueps;
+	ty1 = ((float)symboldata[index].y / smbheight) + veps;
+	ty2 = ((float)(symboldata[index].y + symboldata[index].h) / smbheight) - veps;
 
 	GL_Set2DQuad(
 		vtx,
@@ -4437,10 +4290,7 @@ static void M_DrawMenuSkull(int x, int y) {
 		vy1,
 		symboldata[index].w,
 		symboldata[index].h,
-		tx1,
-		tx2,
-		ty1,
-		ty2,
+		tx1, tx2, ty1, ty2,
 		color
 	);
 
@@ -4456,27 +4306,49 @@ static void M_DrawMenuSkull(int x, int y) {
 // M_DrawCursor
 //
 
-static void M_DrawCursor(float x, float y) {
-	if (m_menumouse.value) {
-		int gfxIdx;
-		float factor;
-		float scale;
+static void M_DrawCursor()
+{
+	if (!m_menumouse.value) return;
 
-		scale = ((m_cursorscale.value + 25.0f) / 100.0f);
-		gfxIdx = GL_BindGfxTexture("CURSOR", true);
-		factor = (((float)SCREENHEIGHT * video_ratio) / (float)video_width) / scale;
+	cursor_x = mouse_x;
+	cursor_y = mouse_y;
 
-		dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, DGL_CLAMP);
-		dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, DGL_CLAMP);
+	int gfxIdx;
+	float factor;
+	float scale;
 
-		GL_SetOrthoScale(scale);
-		GL_SetState(GLSTATE_BLEND, 1);
-		GL_SetupAndDraw2DQuad((float)x * factor, (float)y * factor,
-			gfxwidth[gfxIdx], gfxheight[gfxIdx], 0, 1.0f, 0, 1.0f, WHITE, 0);
+	scale = ((m_cursorscale.value + 25.0f) / 100.0f);
+	gfxIdx = GL_BindGfxTexture("CURSOR", true);
+	if (gfxIdx < 0)
+		return;
 
-		GL_SetState(GLSTATE_BLEND, 0);
-		GL_SetOrthoScale(1.0f);
-	}
+	factor = (((float)SCREENHEIGHT * video_ratio) / (float)video_width) / scale;
+
+	// atsb: fixes cursor alpha
+	dglDisable(GL_COLOR_LOGIC_OP);
+	dglDisable(GL_DEPTH_TEST);
+	dglDepthMask(GL_FALSE);
+
+	GL_SetState(GLSTATE_BLEND, 1);
+	dglEnable(GL_BLEND);
+	dglDisable(GL_ALPHA_TEST);
+	dglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	GL_SetOrthoScale(scale);
+
+	dglColor4ub(255, 255, 255, 255);
+
+	GL_SetupAndDraw2DQuad((float)cursor_x * factor, (float)cursor_y * factor,
+		gfxwidth[gfxIdx], gfxheight[gfxIdx], 0, 1.0f, 0, 1.0f, WHITE, 0);
+
+	GL_SetState(GLSTATE_BLEND, 0);
+	dglDepthMask(GL_TRUE);
+	GL_SetOrthoScale(1.0f);
+
 }
 
 //
@@ -4707,29 +4579,7 @@ void M_Drawer(void) {
 		GL_SetOrthoScale(1.0f);
 	}
 
-#if defined(_WIN32) && defined(USE_XINPUT)  // XINPUT
-	if (xgamepad.connected && currentMenu != &MainDef) {
-		GL_SetOrthoScale(0.75f);
-		if (currentMenu == &PasswordDef) {
-			M_DrawXInputButton(4, 271, XINPUT_GAMEPAD_B);
-			Draw_Text(22, 276, MENUCOLORWHITE, 0.75f, false, "Change");
-		}
-
-		GL_SetOrthoScale(0.75f);
-		M_DrawXInputButton(4, 287, XINPUT_GAMEPAD_A);
-		Draw_Text(22, 292, MENUCOLORWHITE, 0.75f, false, "Select");
-
-		if (currentMenu != &PauseDef) {
-			GL_SetOrthoScale(0.75f);
-			M_DrawXInputButton(5, 303, XINPUT_GAMEPAD_START);
-			Draw_Text(22, 308, MENUCOLORWHITE, 0.75f, false, "Return");
-		}
-
-		GL_SetOrthoScale(1);
-	}
-#endif
-
-	M_DrawCursor(mouse_x, mouse_y);
+	M_DrawCursor();
 }
 
 //
@@ -4854,15 +4704,6 @@ void M_Ticker(void) {
 		SaveDef.prevMenu = &PauseDef;
 	}
 
-#if defined(_WIN32) && defined(USE_XINPUT)  // XINPUT
-	//
-	// hide mouse menu if gamepad controller is plugged in
-	//
-	if (currentMenu == &ControlMenuDef) {
-		currentMenu->menuitems[controls_gamepad].status = xgamepad.connected ? 1 : -3;
-	}
-#endif
-
 	// auto-adjust itemOn and page offset if the first menu item is being used as a header
 	if (currentMenu->menuitems[0].status == -1 &&
 		currentMenu->menuitems[0].name[0] != 0) {
@@ -4947,6 +4788,10 @@ void M_Init(void) {
 	menufadefunc = NULL;
 	nextmenu = NULL;
 	newmenu = false;
+
+	// cursor initially centered
+	cursor_x = ((float)video_width * SCREENHEIGHT / SCREENWIDTH) / 2;
+	cursor_y = video_height / 2.f;
 
 	for (i = 0; i < NUM_CONTROL_ITEMS; i++) {
 		ControlsItem[i].alphaKey = 0;

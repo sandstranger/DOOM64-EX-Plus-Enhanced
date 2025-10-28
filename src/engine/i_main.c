@@ -20,43 +20,17 @@
 //
 //-----------------------------------------------------------------------------
 
-
-#include <stdbool.h>
-
-#ifdef _MSC_VER
-#include "i_opndir.h"
-#else
-#include <dirent.h>
-#endif
-
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
+#include <SDL3/SDL_stdinc.h>
+#include <limits.h>
 #include "doomdef.h"
 #include "doomstat.h"
 #include "d_main.h"
-
-#include <SDL3/SDL.h>
-//#include <SDL3/SDL_main.h>
-
-#include "i_video.h"
 #include "m_misc.h"
 #include "i_system.h"
-#include "con_console.h"
 
 const char version_date[] = __DATE__;
-
-//
-// _dprintf
-//
-
-void _dprintf(const char* s, ...) {
-	static char msg[MAX_MESSAGE_SIZE];
-	va_list    va;
-
-	va_start(va, s);
-	vsprintf(msg, s, va);
-	va_end(va);
-
-	players[consoleplayer].message = msg;
-}
 
 //
 // dmemcpy
@@ -129,6 +103,15 @@ int dstrcmp(const char* s1, const char* s2) {
 }
 
 //
+// dstreq
+//
+
+boolean dstreq(const char* s1, const char* s2) {
+	return dstrcmp(s1, s2) == 0;
+}
+
+
+//
 // dstrncmp
 //
 
@@ -154,7 +137,7 @@ int dstrncmp(const char* s1, const char* s2, int len) {
 //
 
 int dstricmp(const char* s1, const char* s2) {
-	return strcasecmp(s1, s2);
+	return SDL_strcasecmp(s1, s2);
 }
 
 //
@@ -162,8 +145,9 @@ int dstricmp(const char* s1, const char* s2) {
 //
 
 int dstrnicmp(const char* s1, const char* s2, int len) {
-	return strncasecmp(s1, s2, len);
+	return SDL_strncasecmp(s1, s2, len);
 }
+
 
 //
 // dstrupr
@@ -224,6 +208,14 @@ char* dstrrchr(char* s, char c) {
 			return s;
 		}
 	return 0;
+}
+
+//
+// dstrisempty
+//
+
+boolean dstrisempty(char *s) {
+	return !s || s[0] == '\0';
 }
 
 //
@@ -420,7 +412,7 @@ int dhtoi(char* str) {
 // dfcmp
 //
 
-bool dfcmp(float f1, float f2) {
+boolean dfcmp(float f1, float f2) {
 	float precision = 0.00001f;
 	if (((f1 - precision) < f2) &&
 		((f1 + precision) > f2)) {
@@ -435,10 +427,8 @@ bool dfcmp(float f1, float f2) {
 // D_abs
 //
 
-int D_abs(int x) {
-	fixed_t _t = (x), _s;
-	_s = _t >> (8 * sizeof _t - 1);
-	return (_t ^ _s) - _s;
+int D_abs(int v) {
+	return (v >= 0) ? v : (v == INT_MIN ? INT_MAX : -v);
 }
 
 //
@@ -447,45 +437,6 @@ int D_abs(int x) {
 
 float D_fabs(float x) {
 	return x < 0 ? -x : x;
-}
-
-//
-// dsprintf
-//
-
-int dsprintf(char* buf, const char* format, ...) {
-	va_list arg;
-	int x;
-
-	va_start(arg, format);
-#ifdef HAVE_VSNPRINTF
-	x = vsnprintf(buf, dstrlen(buf), format, arg);
-#else
-	x = vsprintf(buf, format, arg);
-#endif
-	va_end(arg);
-
-	return x;
-}
-
-//
-// dsnprintf
-//
-
-int dsnprintf(char* src, unsigned int n, const char* str, ...) {
-	int x;
-	va_list argptr;
-	va_start(argptr, str);
-
-#ifdef HAVE_VSNPRINTF
-	x = vsnprintf(src, n, str, argptr);
-#else
-	x = vsprintf(src, str, argptr);
-#endif
-
-	va_end(argptr);
-
-	return x;
 }
 
 //

@@ -20,9 +20,7 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <stdlib.h>
-#include <stdarg.h>
-
+#include "g_game.h"
 #include "doomdef.h"
 #include "doomstat.h"
 #include "z_zone.h"
@@ -39,21 +37,22 @@
 #include "wi_stuff.h"
 #include "st_stuff.h"
 #include "am_map.h"
-#include "w_wad.h"
 #include "p_local.h"
 #include "s_sound.h"
 #include "d_englsh.h"
 #include "sounds.h"
 #include "tables.h"
 #include "info.h"
-#include "r_local.h"
-#include "r_wipe.h"
+#include "r_lights.h"
+#include "r_main.h"
 #include "con_console.h"
-#include "g_local.h"
-#include "m_password.h"
-#include "i_video.h"
 #include "i_sdlinput.h"
 #include "g_demo.h"
+#include "g_controls.h"
+#include "g_settings.h"
+#include "g_actions.h"
+#include "net_server.h"
+
 
 #define DCLICK_TIME     20
 
@@ -97,6 +96,9 @@ int             displayplayer;              // view being displayed
 static boolean savenow = false;
 static int      savegameflags = 0;
 static int      savecompatflags = 0;
+
+const int title_map_num = 33;
+
 
 // for intermission
 boolean        precache = true;     // if true, load all graphics at start
@@ -143,13 +145,12 @@ NETCVAR(sv_respawnitems, 0);
 NETCVAR(sv_respawn, 0);
 NETCVAR(sv_skill, 2);
 
-NETCVAR_PARAM(sv_lockmonsters, 0, gameflags, GF_LOCKMONSTERS);
-NETCVAR_PARAM(sv_allowcheats, 0, gameflags, GF_ALLOWCHEATS);
-NETCVAR_PARAM(sv_friendlyfire, 0, gameflags, GF_FRIENDLYFIRE);
-NETCVAR_PARAM(sv_keepitems, 0, gameflags, GF_KEEPITEMS);
-NETCVAR_PARAM(p_allowjump, 0, gameflags, GF_ALLOWJUMP);
-NETCVAR_PARAM(p_autoaim, 1, gameflags, GF_ALLOWAUTOAIM);
-NETCVAR_PARAM(compat_mobjpass, 0, compatflags, COMPATF_MOBJPASS);
+NETCVAR_PARAM(sv_lockmonsters, 0, gameflags, GF_LOCKMONSTERS)
+NETCVAR_PARAM(sv_allowcheats, 0, gameflags, GF_ALLOWCHEATS)
+NETCVAR_PARAM(sv_friendlyfire, 0, gameflags, GF_FRIENDLYFIRE)
+NETCVAR_PARAM(sv_keepitems, 0, gameflags, GF_KEEPITEMS)
+NETCVAR_PARAM(p_autoaim, 1, gameflags, GF_ALLOWAUTOAIM)
+NETCVAR_PARAM(compat_mobjpass, 0, compatflags, COMPATF_MOBJPASS)
 
 CVAR_EXTERNAL(v_mlook);
 CVAR_EXTERNAL(v_mlookinvert);
@@ -169,6 +170,7 @@ CVAR_EXTERNAL(m_reworkedweaponsanimations);
 CVAR_EXTERNAL(r_changethecolorofthenightmare);
 CVAR_EXTERNAL(r_transparencynightmare);
 CVAR_EXTERNAL(m_reworkedvanillasounds);
+CVAR_EXTERNAL(m_revenantprojectilespeed);
 CVAR_EXTERNAL(m_reworkedzombieman);
 CVAR_EXTERNAL(m_reworkedzombieshotgun);
 CVAR_EXTERNAL(m_reworkedimp);
@@ -184,7 +186,6 @@ CVAR_EXTERNAL(m_fixspectrehitbox);
 //
 
 void G_RegisterCvars(void) {
-	CON_CvarRegister(&p_allowjump);
 	CON_CvarRegister(&p_autoaim);
 	CON_CvarRegister(&sv_nomonsters);
 	CON_CvarRegister(&sv_fastmonsters);
@@ -206,6 +207,7 @@ void G_RegisterCvars(void) {
 	CON_CvarRegister(&r_changethecolorofthenightmare);
 	CON_CvarRegister(&r_transparencynightmare);
 	CON_CvarRegister(&m_reworkedvanillasounds);
+	CON_CvarRegister(&m_revenantprojectilespeed);
 	CON_CvarRegister(&m_reworkedzombieman);
 	CON_CvarRegister(&m_reworkedzombieshotgun);
 	CON_CvarRegister(&m_reworkedimp);
@@ -333,7 +335,7 @@ static CMD(Weapon) {
 
 	id = datoi(param[0]);
 
-	if ((id > NUMWEAPONS) || (id < 1)) {
+	if ((id > NUMWEAPONS && id < wp_onlyshotgun) || (id < 1)) {
 		return;
 	}
 
@@ -502,6 +504,42 @@ static CMD(Cheat) {
 	}
 }
 
+static CMD(Map) {
+
+	if (param[0]) {
+
+		int map = datoi(param[0]);
+
+		if (P_GetMapInfo(map)) {
+
+			if (gamestate == GS_LEVEL) {
+
+				if (menuactive) {
+					M_ClearMenus();
+				}
+
+				M_CheatWarp(NULL, param[0]);
+			}
+			else {
+				// do the same thing than -warp
+				autostart = true;
+				startmap = map;
+				gameaction = ga_newgame;
+			}
+			CON_dismiss();
+			return;
+		}
+
+		CON_Printf(RED, "Invalid map\n\n");
+	}
+
+
+	CON_Printf(BLUE, "Syntax: map <num>\n\n");
+	CON_Printf(GREEN, "Maps:\n");
+	CON_Printf(GREEN, "-------------------------\n");
+	P_ListMaps();
+}
+
 //
 // G_CmdPause
 //
@@ -628,6 +666,12 @@ static CMD(EndDemo) {
 }
 
 //
+
+static CMD(ListMaps) {
+	P_ListMaps();
+}
+
+//
 // G_SaveDefaults
 //
 
@@ -731,11 +775,12 @@ void G_BuildTiccmd(ticcmd_t* cmd) {
 
 		cmd->angleturn -= pc->mousex * 0x4;
 
-		if (forcefreelook != 2) {
-			if ((int)v_mlook.value || forcefreelook) {
-				cmd->pitch -= (int)v_mlookinvert.value ? pc->mousey * 0x4 : -(pc->mousey * 0x4);
-			}
+		
+		if (forcefreelook != 2 && ((int)v_mlook.value || forcefreelook)) {
+			cmd->pitch -= (int)v_mlookinvert.value ? pc->mousey * 0x4 : -(pc->mousey * 0x4);
 		}
+		
+		
 	}
 
 	if ((int)v_yaxismove.value) {
@@ -780,14 +825,6 @@ void G_BuildTiccmd(ticcmd_t* cmd) {
 		cmd->buttons |= BT_USE;
 		// clear double clicks if hit use button
 		pc->flags &= ~(PCF_FDCLICK2 | PCF_SDCLICK2);
-	}
-
-	if (forcejump != 2) {
-		if (gameflags & GF_ALLOWJUMP || forcejump) {
-			if (pc->key[PCKEY_JUMP]) {
-				cmd->buttons2 |= BT2_JUMP;
-			}
-		}
 	}
 
 	if (pc->flags & PCF_NEXTWEAPON) {
@@ -961,8 +998,7 @@ static void G_SetGameFlags(void) {
 	if (sv_allowcheats.value > 0)   gameflags |= GF_ALLOWCHEATS;
 	if (sv_friendlyfire.value > 0)  gameflags |= GF_FRIENDLYFIRE;
 	if (sv_keepitems.value > 0)     gameflags |= GF_KEEPITEMS;
-	if (p_allowjump.value > 0)      gameflags |= GF_ALLOWJUMP;
-	if (p_autoaim.value > 0)        gameflags |= GF_ALLOWAUTOAIM;
+	if (p_autoaim.value > 0 || v_mlook.value <= 0)  gameflags |= GF_ALLOWAUTOAIM; // force autoaim if mlook is disabled
 
 	if (compat_mobjpass.value > 0)  compatflags |= COMPATF_MOBJPASS;
 }
@@ -1002,7 +1038,6 @@ void G_DoLoadLevel(void) {
 		return;
 	}
 
-	forcejump = map->allowjump;
 	forcefreelook = map->allowfreelook;
 
 	// This was quite messy with SPECIAL and commented parts.
@@ -1043,9 +1078,17 @@ void G_DoLoadLevel(void) {
 boolean G_Responder(event_t* ev) {
 	// Handle level specific ticcmds
 	if (gamestate == GS_LEVEL) {
+
+		/* FIXME: if we support this, add a configurable key binding
 		// allow spy mode changes even during the demo
 		if (ev->type == ev_keydown
 			&& ev->data1 == KEY_F12 && (singledemo || !deathmatch)) {
+
+			int player_count = 0;
+			for(int i = 0 ; i < MAXPLAYERS ; i++) {
+				if(playeringame[i]) player_count++;
+			}
+
 			// spy mode
 			do {
 				displayplayer++;
@@ -1056,6 +1099,7 @@ boolean G_Responder(event_t* ev) {
 
 			return true;
 		}
+		*/
 
 		if (demoplayback && gameaction == ga_nothing) {
 			if (ev->type == ev_keydown ||
@@ -1111,7 +1155,6 @@ boolean G_Responder(event_t* ev) {
 void G_Ticker(void) {
 	int         i;
 	int         buf;
-	ticcmd_t* cmd;
 
 	G_ActionTicker();
 	CON_Ticker();
@@ -1126,7 +1169,7 @@ void G_Ticker(void) {
 		gameaction = ga_nothing;
 	}
 
-	if (paused & 2 || (!demoplayback && menuactive && !netgame)) {
+	if (paused || (menuactive && !netgame)) {
 		basetic++;    // For tracers and RNG -- we must maintain sync
 	}
 	else {
@@ -1135,10 +1178,22 @@ void G_Ticker(void) {
 		buf = (gametic / ticdup) % BACKUPTICS;
 
 		for (i = 0; i < MAXPLAYERS; i++) {
-			if (playeringame[i]) {
-				cmd = &players[i].cmd;
-
-				dmemcpy(cmd, &netcmds[i][buf], sizeof(ticcmd_t));
+			ticcmd_t * cmd = &players[i].cmd;
+			if (demoplayback) {
+				if (i == consoleplayer && gameaction == ga_nothing) {
+					G_ReadDemoTiccmd(cmd);
+					
+				}
+				else {
+					dmemset(cmd, 0, sizeof(*cmd)); // no phantom inputs for others
+					
+				}
+				
+			}
+			else {
+				*cmd = netcmds[i][buf];
+				
+			}
 
 				//
 				// 20120404 villsa - make sure gameaction isn't set to anything before
@@ -1171,7 +1226,6 @@ void G_Ticker(void) {
 				}
 			}
 		}
-	}
 
 	// check for special buttons
 	for (i = 0; i < MAXPLAYERS; i++) {
@@ -1464,7 +1518,9 @@ void G_ExitLevel(void) {
 
 	P_SpawnDelayTimer(&junk, G_CompleteLevel);
 
-	nextmap = gamemap + 1;
+	if (gamemap != title_map_num) {
+		nextmap = gamemap + 1;
+	}
 }
 
 //
@@ -1490,27 +1546,14 @@ void G_SecretExitLevel(int map) {
 //
 
 void G_RunTitleMap(void) {
-	int alpha_title_map = M_CheckParm("-alpha");
-	// villsa 12092013 - abort if map doesn't exist in mapfino
-	if (!alpha_title_map && P_GetMapInfo(33) == NULL) {
-		return;
-	}
-	else if (alpha_title_map && P_GetMapInfo(30) == NULL) {
-		return;
-	}
 
+	if (!P_GetMapInfo(title_map_num)) return;
+	
 	demobuffer = (byte*)Z_Calloc(0x16000, PU_STATIC, NULL);
 	demo_p = demobuffer;
 	demobuffer[0x16000 - 1] = DEMOMARKER;
 
-	if (!alpha_title_map)
-	{
-		G_InitNew(sk_medium, 33);
-	}
-	else if (alpha_title_map)
-	{
-		G_InitNew(sk_medium, 30);
-	}
+	G_InitNew(sk_medium, title_map_num);
 
 	precache = true;
 	usergame = false;
@@ -1564,7 +1607,7 @@ void G_RunGame(void) {
 			next = D_MiniLoop(WI_Start, WI_Stop, WI_Drawer, WI_Ticker);
 		}
 
-		if (next == ga_victory) {
+		if (next == ga_victory && gamemap != title_map_num) {
 			next = D_MiniLoop(IN_Start, IN_Stop, IN_Drawer, IN_Ticker);
 
 			if (next == ga_finale) {
@@ -1663,8 +1706,6 @@ void G_Init(void) {
 	G_AddCommand("-use", CMD_Button, PCKEY_USE | PCKF_UP);
 	G_AddCommand("+run", CMD_Button, PCKEY_RUN);
 	G_AddCommand("-run", CMD_Button, PCKEY_RUN | PCKF_UP);
-	G_AddCommand("+jump", CMD_Button, PCKEY_JUMP);
-	G_AddCommand("-jump", CMD_Button, PCKEY_JUMP | PCKF_UP);
 	G_AddCommand("weapon", CMD_Weapon, 0);
 	G_AddCommand("nextweap", CMD_NextWeapon, 0);
 	G_AddCommand("prevweap", CMD_PrevWeapon, 0);
@@ -1702,6 +1743,7 @@ void G_Init(void) {
 	G_AddCommand("give", CMD_Cheat, 2);
 	G_AddCommand("killall", CMD_Cheat, 3);
 	G_AddCommand("mapall", CMD_Cheat, 4);
+	G_AddCommand("map", CMD_Map, 0);
 	G_AddCommand("pause", CMD_Pause, 0);
 	G_AddCommand("spawnthing", CMD_SpawnThing, 0);
 	G_AddCommand("exitlevel", CMD_ExitLevel, 0);
@@ -1709,6 +1751,8 @@ void G_Init(void) {
 	G_AddCommand("setcamerastatic", CMD_PlayerCamera, 0);
 	G_AddCommand("setcamerachase", CMD_PlayerCamera, 1);
 	G_AddCommand("enddemo", CMD_EndDemo, 0);
+	G_AddCommand("listmaps", CMD_ListMaps, 0);
+	
 }
 
 //
@@ -1722,7 +1766,7 @@ void G_SetFastParms(int fast_pending) {
 	if (fast != fast_pending) {
 		/* only change if necessary */
 		if ((fast = fast_pending)) {
-			for (i = S_SARG_RUN1; i <= S_SARG_PAIN2; i++) {
+			for (i = S_SARG_STND; i <= S_SARG_PAIN2; i++) {
 				if (states[i].info_tics != 1) { // killough 4/10/98
 					states[i].info_tics >>= 1;    // don't change 1->0 since it causes cycles
 				}
@@ -1733,7 +1777,7 @@ void G_SetFastParms(int fast_pending) {
 			mobjinfo[MT_PROJ_IMP1].speed = 20 * FRACUNIT;
 		}
 		else {
-			for (i = S_SARG_RUN1; i <= S_SARG_PAIN2; i++) {
+			for (i = S_SARG_STND; i <= S_SARG_PAIN2; i++) {
 				states[i].info_tics <<= 1;
 			}
 

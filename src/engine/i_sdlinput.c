@@ -3,7 +3,7 @@
 //
 // Copyright(C) 1993-1997 Id Software, Inc.
 // Copyright(C) 2007-2012 Samuel Villarreal
-// 
+//
 // This source is available for distribution and/or modification
 // only under the terms of the DOOM Source Code License as
 // published by id Software. All rights reserved.
@@ -21,22 +21,48 @@
 //-----------------------------------------------------------------------------
 
 #include <math.h>
+
 #include "i_sdlinput.h"
 #include "doomdef.h"
-#include "m_misc.h"
 #include "doomstat.h"
 #include "i_system.h"
 #include "i_video.h"
 #include "d_main.h"
+#include "con_cvar.h"
+#include "dgl.h"
+#include "g_settings.h"
 
 CVAR(v_msensitivityx, 5);
 CVAR(v_msensitivityy, 5);
 CVAR(v_macceleration, 0);
-CVAR(v_mlook, 0);
 CVAR(v_mlookinvert, 0);
 CVAR(v_yaxismove, 0);
 CVAR(v_xaxismove, 0);
+CVAR_EXTERNAL(i_interpolateframes);
 CVAR_EXTERNAL(m_menumouse);
+CVAR_EXTERNAL(p_autoaim);
+CVAR_EXTERNAL(v_maxfps);
+CVAR_EXTERNAL(v_vsync);
+
+CVAR_CMD(v_mlook, 0) {
+	if (cvar->value > 0) {
+		if(!g_in_load_settings) {
+			I_Printf("WARNING: mouse look: skies will not render properly with high pitch. Do not report.\n");
+		}
+		return;
+	}
+
+	// mlook is disabled
+
+	// center player view, resetting pitch
+	if (gamestate == GS_LEVEL) {
+		players[0].mo->pitch = 0;
+	}
+
+	// force autoaim
+	gameflags |= GF_ALLOWAUTOAIM;
+};
+
 
 float mouse_accelfactor;
 
@@ -67,7 +93,6 @@ gamepad64_t gamepad64;
 #define GAMEPAD_KEY_MOVE_RIGHT    SDLK_D
 #define GAMEPAD_KEY_FIRE          KEY_CTRL
 #define GAMEPAD_KEY_USE           SDLK_E
-#define GAMEPAD_KEY_JUMP          SDLK_SPACE
 #define GAMEPAD_KEY_RUN			  KEY_SHIFT
 #define GAMEPAD_KEY_AUTOMAP		  SDLK_TAB
 #define GAMEPAD_KEY_NEXT_WEAPON   KEY_MWHEELUP
@@ -87,7 +112,7 @@ extern void D_PostEvent(event_t*);
 extern boolean menuactive;
 extern gamestate_t gamestate;
 
-static inline float I_GamepadClamp(float x) { return x < 0.f ? 0.f : (x > 1.f ? 1.f : x); }
+static SDL_INLINE float I_GamepadClamp(float x) { return SDL_clamp(x, 0.f, 1.f); }
 
 static void I_GamepadRadialLookSmoothing(float x, float y,
 	float inner_dz, float outer_dz,
@@ -109,18 +134,18 @@ static void I_GamepadRadialLookSmoothing(float x, float y,
 	*oy = ny * t;
 }
 
-static inline float I_GamepadLookSmoothing(float prev, float input, float dt, float tc) {
+static SDL_INLINE float I_GamepadLookSmoothing(float prev, float input, float dt, float tc) {
 	float alpha = (tc > 0.f) ? (dt / (tc + dt)) : 1.f;
-	if (alpha < 0.f) alpha = 0.f; if (alpha > 1.f) alpha = 1.f;
+	alpha = SDL_clamp(alpha, 0.f, 1.f);
 	return prev + alpha * (input - prev);
 }
 
-static inline void I_GamepadPostKeyEvent(int key, bool down) {
+static SDL_INLINE void I_GamepadPostKeyEvent(int key, bool down) {
 	event_t ev; ev.type = down ? ev_keydown : ev_keyup; ev.data1 = key; ev.data2 = ev.data3 = 0; ev.data4 = 0;
 	D_PostEvent(&ev);
 }
 
-static inline void I_GamepadMenuEvent(bool now, bool* prev, int keycode, unsigned int* next_tic) {
+static SDL_INLINE void I_GamepadMenuEvent(bool now, bool* prev, int keycode, unsigned int* next_tic) {
 	if (now && !*prev) {
 		I_GamepadPostKeyEvent(keycode, true);
 		*next_tic = gametic + GAMEPAD_MENU_INITIAL_DELAY_TICS;
@@ -135,11 +160,11 @@ static inline void I_GamepadMenuEvent(bool now, bool* prev, int keycode, unsigne
 	*prev = now;
 }
 
-static inline void I_GamepadEdgeDetection(bool now, bool* prev, int keycode) {
+static SDL_INLINE void I_GamepadEdgeDetection(bool now, bool* prev, int keycode) {
 	if (now != *prev) { I_GamepadPostKeyEvent(keycode, now); *prev = now; }
 }
 
-static inline void I_GamepadKeyRelease(void) {
+static SDL_INLINE void I_GamepadKeyRelease(void) {
 	I_GamepadEdgeDetection(false, &gamepad64.player_forward, GAMEPAD_KEY_MOVE_FWD);
 	I_GamepadEdgeDetection(false, &gamepad64.player_backwards, GAMEPAD_KEY_MOVE_BACK);
 	I_GamepadEdgeDetection(false, &gamepad64.player_left, GAMEPAD_KEY_MOVE_LEFT);
@@ -147,25 +172,24 @@ static inline void I_GamepadKeyRelease(void) {
 	I_GamepadEdgeDetection(false, &gamepad64.player_fire, GAMEPAD_KEY_FIRE);
 	I_GamepadEdgeDetection(false, &gamepad64.player_next_weapon, GAMEPAD_KEY_NEXT_WEAPON);
 	I_GamepadEdgeDetection(false, &gamepad64.player_previous_weapon, GAMEPAD_KEY_PREV_WEAPON);
-	I_GamepadEdgeDetection(false, &gamepad64.player_jump, GAMEPAD_KEY_JUMP);
 	I_GamepadEdgeDetection(false, &gamepad64.player_use, GAMEPAD_KEY_USE);
 	I_GamepadEdgeDetection(false, &gamepad64.player_run, GAMEPAD_KEY_RUN);
 	I_GamepadEdgeDetection(false, &gamepad64.player_automap, GAMEPAD_KEY_AUTOMAP);
 }
 
-static inline float I_GamepadAxisAlive(Sint16 v) {
+static SDL_INLINE float I_GamepadAxisAlive(Sint16 v) {
 	const float maxmag = (float)SDL_JOYSTICK_AXIS_MAX;
 	float f = (float)v / maxmag;
-	if (f < -1.f) f = -1.f; if (f > 1.f) f = 1.f;
+	f = SDL_clamp(f, -1.f, 1.f);
 	return f;
 }
-static inline float I_GamepadAxisDead(float v, float dz) {
+/*static SDL_INLINE float I_GamepadAxisDead(float v, float dz) {
 	float a = fabsf(v);
 	if (a <= dz) return 0.f;
 	float sign = (v < 0.f) ? -1.f : 1.f;
 	return sign * (a - dz) / (1.f - dz);
-}
-static inline void I_MouseRelease(int dx, int dy) {
+}*/
+static SDL_INLINE void I_MouseRelease(int dx, int dy) {
 	event_t ev; ev.type = ev_mouse;
 	ev.data1 = 0;
 	ev.data2 = dx * 32;
@@ -320,8 +344,6 @@ static void I_GamepadUpdate(void) {
 		I_GamepadEdgeDetection(lb, &gamepad64.mouse_scroll_up, KEY_PAGEUP);
 		I_GamepadEdgeDetection(rb, &gamepad64.mouse_scroll_down, KEY_PAGEDOWN);
 
-		static float s_look_fx = 0.f, s_look_fy = 0.f;
-		s_look_fx = s_look_fy = 0.f;
 		gamepad64.gamepad_look_dx = gamepad64.gamepad_look_dy = 0.f;
 		return;
 	}
@@ -364,12 +386,11 @@ static void I_GamepadUpdate(void) {
 	}
 	bool fire = (rt >= GAMEPAD_TRIGGER_THRESHOLD);
 	bool alt = (lt >= GAMEPAD_TRIGGER_THRESHOLD);
-	bool nextw = false, prevw = false, jump = false, use = false, pausebtn = false, run = false, automap = false;
+	bool nextw = false, prevw = false, use = false, pausebtn = false, run = false, automap = false;
 
 	if (gamepad64.gamepad) {
 		nextw = SDL_GetGamepadButton(gamepad64.gamepad, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER) != 0;
 		prevw = SDL_GetGamepadButton(gamepad64.gamepad, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER) != 0;
-		jump = SDL_GetGamepadButton(gamepad64.gamepad, SDL_GAMEPAD_BUTTON_EAST) != 0;
 		use = SDL_GetGamepadButton(gamepad64.gamepad, SDL_GAMEPAD_BUTTON_SOUTH) != 0;
 		run = SDL_GetGamepadButton(gamepad64.gamepad, SDL_GAMEPAD_BUTTON_WEST) != 0;
 		automap = SDL_GetGamepadButton(gamepad64.gamepad, SDL_GAMEPAD_BUTTON_NORTH) != 0;
@@ -378,7 +399,6 @@ static void I_GamepadUpdate(void) {
 	else if (gamepad64.joy) {
 		nextw = SDL_GetJoystickButton(gamepad64.joy, 5) != 0;
 		prevw = SDL_GetJoystickButton(gamepad64.joy, 4) != 0;
-		jump = SDL_GetJoystickButton(gamepad64.joy, 0) != 0;
 		use = SDL_GetJoystickButton(gamepad64.joy, 2) != 0;
 		run = SDL_GetJoystickButton(gamepad64.joy, 6) != 0;
 		automap = SDL_GetJoystickButton(gamepad64.joy, 7) != 0;
@@ -389,7 +409,6 @@ static void I_GamepadUpdate(void) {
 	I_GamepadEdgeDetection(fire, &gamepad64.player_fire, GAMEPAD_KEY_FIRE);
 	I_GamepadEdgeDetection(nextw, &gamepad64.player_next_weapon, GAMEPAD_KEY_NEXT_WEAPON);
 	I_GamepadEdgeDetection(prevw, &gamepad64.player_previous_weapon, GAMEPAD_KEY_PREV_WEAPON);
-	I_GamepadEdgeDetection(jump, &gamepad64.player_jump, GAMEPAD_KEY_JUMP);
 	I_GamepadEdgeDetection(use, &gamepad64.player_use, GAMEPAD_KEY_USE);
 	I_GamepadEdgeDetection(pausebtn, &gamepad64.player_pause, GAMEPAD_KEY_PAUSE);
 	I_GamepadEdgeDetection(run, &gamepad64.player_run, GAMEPAD_KEY_RUN);
@@ -401,9 +420,9 @@ static void I_GamepadUpdate(void) {
 //
 
 // Modernised, it was really needed!
-static int I_TranslateKey(const int key)
+static int I_TranslateKey(SDL_KeyboardEvent *key_event)
 {
-	struct { int sdl; int eng; } map[] = {
+	static struct { int sdl; int eng; } map[] = {
 		{ SDLK_LEFT,        KEY_LEFTARROW },
 		{ SDLK_RIGHT,       KEY_RIGHTARROW },
 		{ SDLK_UP,          KEY_UPARROW },
@@ -457,12 +476,23 @@ static int I_TranslateKey(const int key)
 		{ SDLK_KP_DIVIDE,   KEY_KEYPADDIVIDE },
 		{ SDLK_KP_PERIOD,   KEY_KEYPADPERIOD },
 	};
+
+	const int key = key_event->key;
+		
+	// key reserved for the console, independent of location on keyboard
+	// Located in the top left corner (on both ANSI and ISO keyboards).
+	if(key_event->scancode == SDL_SCANCODE_GRAVE) {
+		return KEY_CONSOLE;
+	}
+	
 	for (size_t i = 0; i < sizeof(map) / sizeof(map[0]); ++i) {
 		if (key == map[i].sdl) return map[i].eng;
 	}
+	
 	if (key >= 32 && key < 127) {
 		return key;
 	}
+	
 	return 0;
 }
 
@@ -510,6 +540,13 @@ void I_CenterMouse(void) {
 	SDL_GetRelativeMouseState(NULL, NULL);
 }
 
+
+void I_SetMousePos(float x, float y) {
+	SDL_WarpMouseInWindow(window, (unsigned short)x, (unsigned short)y);
+	SDL_PumpEvents();
+	SDL_GetMouseState(&mouse_x, &mouse_y); // refresh new location
+}
+
 //
 // I_MouseAccelChange
 //
@@ -539,6 +576,7 @@ float I_MouseAccel(float val) {
 //
 
 boolean I_UpdateGrab(void) {
+
 	static boolean currently_grabbed = false;
 	boolean grab;
 
@@ -546,16 +584,22 @@ boolean I_UpdateGrab(void) {
 		&& (gamestate == GS_LEVEL)
 		&& !demoplayback;
 
+	/*
+		Don't grab the keyboard (SDL_SetWindowKeyboardGrab) because:
+			- we don't need it
+			- it mess up Alt-Tab (only works when not grabbed). And Tab switches the automap modes
+			- on Linux KDE (Plasma) it prevents global shortcuts to work (brightness, sound, ...)
+			- finally, the SDL doc does not recommend it: "Normal games should not use keyboard grab"
+	*/
+
 	if (grab && !currently_grabbed) {
-		SDL_SetWindowRelativeMouseMode(window, 1);
+		SDL_SetWindowRelativeMouseMode(window, 1); // this grabs the mouse and hide cursor
 		SDL_SetWindowMouseGrab(window, 1);
-		SDL_SetWindowKeyboardGrab(window, 1);
 	}
 
 	if (!grab && currently_grabbed) {
 		SDL_SetWindowRelativeMouseMode(window, 0);
 		SDL_SetWindowMouseGrab(window, 0);
-		SDL_SetWindowKeyboardGrab(window, 0);
 	}
 
 	currently_grabbed = grab;
@@ -573,22 +617,23 @@ void I_GetEvent(SDL_Event* Event) {
 	unsigned int tic = gametic;
 
 	I_GamepadHandleSDLEvent(Event);
-
+	
 	switch (Event->type) {
 	case SDL_EVENT_KEY_DOWN:
-		if (Event->key.repeat)
+		if (Event->key.repeat) {
 			break;
+		}
 		event.type = ev_keydown;
-		event.data1 = I_TranslateKey(Event->key.key);
-		if (event.data1) {
+		event.data1 = I_TranslateKey(&Event->key);
+		if(event.data1) {
 			D_PostEvent(&event);
 		}
 		break;
 
 	case SDL_EVENT_KEY_UP:
 		event.type = ev_keyup;
-		event.data1 = I_TranslateKey(Event->key.key);
-		if (event.data1) {
+		event.data1 = I_TranslateKey(&Event->key);
+		if(event.data1) {
 			D_PostEvent(&event);
 		}
 		break;
@@ -697,13 +742,68 @@ void I_StartTic(void) {
 	I_GamepadUpdate();
 }
 
+static float GetDisplayRefreshRate(void) {
+	SDL_DisplayID displayid = SDL_GetDisplayForWindow(window);
+	if (displayid) {
+		const SDL_DisplayMode* mode = SDL_GetCurrentDisplayMode(displayid);
+		if (mode && mode->refresh_rate > 0) {
+			return mode->refresh_rate;
+		}
+	}
+	return 60.0f; // not happy, return to 60
+}
+
+void I_FPSLimit(void) {
+	static Uint64 lastFrameTime = 0;
+	static float displayRefreshRate = 0.0f;
+
+	static int refreshCheckCounter = 0;
+	if (refreshCheckCounter++ % 60 == 0) {
+		displayRefreshRate = GetDisplayRefreshRate();
+	}
+
+	float targetFPS = (v_maxfps.value > 0) ? v_maxfps.value : displayRefreshRate;
+	const Uint64 targetFrameTimeNS = (Uint64)(1000000000.0f / targetFPS);
+
+	Uint64 currentTime = SDL_GetTicksNS();
+	if (lastFrameTime > 0) {
+		Uint64 elapsed = currentTime - lastFrameTime;
+		if (elapsed < targetFrameTimeNS) {
+			Uint64 sleepTime = targetFrameTimeNS - elapsed;
+			if (sleepTime > 500000) {
+				SDL_DelayNS(sleepTime - 100000);
+			}
+			while (SDL_GetTicksNS() - lastFrameTime < targetFrameTimeNS) {
+			}
+		}
+	}
+	lastFrameTime = SDL_GetTicksNS();
+}
+
 //
 // I_FinishUpdate
 //
 
 void I_FinishUpdate(void) {
+
+	static int prev_swap_interval = -1;
+	int swap_interval = (int)v_vsync.value;
+
 	I_UpdateGrab();
+
+	if (prev_swap_interval != swap_interval) {
+		SDL_GL_SetSwapInterval(swap_interval);
+		prev_swap_interval = swap_interval;
+	}
+
 	SDL_GL_SwapWindow(window);
+
+	if (swap_interval > 0) {
+		glFinish();
+	}
+	else if (i_interpolateframes.value > 0) {
+		I_FPSLimit();
+	}
 
 	BusyDisk = false;
 }

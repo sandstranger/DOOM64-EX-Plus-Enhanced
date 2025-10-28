@@ -19,8 +19,6 @@
 #ifndef __INFO__
 #define __INFO__
 
-#include <stdint.h>
-
 // Needed for action function pointer handling.
 #include "d_think.h"
 
@@ -1170,6 +1168,9 @@ typedef enum {
 	S_ROCKETLLIGHT2,
 	S_ROCKETLLIGHT3,
 	S_ROCKETLLIGHT4,
+	S_ROCKETL1REWORK,
+	S_ROCKETL2REWORK,
+	S_ROCKETL3REWORK,
 	S_PLASMAG,
 	S_PLASMAGDOWN,
 	S_PLASMAGUP1,

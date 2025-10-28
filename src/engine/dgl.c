@@ -18,17 +18,15 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <SDL3/SDL_opengl.h>
+#include <SDL3/SDL_platform_defines.h>
 
-#ifdef __APPLE__
+#ifdef SDL_PLATFORM_MACOS
 #include <math.h>
 #endif
-
-#include "doomdef.h"
+#include "dgl.h"
 #include "doomstat.h"
 #include "gl_main.h"
 #include "gl_texture.h"
-#include "con_console.h"
 #include "i_system.h"
 
 #define MAXINDICES  0x10000
@@ -108,15 +106,15 @@ void dglSetVertex(vtx_t* vtx) {
 
 void dglTriangle(int v0, int v1, int v2) {
 #ifdef LOG_GLFUNC_CALLS
-    I_Printf("dglTriangle(v0=%i, v1=%i, v2=%i)\n", v0, v1, v2);
+	I_Printf("dglTriangle(v0=%i, v1=%i, v2=%i)\n", v0, v1, v2);
 #endif
-    if(indicecnt + 3 >= MAXINDICES) {
-        I_Error("Triangle indice overflow");
-    }
+	if (indicecnt + 3 >= MAXINDICES) {
+		I_Error("Triangle indice overflow");
+	}
 
-    drawIndices[indicecnt++] = v0;
-    drawIndices[indicecnt++] = v1;
-    drawIndices[indicecnt++] = v2;
+	drawIndices[indicecnt++] = v0;
+	drawIndices[indicecnt++] = v1;
+	drawIndices[indicecnt++] = v2;
 }
 
 //

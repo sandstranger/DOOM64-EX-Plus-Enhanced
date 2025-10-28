@@ -23,14 +23,7 @@
 #include "tables.h"
 #include "info.h"
 #include "m_fixed.h"
-#include "d_think.h"
 #include "doomdata.h"
-#include "tables.h"
-#include "info.h"
-
-#ifdef __GNUG__
-#pragma interface
-#endif
 
 //
 // NOTES: mobj_t
@@ -175,9 +168,6 @@ typedef struct mobj_s {
     // The closest interval over all contacted Sectors.
     fixed_t             floorz;
     fixed_t             ceilingz;
-
-    // killough 11/98: the lowest floor over all contacted Sectors.
-    fixed_t             dropoffz;
 
     // For movement checking.
     fixed_t             radius;

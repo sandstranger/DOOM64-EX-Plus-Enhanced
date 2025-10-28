@@ -25,51 +25,34 @@
 //
 //-----------------------------------------------------------------------------
 
-#ifdef _WIN32
-#include <io.h>
-#endif
-
+#include <SDL3/SDL.h>
 #include <stdlib.h>
 
+#include "d_main.h"
 #include "doomdef.h"
 #include "doomstat.h"
-#include "i_video.h"
 #include "i_sdlinput.h"
-#include "d_englsh.h"
 #include "sounds.h"
-#include "m_shift.h"
 #include "z_zone.h"
 #include "w_wad.h"
 #include "s_sound.h"
-#include "f_finale.h"
 #include "m_misc.h"
 #include "m_menu.h"
 #include "i_system.h"
 #include "g_game.h"
-#include "wi_stuff.h"
 #include "st_stuff.h"
-#include "am_map.h"
 #include "p_setup.h"
-#include "d_main.h"
 #include "con_console.h"
+#include "con_cvar.h"
 #include "d_devstat.h"
-#include "r_local.h"
 #include "r_wipe.h"
-#include "g_controls.h"
+#include "r_main.h"
 #include "g_demo.h"
 #include "p_saveg.h"
 #include "gl_draw.h"
 #include "net_client.h"
+#include "i_shaders.h"
 
-//
-// D_DoomLoop()
-// Not a globally visible function,
-//  just included for source reference,
-//  called by D_DoomMain, never exits.
-// Manages timing and IO,
-//  calls all ?_Responder, ?_Ticker, and ?_Drawer,
-//  calls I_GetTime, and I_StartTic
-//
 void D_DoomLoop(void);
 
 static int      pagetic;
@@ -77,9 +60,8 @@ static int      screenalpha;
 static int      screenalphatext;
 static int      creditstage;
 static int      creditscreenstage;
+static boolean	fadesplash;
 
-int        InWindow;
-int        InWindowBorderless;
 boolean        setWindow = true;
 int             validcount = 1;
 boolean        windowpause = false;
@@ -112,6 +94,7 @@ CVAR_EXTERNAL(sv_fastmonsters);
 CVAR_EXTERNAL(sv_respawnitems);
 CVAR_EXTERNAL(sv_respawn);
 CVAR_EXTERNAL(sv_skill);
+CVAR_EXTERNAL(v_maxfps);
 
 //
 // EVENT HANDLING
@@ -206,12 +189,13 @@ static void D_FinishDraw(void) {
 	// send out any new accumulation
 	NetUpdate();
 
+	I_ShaderUnBind();
+
 	// normal update
 	I_FinishUpdate();
 
-	if (i_interpolateframes.value) {
-		I_EndDisplay();
-	}
+	I_EndDisplay();
+
 }
 
 int D_MiniLoop(void (*start)(void), void (*stop)(void),
@@ -244,10 +228,12 @@ int D_MiniLoop(void (*start)(void), void (*stop)(void),
 			renderinframe = true;
 
 			if (I_StartDisplay()) {
+				I_ShaderBind();
 				if (draw && !action) {
 					draw();
 				}
 				D_DrawInterface();
+				I_ShaderUnBind();
 				D_FinishDraw();
 			}
 
@@ -338,10 +324,12 @@ int D_MiniLoop(void (*start)(void), void (*stop)(void),
 				renderinframe = true;
 
 				if (I_StartDisplay()) {
+					I_ShaderBind();
 					if (draw && !action) {
 						draw();
 					}
 					D_DrawInterface();
+					I_ShaderUnBind();
 					D_FinishDraw();
 				}
 
@@ -355,10 +343,16 @@ int D_MiniLoop(void (*start)(void), void (*stop)(void),
 				goto drawframe;
 			}
 
-			I_Sleep(1);
+			if (!i_interpolateframes.value) {
+				// use this to not peg CPU with an active loop when interpolation is disabled.
+				// when interpolation is enabled, this is taken care of by fps limit (vsync off) or vsync on
+				// 
+				// interpolation disabled seem to always result in a constant framerate of 60 fps (2 * TICRATE)
+				SDL_Delay(1);
+			}
 		}
 
-		// run the count * ticdup dics
+		// run the count * ticdup tics
 		while (counts--) {
 			for (i = 0; i < ticdup; i++) {
 				// check that there are players in the game.  if not, we cannot
@@ -418,12 +412,13 @@ int D_MiniLoop(void (*start)(void), void (*stop)(void),
 			}
 		}
 
+		I_ShaderBind();
 		if (draw && !action) {
 			draw();
 		}
 		D_DrawInterface();
+		I_ShaderUnBind();
 		D_FinishDraw();
-
 	freealloc:
 
 		// force garbage collection
@@ -478,7 +473,7 @@ static void Title_Start(void) {
 	paused = false;
 	allowclearmenu = false;
 
-	S_StartMusic(mus_title);
+	S_StartMusic(W_GetNumForName("MUSTITLE"));
 	M_StartMainMenu();
 }
 
@@ -496,62 +491,25 @@ static void Title_Stop(void) {
 	S_StopMusic();
 }
 
-//
-// Legal_Start
-//
-
-CVAR_EXTERNAL(p_regionmode);
-
-static char* legalpic = "USLEGAL";
-static int legal_x = 32;
-static int legal_y = 72;
-
-static void Legal_Start(void) {
-	int pllump;
-	int jllump;
-
-	pllump = W_CheckNumForName("PLLEGAL");
-	jllump = W_CheckNumForName("JPLEGAL");
-
-	if (pllump == -1 && jllump == -1) {
-		return;
-	}
-
-	if (p_regionmode.value >= 2 && jllump >= 0) {
-		legalpic = "JPLEGAL";
-		legal_x = 35;
-		legal_y = 45;
-	}
-	else if (p_regionmode.value >= 2 && jllump == -1) {
-		CON_CvarSetValue(p_regionmode.name, 1);
-	}
-
-	if (p_regionmode.value == 1 && pllump >= 0) {
-		legalpic = "PLLEGAL";
-		legal_x = 35;
-		legal_y = 50;
-	}
-	else if (p_regionmode.value == 1 && pllump == -1) {
-		CON_CvarSetValue(p_regionmode.name, 0);
-	}
-}
-
-//
-// Legal_Drawer
-//
-
 static void Legal_Drawer(void) {
 	GL_ClearView(0xFF000000);
-	Draw_GfxImageLegal(legal_x, legal_y, legalpic, WHITE, true);
+	Draw_GfxImageLegal(32, 72, "USLEGAL", WHITE, true);
+}
+
+static void PhotoSensWarning_Drawer(void) {
+	GL_ClearView(0xFF000000);
+	Draw_GfxImageLegal(32, 72, PHSENSW_LUMPNAME, WHITE, true);
 }
 
 //
-// Legal_Ticker
+// Splash_Ticker
 //
 
-static int Legal_Ticker(void) {
+static int Splash_Ticker(void) {
 	if ((gametic - pagetic) >= (TICRATE * 5)) {
-		WIPE_FadeScreen(6);
+		if (fadesplash) {
+			WIPE_FadeScreen(6);
+		}
 		return 1;
 	}
 
@@ -662,12 +620,41 @@ static void Credits_Start(void) {
 // D_SplashScreen
 //
 
-static void D_SplashScreen(void) {
-	int skip = 0;
 
-	if (gameaction || netgame) {
-		return;
-	}
+//
+// D_RunDemos
+//
+static int D_RunDemos(void)
+{
+    const char* candidates[][3] = {
+        { "DEMO1LMP", "DEMO1", NULL },
+        { "DEMO2LMP", "DEMO2", NULL },
+        { "DEMO3LMP", "DEMO3", NULL },
+    };
+    const int maps[] = { 3, 9, 17 };
+    int i;
+
+    for (i = 0; i < 3; i++)
+    {
+        const char* name0 = candidates[i][0];
+        const char* name1 = candidates[i][1];
+        
+		if (W_CheckNumForName(name0) >= 0 || W_CheckNumForName(name1) >= 0)
+        {
+            const char* pick = (W_CheckNumForName(name0) >= 0) ? name0 : name1;
+            int exit = D_RunDemo((char*)pick, sk_medium, maps[i]);
+            if (exit == ga_exitdemo)
+                return exit;
+
+            if (gameaction != ga_nothing)
+                return gameaction;
+        }
+    }
+
+    return ga_nothing;
+}
+
+static int D_ShowSplash(void (*draw)(void), int(*tick)(void), boolean fade) {
 
 	screenalpha = 0xff;
 	allowmenu = false;
@@ -676,10 +663,17 @@ static void D_SplashScreen(void) {
 	gamestate = GS_SKIPPABLE;
 	pagetic = gametic;
 	gameaction = ga_nothing;
+	fadesplash = fade;
 
-	skip = D_MiniLoop(Legal_Start, NULL, Legal_Drawer, Legal_Ticker);
+	return D_MiniLoop(NULL, NULL, draw, tick);
+}
 
-	if (skip != ga_title) {
+static void D_SplashScreen(void) {
+
+	if (gameaction || netgame) return;
+	
+	if (D_ShowSplash(Legal_Drawer, Splash_Ticker, false) != ga_title &&
+		D_ShowSplash(PhotoSensWarning_Drawer, Splash_Ticker, true) != ga_title) {
 		G_RunTitleMap();
 		gameaction = ga_title;
 	}
@@ -706,6 +700,18 @@ void D_DoomLoop(void) {
 			G_RunGame();
 		}
 		else {
+			/*  Don't run demos as they do not play properly and crash the game
+        {
+            int demoexit = D_RunDemos();
+            if (demoexit == ga_exitdemo) {
+                return;
+            }
+            if (gameaction == ga_title) {
+                continue;
+            }
+        }
+			*/
+    
 			D_MiniLoop(Credits_Start, NULL, Credits_Drawer, Credits_Ticker);
 
 			if (gameaction == ga_title) {
@@ -867,8 +873,9 @@ static void D_Init(void) {
 
 	p = M_CheckParm("-loadgame");
 	if (p && p < myargc - 1) {
-		// sprintf(file, SAVEGAMENAME"%c.dsg",myargv[p+1][0]);
-		G_LoadGame(P_GetSaveGameName(myargv[p + 1][0] - '0'));
+		char *filepath = P_GetSaveGameName(myargv[p + 1][0] - '0');
+		G_LoadGame(filepath);
+		free(filepath);
 		autostart = true; // 20120105 bkw: this was missing
 	}
 
@@ -882,6 +889,10 @@ static void D_Init(void) {
 //
 
 static int D_CheckDemo(void) {
+
+	// Demo recording / playback is broken (crashes) so disable it for now
+
+	/*
 	int p;
 
 	// start the apropriate game based on parms
@@ -898,8 +909,32 @@ static int D_CheckDemo(void) {
 		G_PlayDemo(myargv[p + 1]);
 		return 1;
 	}
+	*/
 
 	return 0;
+}
+
+void D_CheckDataFileFound(char* filename) {
+
+	char *path = I_FindDataFile(filename); // must not free
+
+	if (!path) {
+		I_Error("Required game data file not found: %s.\n\nPlease install the DOOM 64 Remaster "
+			"on GOG or Steam, or copy file %s to %s",
+			filename,
+			filename,
+			I_GetUserDir());
+	}
+}
+
+
+// check availability of data files and immediately exit with message box if not found
+void D_CheckDataFilesFound(void) {
+	D_CheckDataFileFound(IWAD_FILENAME);
+	D_CheckDataFileFound(KPF_FILENAME);
+	if (!M_CheckParm("-nosound") || !M_CheckParm("-nomusic")) {
+		D_CheckDataFileFound(DLS_FILENAME);
+	}
 }
 
 //
@@ -907,6 +942,7 @@ static int D_CheckDemo(void) {
 //
 
 void D_DoomMain(void) {
+
 	devparm = M_CheckParm("-devparm");
 
 	// init subsystems
@@ -917,6 +953,8 @@ void D_DoomMain(void) {
 	I_Printf("CON_Init: Init Game Console\n");
 	CON_Init();
 
+	D_CheckDataFilesFound();
+
 	I_Printf("G_Init: Setting up game input and commands\n");
 	G_Init();
 
@@ -926,11 +964,11 @@ void D_DoomMain(void) {
 	I_Printf("I_Init: Setting up machine state.\n");
 	I_Init();
 
-	I_Printf("D_Init: Init DOOM parameters\n");
-	D_Init();
-
 	I_Printf("W_Init: Init WADfiles.\n");
 	W_Init();
+
+	I_Printf("D_Init: Init DOOM parameters\n");
+	D_Init();
 
 	I_Printf("R_Init: Init DOOM refresh daemon.\n");
 	R_Init();

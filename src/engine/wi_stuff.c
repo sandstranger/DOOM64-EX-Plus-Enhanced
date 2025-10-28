@@ -23,24 +23,21 @@
 
 #include <SDL3/SDL.h>
 
-#include "z_zone.h"
-#include "g_game.h"
+#include "wi_stuff.h"
 #include "s_sound.h"
 #include "doomstat.h"
 #include "sounds.h"
-#include "wi_stuff.h"
-#include "d_englsh.h"
 #include "m_password.h"
 #include "p_setup.h"
 #include "st_stuff.h"
 #include "r_wipe.h"
 #include "gl_draw.h"
-#include "m_misc.h"
+#include "w_wad.h"
 #include "i_sdlinput.h"
 
 extern gamepad64_t gamepad64;
 
-#define WIALPHARED      D_RGBA(0xC0, 0, 0, 0xFF)
+#define RGB_ALPHA      D_RGBA(0xC0, 0, 0, 0xFF)
 
 static int itempercent[MAXPLAYERS];
 static int itemvalue[MAXPLAYERS];
@@ -98,7 +95,7 @@ void WI_Start(void) {
 		seconds = (leveltime / TICRATE) % 60;
 	}
 
-	dsnprintf(timevalue, 16, "%2.2d:%2.2d", minutes, seconds);
+	SDL_snprintf(timevalue, sizeof(timevalue), "%2.2d:%2.2d", minutes, seconds);
 
 	// generate password
 	if (nextmap < 40) {
@@ -111,7 +108,7 @@ void WI_Start(void) {
 	wi_advance = 0;
 
 	// start music
-	S_StartMusic(mus_complete);
+	S_StartMusic(W_GetNumForName("MUSDONE"));
 
 	allowmenu = true;
 }
@@ -371,30 +368,30 @@ void WI_Drawer(void) {
 
 	if (!netgame) {
 		// draw kills
-		Draw_BigText(57, 60, WIALPHARED, "Kills");
-		Draw_BigText(248, 60, WIALPHARED, "%");
+		Draw_BigText(57, 60, RGB_ALPHA, "Kills");
+		Draw_BigText(248, 60, RGB_ALPHA, "%");
 		if (wi_stage > 0 && killvalue[0] > -1) {
-			Draw_Number(210, 60, killvalue[0], 1, WIALPHARED);
+			Draw_Number(210, 60, killvalue[0], 1, RGB_ALPHA);
 		}
 
 		// draw items
-		Draw_BigText(57, 78, WIALPHARED, "Items");
-		Draw_BigText(248, 78, WIALPHARED, "%");
+		Draw_BigText(57, 78, RGB_ALPHA, "Items");
+		Draw_BigText(248, 78, RGB_ALPHA, "%");
 		if (wi_stage > 1 && itemvalue[0] > -1) {
-			Draw_Number(210, 78, itemvalue[0], 1, WIALPHARED);
+			Draw_Number(210, 78, itemvalue[0], 1, RGB_ALPHA);
 		}
 
 		// draw secrets
-		Draw_BigText(57, 99, WIALPHARED, "Secrets");
-		Draw_BigText(248, 99, WIALPHARED, "%");
+		Draw_BigText(57, 99, RGB_ALPHA, "Secrets");
+		Draw_BigText(248, 99, RGB_ALPHA, "%");
 		if (wi_stage > 2 && secretvalue[0] > -1) {
-			Draw_Number(210, 99, secretvalue[0], 1, WIALPHARED);
+			Draw_Number(210, 99, secretvalue[0], 1, RGB_ALPHA);
 		}
 
 		// draw time
 		if (wi_stage > 3) {
-			Draw_BigText(57, 120, WIALPHARED, "Time");
-			Draw_BigText(210, 120, WIALPHARED, timevalue);
+			Draw_BigText(57, 120, RGB_ALPHA, "Time");
+			Draw_BigText(210, 120, RGB_ALPHA, timevalue);
 		}
 	}
 	else {
@@ -412,21 +409,21 @@ void WI_Drawer(void) {
 				continue;
 			}
 
-			Draw_BigText(57, y, WIALPHARED, player_names[i]);
-			Draw_BigText(232, y, WIALPHARED, "%");
-			Draw_BigText(352, y, WIALPHARED, "%");
-			Draw_BigText(464, y, WIALPHARED, "%");
+			Draw_BigText(57, y, RGB_ALPHA, player_names[i]);
+			Draw_BigText(232, y, RGB_ALPHA, "%");
+			Draw_BigText(352, y, RGB_ALPHA, "%");
+			Draw_BigText(464, y, RGB_ALPHA, "%");
 
 			if (wi_stage > 0 && killvalue[i] > -1) {
-				Draw_Number(180, y, killvalue[i], 1, WIALPHARED);
+				Draw_Number(180, y, killvalue[i], 1, RGB_ALPHA);
 			}
 
 			if (wi_stage > 1 && itemvalue[i] > -1) {
-				Draw_Number(300, y, itemvalue[i], 1, WIALPHARED);
+				Draw_Number(300, y, itemvalue[i], 1, RGB_ALPHA);
 			}
 
 			if (wi_stage > 2 && secretvalue[i] > -1) {
-				Draw_Number(412, y, secretvalue[i], 1, WIALPHARED);
+				Draw_Number(412, y, secretvalue[i], 1, RGB_ALPHA);
 			}
 
 			y += 16;
@@ -434,8 +431,8 @@ void WI_Drawer(void) {
 
 		// draw time
 		if (wi_stage > 3) {
-			Draw_BigText(248, y + 32, WIALPHARED, "Time");
-			Draw_BigText(324, y + 32, WIALPHARED, timevalue);
+			Draw_BigText(248, y + 32, RGB_ALPHA, "Time");
+			Draw_BigText(324, y + 32, RGB_ALPHA, timevalue);
 		}
 
 		GL_SetOrthoScale(1.0f);

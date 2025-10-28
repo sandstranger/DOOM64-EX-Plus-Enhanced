@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C -*-
+﻿// Emacs style mode select   -*- C -*-
 //-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1997 Id Software, Inc.
@@ -23,7 +23,9 @@
 //-----------------------------------------------------------------------------
 
 #include <math.h>
+#include <stdlib.h>     /* strtol */
 
+#include "p_setup.h"
 #include "doomdef.h"
 #include "i_swap.h"
 #include "m_fixed.h"
@@ -31,20 +33,24 @@
 #include "i_system.h"
 #include "w_wad.h"
 #include "p_local.h"
-#include "s_sound.h"
 #include "doomstat.h"
 #include "t_bsp.h"
 #include "p_macros.h"
 #include "info.h"
 #include "m_misc.h"
 #include "tables.h"
-#include "r_local.h"
 #include "gl_texture.h"
 #include "r_sky.h"
+#include "r_main.h"
+#include "r_lights.h"
+#include "r_things.h"
 #include "con_console.h"
+#include "con_cvar.h"
 #include "m_random.h"
 #include "z_zone.h"
 #include "sc_main.h"
+
+
 
 void P_SpawnMapThing(mapthing_t* mthing);
 
@@ -76,12 +82,12 @@ macroinfo_t         macros;
 // [kex] mapinfo stuff
 //
 
-int                 nummapdef;
-mapdef_t* mapdefs;
-int                 numclusterdef;
-clusterdef_t* clusterdefs;
-int					numepisodedef;
-episodedef_t* episodedefs;
+extern int nummapdef;
+extern mapdef_t* mapdefs;
+extern int numclusterdef;
+extern clusterdef_t* clusterdefs;
+extern int numepisodedef;
+extern episodedef_t* episodedefs;
 
 //
 // [kex] cvars
@@ -92,7 +98,6 @@ CVAR(p_fdoubleclick, 0);
 CVAR(p_sdoubleclick, 0);
 CVAR(p_usecontext, 0);
 CVAR(p_damageindicator, 0);
-CVAR(p_regionmode, 0);
 
 //
 // [kex] sky definition stuff
@@ -205,9 +210,9 @@ void P_LoadVertexes(int lump) {
 void P_LoadSegs(void)
 {
 	int			i;
-	mapseg_t*	ml;
-	seg_t*		li;
-	line_t*		ldef;
+	mapseg_t* ml;
+	seg_t* li;
+	line_t* ldef;
 	int			linedef, side;
 	float       x, y;
 
@@ -753,7 +758,7 @@ static void P_LoadBlockMap(void) {
 	int32_t	count;
 	int32_t	i;
 	int32_t length;
-	byte*	src;
+	byte* src;
 
 	length = W_MapLumpLength(ML_BLOCKMAP);
 	count = length / 2 >= 0x10000;
@@ -1021,233 +1026,15 @@ void P_SetupLevel(int map, int playermask, skill_t skill) {
 	CON_DPrintf("Used memory: %d kb\n", Z_FreeMemory() >> 10);
 }
 
-//
-// P_InitMapInfo
-//
 
-static scdatatable_t mapdatatable[] = {
-	{   "CLASSTYPE", (int64_t) & ((mapdef_t*)0)->type,                 'i' },
-	{   "LEVELNUM", (int64_t) & ((mapdef_t*)0)->mapid,                'i' },
-	{   "CLUSTER", (int64_t) & ((mapdef_t*)0)->cluster,              'i' },
-	{   "EXITDELAY", (int64_t) & ((mapdef_t*)0)->exitdelay,            'i' },
-	{   "NOINTERMISSION", (int64_t) & ((mapdef_t*)0)->nointermission,       'b' },
-	{   "CLEARCHEATS", (int64_t) & ((mapdef_t*)0)->clearchts,            'b' },
-	{   "CONTINUEMUSICONEXIT", (int64_t) & ((mapdef_t*)0)->contmusexit,          'b' },
-	{   "FORCEGODMODE", (int64_t) & ((mapdef_t*)0)->forcegodmode,         'b' },
-	{   NULL,                   0,                                          0   }
-};
+///
 
-static scdatatable_t clusterdatatable[] = {
-	{   "PIC", (int64_t) & ((clusterdef_t*)0)->pic,              'S' },
-	{   "NOINTERMISSION", (int64_t) & ((clusterdef_t*)0)->nointermission,   'b' },
-	{   "SCROLLTEXTEND", (int64_t) & ((clusterdef_t*)0)->scrolltextend,    'b' },
-	{   "PIC_X", (int64_t) & ((clusterdef_t*)0)->pic_x,            'i' },
-	{   "PIC_Y", (int64_t) & ((clusterdef_t*)0)->pic_y,            'i' },
-	{   NULL,                   0,                                          0   }
-};
-
-static scdatatable_t episodedatatable[] = {
-	{ "NAME", (int64_t) & ((episodedef_t*)0)->name, 's'},
-	{ "KEY", (int64_t) & ((episodedef_t*)0)->key, 's'}
-};
-
-static void P_InitMapInfo(void) {
-	mapdef_t mapdef;
-	clusterdef_t cluster;
-	episodedef_t episode;
-
-	mapdefs = NULL;
-	clusterdefs = NULL;
-	episodedefs = NULL;
-	nummapdef = 0;
-	numclusterdef = 0;
-	numepisodedef = 0;
-
-	sc_parser.open("MAPINFO");
-
-	while (sc_parser.readtokens()) {
-		sc_parser.find(false);
-
-		//
-		// find map block
-		//
-		if (!dstricmp(sc_parser.token, "MAP")) {
-			dmemset(&mapdef, 0, sizeof(mapdef_t));
-
-			//
-			// set default values
-			//
-			mapdef.mapid = 1;
-			mapdef.exitdelay = 15;
-			mapdef.music = -1;
-
-			sc_parser.find(false);  // skip map lump name
-
-			// read level name
-			sc_parser.find(false);
-			dstrncpy(mapdef.mapname, sc_parser.token, dstrlen(sc_parser.token));
-
-			sc_parser.compare("{");  // must expect open bracket
-
-			//
-			// read into block
-			//
-			while (sc_parser.readtokens()) {
-				sc_parser.find(false);
-
-				if (sc_parser.token[0] == '}') { // exit block if closed bracket is found
-					break;
-				}
-
-				if (!sc_parser.setdata(&mapdef, mapdatatable)) {
-					boolean ok = false;
-
-					//
-					// get music track ID
-					//
-					if (!dstricmp(sc_parser.token, "MUSIC")) {
-						char* text;
-						int ds_start;
-						int ds_end;
-						int lump;
-
-						ok = true;
-
-						text = sc_parser.getstring();
-						ds_start = W_GetNumForName("DM_START") + 1;
-						ds_end = W_GetNumForName("DM_END") - 1;
-
-						lump = W_GetNumForName(text);
-
-						if (lump > ds_end && lump < ds_start) {
-							CON_Warnf("P_InitMapInfo: Invalid music name: %s\n", text);
-							mapdef.music = -1;
-						}
-						else {
-							mapdef.music = (lump - ds_start);
-						}
-					}
-					else if (!dstricmp(sc_parser.token, "ALLOWJUMP")) {
-						if (datoi(sc_parser.getstring()) == 1) {
-							mapdef.allowjump = 1;
-						}
-						else if (datoi(sc_parser.getstring()) == 0) {
-							mapdef.allowjump = 2;
-						}
-
-						ok = true;
-					}
-					else if (!dstricmp(sc_parser.token, "ALLOWFREELOOK")) {
-						if (datoi(sc_parser.getstring()) == 1) {
-							mapdef.allowfreelook = 1;
-						}
-						else if (datoi(sc_parser.getstring()) == 0) {
-							mapdef.allowfreelook = 2;
-						}
-
-						ok = true;
-					}
-
-					if (!ok) {
-						sc_parser.error("P_InitMapInfo");
-					}
-				}
-			}
-
-			mapdefs = Z_Realloc(mapdefs,
-				sizeof(mapdef_t) * ++nummapdef, PU_STATIC, 0);
-			dmemcpy(&mapdefs[nummapdef - 1], &mapdef, sizeof(mapdef_t));
-		}
-
-		//
-		// find cluster block
-		//
-		else if (!dstricmp(sc_parser.token, "CLUSTER")) {
-			dmemset(&cluster, 0, sizeof(clusterdef_t));
-
-			sc_parser.find(false);
-			cluster.id = datoi(sc_parser.token);
-
-			sc_parser.compare("{");  // must expect open bracket
-
-			//
-			// read into block
-			//
-			while (sc_parser.readtokens()) {
-				sc_parser.find(false);
-
-				if (sc_parser.token[0] == '}') { // exit block if closed bracket is found
-					break;
-				}
-
-				if (!sc_parser.setdata(&cluster, clusterdatatable)) {
-					char* text;
-
-					//
-					// get music track ID
-					//
-					if (!dstricmp(sc_parser.token, "MUSIC")) {
-						const char* name = sc_parser.getstring();
-						int lump = W_CheckNumForName(name);
-
-						if (lump == -1) {
-							CON_Warnf("P_InitMapInfo: Invalid music name: %s\n", name);
-							cluster.music = -1;
-						}
-						else {
-							cluster.music = lump;
-						}
-					}
-					//
-					// check for text
-					//
-					else if (!dstricmp(sc_parser.token, "ENTERTEXT")) {
-						cluster.enteronly = true;
-						text = sc_parser.getstring();
-						dstrncpy(cluster.text, text, dstrlen(text));
-					}
-					else if (!dstricmp(sc_parser.token, "EXITTEXT")) {
-						text = sc_parser.getstring();
-						dstrncpy(cluster.text, text, dstrlen(text));
-					}
-					else {
-						sc_parser.error("P_InitMapInfo");
-					}
-				}
-			}
-
-			clusterdefs = Z_Realloc(clusterdefs,
-				sizeof(clusterdef_t) * ++numclusterdef, PU_STATIC, 0);
-			dmemcpy(&clusterdefs[numclusterdef - 1], &cluster, sizeof(clusterdef_t));
-		}
-		else if (!dstricmp(sc_parser.token, "EPISODE")) {
-			dmemset(&episode, 0, sizeof(episodedef_t));	
-
-			sc_parser.find(false);
-			episode.mapid = datoi(sc_parser.token);
-
-			sc_parser.compare("{");
-			while (sc_parser.readtokens()) {
-				sc_parser.find(false);
-				if (sc_parser.token[0] == '}') {
-					break;
-				}
-				sc_parser.setdata(&episode, episodedatatable);
-			}
-
-			episodedefs = Z_Realloc(episodedefs, sizeof(episodedef_t) * ++numepisodedef, PU_STATIC, 0);
-			dmemcpy(&episodedefs[numepisodedef - 1], &episode, sizeof(episodedef_t));
-		}
-		else {
-			sc_parser.error("P_InitMapInfo");
-		}
+void P_ListMaps(void) {
+	for (int i = 0; i < nummapdef; i++) {
+		mapdef_t* map = &mapdefs[i];
+		CON_Printf(AQUA, "%d: %s\n", 
+			map->mapid, dstrisempty(map->mapname) ? "Untitled" : map->mapname);
 	}
-
-	sc_parser.close();
-
-	CON_DPrintf("%i map definitions\n", nummapdef);
-	CON_DPrintf("%i cluster definitions\n", numclusterdef);
-	CON_DPrintf("%i episode definitions\n", numepisodedef);
 }
 
 //
@@ -1303,14 +1090,14 @@ episodedef_t* P_GetEpisode(int episode) {
 //
 
 static scdatatable_t skydatatable[] = {
-	{   "PIC", (int64_t) & ((skydef_t*)0)->pic,          'S' },
-	{   "BACKPIC", (int64_t) & ((skydef_t*)0)->backdrop,     'S' },
-	{   "FOGFACTOR", (int64_t) & ((skydef_t*)0)->fognear,      'i' },
-	{   "FOGCOLOR", (int64_t) & ((skydef_t*)0)->fogcolor,     'c' },
-	{   "BASECOLOR", (int64_t) & ((skydef_t*)0)->skycolor[2],  'c' },
-	{   "HIGHCOLOR", (int64_t) & ((skydef_t*)0)->skycolor[0],  'c' },
-	{   "LOWCOLOR", (int64_t) & ((skydef_t*)0)->skycolor[1],  'c' },
-	{   NULL,           0,                                  0   }
+	{ "PIC",      (int64_t) & ((skydef_t*)0)->pic,          'S' },
+	{ "BACKPIC",  (int64_t) & ((skydef_t*)0)->backdrop,     'S' },
+	{ "FOGFACTOR",(int64_t) & ((skydef_t*)0)->fognear,      'i' },
+	{ "FOGCOLOR", (int64_t) & ((skydef_t*)0)->fogcolor,     'F' },
+	{ "BASECOLOR",(int64_t) & ((skydef_t*)0)->skycolor[2],  'c' },
+	{ "HIGHCOLOR",(int64_t) & ((skydef_t*)0)->skycolor[1],  'c' },
+	{ "LOWCOLOR", (int64_t) & ((skydef_t*)0)->skycolor[0],  'c' },
+	{ NULL, 0, 0 }
 };
 
 static void P_InitSkyDef(void) {
@@ -1414,5 +1201,4 @@ void P_RegisterCvars(void) {
 	CON_CvarRegister(&p_sdoubleclick);
 	CON_CvarRegister(&p_usecontext);
 	CON_CvarRegister(&p_damageindicator);
-	CON_CvarRegister(&p_regionmode);
 }

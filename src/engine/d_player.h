@@ -38,10 +38,6 @@
 // as commands per game tick.
 #include "d_ticcmd.h"
 
-#ifdef __GNUG__
-#pragma interface
-#endif
-
 //
 // Player states.
 //
@@ -147,10 +143,10 @@ typedef struct player_s {
     int           secretcount;
 
     // Hint messages.
-    char*             message;
+    char*           message;
 	
 	// Secret messages.
-    char*             secretmessage;
+    char*           secretmessage;
 
     // [d64] tic for how long message should stay on hud...not used in d64ex
     // int          messagetic;

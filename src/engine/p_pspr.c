@@ -24,6 +24,7 @@
 
 #include <math.h>
 
+#include "p_pspr.h"
 #include "doomdef.h"
 #include "d_event.h"
 #include "m_fixed.h"
@@ -31,11 +32,10 @@
 #include "p_local.h"
 #include "s_sound.h"
 #include "z_zone.h"
-#include "r_local.h"
+#include "r_main.h"
 #include "doomstat.h"
 #include "sounds.h"
-#include "p_pspr.h"
-#include "m_misc.h"
+
 
 #define LOWERSPEED                FRACUNIT*7
 #define RAISESPEED                FRACUNIT*7
@@ -62,7 +62,7 @@ weaponinfo_t    weaponinfo[NUMWEAPONS] = {
 	{ am_misl,      S_ROCKETLUP, S_ROCKETLDOWN, S_ROCKETL, S_ROCKETL1, S_ROCKETLLIGHT1 },    // rocket launcher
 	{ am_cell,      S_PLASMAGUP1, S_PLASMAGDOWN, S_PLASMAG, S_PLASMAG1, S_NULL },    // plasma gun
 	{ am_cell,      S_BFGUP, S_BFGDOWN, S_BFG, S_BFG1, S_BFGLIGHT1 },    // bfg
-	{ am_cell,      S_LASERGUP, S_LASERGDOWN, S_LASERG, S_LASERG1, S_LASERGLIGHT }    // laser rifle
+	{ am_cell,      S_LASERGUP, S_LASERGDOWN, S_LASERG, S_LASERG1, S_LASERGLIGHT }    // demon artifact
 };
 
 static int laserCells = 1;
@@ -102,7 +102,7 @@ void P_SetPsprite (player_t* player, int position, statenum_t stnum)
 {
 	pspdef_t* psp;
 	state_t* state;
-	
+
 	psp = &player->psprites[position];
 	psp->processPending = true; //ATSB: From GEC
 
@@ -231,7 +231,7 @@ void P_DropWeapon(player_t* player) {
 boolean P_CheckAmmo(player_t* player) {
 	ammotype_t ammo;
 	int count;
-	
+
 	ammo = weaponinfo[player->readyweapon].ammo;
 
 	// Minimal amount for one shot varies.
@@ -360,6 +360,9 @@ void A_WeaponReady(player_t* player, pspdef_t* psp) {
 			weaponinfo[player->readyweapon].readystate = S_PUNCHREWORKA;
 			weaponinfo[player->readyweapon].atkstate = S_PUNCH1REWORK;
 		}
+		else if (player->readyweapon == wp_missile) {
+			weaponinfo[player->readyweapon].atkstate = S_ROCKETL1REWORK;
+		}
 	}
 	else if (m_reworkedweaponsanimations.value == 0)
 	{
@@ -383,6 +386,9 @@ void A_WeaponReady(player_t* player, pspdef_t* psp) {
 			weaponinfo[player->readyweapon].downstate = S_PUNCHDOWN;
 			weaponinfo[player->readyweapon].readystate = S_PUNCHA;
 			weaponinfo[player->readyweapon].atkstate = S_PUNCH1;
+		}
+		else if (player->readyweapon == wp_missile) {
+			weaponinfo[player->readyweapon].atkstate = S_ROCKETL1;
 		}
 	}
 
@@ -544,7 +550,7 @@ void A_Punch(player_t* player, pspdef_t* psp) {
 	}
 
 	angle = player->mo->angle;
-	angle += (angle_t)(P_Random() - P_Random()) << 18;
+	angle += (angle_t)((int32_t)P_SubRandom()) << 18;
 
 	slope = P_AimLineAttack(player->mo, angle, 0, MELEERANGE);
 
@@ -765,9 +771,9 @@ void A_FireShotgun2(player_t* player, pspdef_t* psp) {
 	for (i = 0; i < 20; i++) {
 		damage = (P_Random() % 3 + 1) * 5;
 		angle = player->mo->angle;
-		angle += (P_Random() - P_Random()) << 19;
+		angle += ((int32_t)P_SubRandom()) << 19;
 		P_LineAttack(player->mo, angle, MISSILERANGE, bulletslope +
-			((P_Random() - P_Random()) << 5), damage);
+			(((int32_t)P_SubRandom()) << 5), damage);
 	}
 }
 
@@ -793,8 +799,8 @@ void A_FireCGun(player_t* player, pspdef_t* psp) {
 	psp->sx = (rand * FRACUNIT);
 
 	// randomize sy
-	rand = ((((ammo - 1) & 1) << 1) - 1);
-	psp->sy = WEAPONTOP - (rand * (2 * FRACUNIT));
+	int rand_sy = (((player->ammo[weaponinfo[player->readyweapon].ammo] - 1) & 1) << 1) - 1;
+	psp->sy = WEAPONTOP - (rand_sy * (2 * FRACUNIT));
 	if (v_accessibility.value < 1)
 	{
 		player->psprites[ps_flash].alpha = 160;
@@ -875,11 +881,11 @@ void A_BFGsound(player_t* player, pspdef_t* psp) {
 }
 
 //
-// A_OpenShotgun2
+// A_LoadShotgun2
 //
 
-void A_OpenShotgun2(player_t* player, pspdef_t* psp) {
-	S_StartSound(player->mo, sfx_sht2load1);
+void A_LoadShotgun2(player_t* player, pspdef_t* psp) {
+	S_StartSound(player->mo, sfx_sht2load3);
 }
 
 //
@@ -894,7 +900,7 @@ void A_CloseShotgun2(player_t* player, pspdef_t* psp) {
 // P_LaserPointOnSide
 //
 
-d_inline static fixed_t P_LaserPointOnSide(fixed_t x, fixed_t y, node_t* node) {
+SDL_INLINE static fixed_t P_LaserPointOnSide(fixed_t x, fixed_t y, node_t* node) {
 	fixed_t    dx;
 	fixed_t    dy;
 	fixed_t    left;
@@ -1173,6 +1179,7 @@ void A_FireLaser(player_t* player, pspdef_t* psp) {
 	P_SetPsprite(player, ps_flash, weaponinfo[player->readyweapon].flashstate);
 }
 
+
 //
 // P_SetupPsprites
 // Called at start of level for each player.
@@ -1224,11 +1231,11 @@ void P_MovePsprites(player_t* player) {
 }
 
 //
-// A_LoadShotgun2
+// A_OpenShotgun2
 //
 
-void A_LoadShotgun2(player_t* player, pspdef_t* psp) {
-	S_StartSound(player->mo, sfx_sht2load3);
+void A_OpenShotgun2(player_t* player, pspdef_t* psp) {
+	S_StartSound(player->mo, sfx_sht2load1);
 }
 
 //
@@ -1244,20 +1251,20 @@ void A_Fistwhiff(player_t* player, pspdef_t* psp) {
 //  styd: check if the smooth animation option is enabled or disabled to change weapons sprites in the player view
 
 void A_CheckVanillaAnimationsOrReworked(player_t* player, pspdef_t* psp) {
-	
+
 	if (m_reworkedweaponsanimations.value == 1)
 	{
 		// reworked vanilla weapons animation
 		if (player->readyweapon == wp_shotgun) {
-			
+
 			P_SetPsprite(player, ps_weapon, S_SGUNREWORKB);
 		}
 		else if (player->readyweapon == wp_supershotgun) {
-			
+
 			P_SetPsprite(player, ps_weapon, S_SSGREWORKB);
 		}
 		else if (player->readyweapon == wp_fist) {
-			
+
 			P_SetPsprite(player, ps_weapon, S_PUNCHREWORKB);
 		}
 	}
@@ -1265,17 +1272,17 @@ void A_CheckVanillaAnimationsOrReworked(player_t* player, pspdef_t* psp) {
 	{
 		// vanilla weapons animation
 		if (player->readyweapon == wp_shotgun) {
-			
+
 			P_SetPsprite(player, ps_weapon, S_SGUNB);
 		}
 		else if (player->readyweapon == wp_supershotgun) {
-			
+
 			P_SetPsprite(player, ps_weapon, S_SSGB);
 		}
 		else if (player->readyweapon == wp_fist) {
-			
+
 			P_SetPsprite(player, ps_weapon, S_PUNCHB);
 		}
 	}
-	
+
 }

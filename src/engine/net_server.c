@@ -14,25 +14,22 @@
 //
 //-------------------------------------------------------------------------------
 
-#include <stdarg.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
+#include <limits.h>
+#include <SDL3/SDL_stdinc.h>
 
-//#include "config.h"
-
+#include "net_server.h"
 #include "doomdef.h"
-#include "doomstat.h"
 #include "i_system.h"
-//#include "i_timer.h"
 #include "m_misc.h"
-
+#include "d_net.h"
 #include "net_client.h"
 #include "net_common.h"
 #include "net_defs.h"
 #include "net_io.h"
-#include "net_loop.h"
 #include "net_packet.h"
-#include "net_server.h"
 #include "net_structure.h"
 
 typedef enum
@@ -145,7 +142,7 @@ static void NET_SV_SendConsoleMessage(net_client_t* client, char* s, ...)
 	net_packet_t* packet;
 
 	va_start(args, s);
-	vsnprintf(buf, sizeof(buf), s, args);
+	SDL_vsnprintf(buf, sizeof(buf), s, args);
 	va_end(args);
 
 	packet = NET_Conn_NewReliable(&client->connection,
@@ -163,7 +160,7 @@ static void NET_SV_BroadcastMessage(char* s, ...)
 	int i;
 
 	va_start(args, s);
-	vsnprintf(buf, sizeof(buf), s, args);
+	SDL_vsnprintf(buf, sizeof(buf), s, args);
 	va_end(args);
 
 	for (i = 0; i < MAXNETNODES; ++i)
@@ -291,6 +288,14 @@ static unsigned int NET_SV_LatestAcknowledged(void)
 	return lowtic;
 }
 
+
+#ifdef GCC_COMPILER
+// disable GCC overlapped memcpy warning in -Wall mode:
+// warning: ‘memcpy’ accessing 14224 bytes at offsets 0 and 112 overlaps 14112 bytes at offset 112 [-Wrestrict]
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wrestrict"
+#endif
+
 // Possibly advance the recv window if all connected clients have
 // used the data in the window
 
@@ -369,6 +374,10 @@ static net_client_t* NET_SV_Controller(void)
 	return NULL;
 }
 
+#ifdef GCC_COMPILER
+#pragma GCC diagnostic pop
+#endif
+
 // Given an address, find the corresponding client
 
 static net_client_t* NET_SV_FindClient(net_addr_t* addr)
@@ -409,11 +418,7 @@ static void NET_SV_InitNewClient(net_client_t* client,
 	NET_Conn_InitServer(&client->connection, addr);
 	client->addr = addr;
 	client->last_send_time = -1;
-#ifdef _WIN32
-	client->name = _strdup(player_name);
-#else
-	client->name = strdup(player_name);
-#endif
+	client->name = M_StringDuplicate(player_name);
 
 	// init the ticcmd send queue
 
@@ -464,7 +469,7 @@ static void NET_SV_ParseSYN(net_packet_t* packet,
 		return;
 	}
 
-	if (strcmp(client_version, "Doom64EX+Enhanced") != 0)
+	if (strcmp(client_version, "Doom64EX+") != 0)
 	{
 		//!
 		// @category net
@@ -479,7 +484,7 @@ static void NET_SV_ParseSYN(net_packet_t* packet,
 		{
 			NET_SV_SendReject(addr,
 				"Version mismatch: server version is: "
-				"Doom64EX+Enhanced");
+				"Doom64EX+");
 			return;
 		}
 	}
@@ -827,7 +832,7 @@ static void NET_SV_ParseGameData(net_packet_t* packet, net_client_t* client)
 
 	// Read header
 
-	if (!NET_ReadInt8(packet, (int*)&ackseq)
+	if (!NET_ReadInt8(packet, (int *)&ackseq)
 		|| !NET_ReadInt8(packet, &seq)
 		|| !NET_ReadInt8(packet, &num_tics))
 	{
@@ -946,7 +951,7 @@ static void NET_SV_ParseGameDataACK(net_packet_t* packet, net_client_t* client)
 
 	// Read header
 
-	if (!NET_ReadInt8(packet, (int*)&ackseq))
+	if (!NET_ReadInt8(packet, (int *)&ackseq))
 	{
 		return;
 	}
@@ -1056,7 +1061,7 @@ void NET_SV_SendQueryResponse(net_addr_t* addr)
 
 	// Version
 
-	querydata.version = "Doom64EX+Enhanced";
+	querydata.version = "Doom64EX+";
 
 	// Server state
 

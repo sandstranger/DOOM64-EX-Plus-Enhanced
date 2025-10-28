@@ -21,6 +21,7 @@
 //
 //-----------------------------------------------------------------------------
 
+#include "p_mobj.h"
 #include "i_system.h"
 #include "z_zone.h"
 #include "m_fixed.h"
@@ -33,10 +34,8 @@
 #include "doomstat.h"
 #include "info.h"
 #include "tables.h"
-#include "r_local.h"
+#include "r_main.h"
 #include "r_sky.h"
-#include "m_misc.h"
-#include "con_console.h"
 #include "m_password.h"
 
 mapthing_t* spawnlist;
@@ -46,7 +45,6 @@ void G_PlayerReborn(int player);
 mobj_t* P_SpawnMapThing(mapthing_t* mthing);
 void P_CreateFadeThinker(mobj_t* mobj, line_t* line);
 void P_CreateFadeOutThinker(mobj_t* mobj, line_t* line);
-void P_CreateFadeThinkerNightmare(mobj_t* mobj, line_t* line);
 
 CVAR_EXTERNAL(m_reworkedvanillasounds);
 
@@ -111,7 +109,7 @@ void P_SetTarget(mobj_t** mop, mobj_t* targ) {
 			(*mop)->refcount--;
 		}
 		else {
-			fprintf(stderr, "P_SetTarget: Invalid pointer detected in mop=%p\n", *mop);
+			fprintf(stderr, "P_SetTarget: Invalid pointer detected in mop=%p\n", (void *)*mop);
 			return;
 		}
 	}
@@ -121,7 +119,7 @@ void P_SetTarget(mobj_t** mop, mobj_t* targ) {
 			targ->refcount++;
 		}
 		else {
-			fprintf(stderr, "P_SetTarget: Invalid pointer detected in targ=%p\n", targ);
+			fprintf(stderr, "P_SetTarget: Invalid pointer detected in targ=%p\n", (void *)targ);
 			*mop = NULL;
 		}
 	}
@@ -220,7 +218,7 @@ void P_ExplodeMissile(mobj_t* mo) {
 			}
 
 			S_StartSound(mo, mo->info->deathsound);
-		}
+	    }
 
 	}
 }
@@ -511,7 +509,12 @@ void P_NightmareRespawn(mobj_t* mobj) {
 	mo->angle = ANG45 * (mthing->angle / 45);
 
 	// 20120212 villsa - fix for respawning spectures
-	if (mo->type != MT_DEMON2 && mo->type != MT_NIGHTMAREDEMON) {
+	// styd: Fixes the transparency of nightmare things that appear with Thing Spawn, because with my new transparency code for nightmare things when appearing with Thing Spawn they lose their nightmare transparency
+	if (mo->flags & MF_NIGHTMARE) {
+		mo->alpha = 0;
+		P_CreateFadeThinker(mobj, &junk);
+	}
+	else if (mo->type != MT_DEMON2 && mo->type != MT_NIGHTMAREDEMON) {
 		mo->alpha = 0;
 		P_CreateFadeThinker(mo, &junk);
 	}
@@ -684,12 +687,6 @@ mobj_t* P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type) {
 	mobj->target = NULL;
 	mobj->tracer = NULL;
 	mobj->refcount = 0;    // init reference counter to 0
-
-	if (mobj->flags & MF_SOLID &&
-		compatflags & COMPATF_MOBJPASS &&
-		!(mobj->flags & (MF_NOCLIP | MF_SPECIAL))) {
-		mobj->blockflag |= BF_MOBJPASS;
-	}
 
 	if (gameskill != sk_nightmare && gameskill != sk_ultranightmare) {
 		mobj->reactiontime = info->reactiontime;
@@ -929,7 +926,14 @@ void P_CreateFadeThinker(mobj_t* mobj, line_t* line) {
 		mobj->flags &= ~MF_SPECIAL;
 	}
 
-	P_FadeMobj(mobj, 8, mobj->info->alpha, flags);
+	// styd: to fix the transparency of the nightmare when the things spawns with Thing Spawn 
+	if (mobj->flags & MF_NIGHTMARE) {
+		P_FadeMobj(mobj, 8, 128, flags);
+	}
+	else {
+		P_FadeMobj(mobj, 8, mobj->info->alpha, flags);
+	}
+	
 }
 
 //
@@ -949,25 +953,6 @@ void P_CreateFadeOutThinker(mobj_t* mobj, line_t* line) {
 	}
 
 	P_FadeMobj(mobj, -8, 0, flags);
-}
-
-//
-// P_CreateFadeThinkerNightmare
-// styd: to fix the transparency of the nightmare when the things spawns with Thing Spawn 
-
-void P_CreateFadeThinkerNightmare(mobj_t* mobj, line_t* line) {
-	int flags = 0;
-
-	if (mobj->flags & MF_SHOOTABLE) {
-		flags |= MF_SHOOTABLE;
-		mobj->flags &= ~MF_SHOOTABLE;
-	}
-	if (mobj->flags & MF_SPECIAL) {
-		flags |= MF_SPECIAL;
-		mobj->flags &= ~MF_SPECIAL;
-	}
-
-	P_FadeMobj(mobj, 8, 128, flags);
 }
 
 //
@@ -1009,7 +994,7 @@ int EV_SpawnMobjTemplate(line_t* line, boolean silent) {
 		// styd: Fixes the transparency of nightmare things that appear with Thing Spawn, because with my new transparency code for nightmare things when appearing with Thing Spawn they lose their nightmare transparency
 		if (mobj->flags & MF_NIGHTMARE) {
 			mobj->alpha = 0;
-			P_CreateFadeThinkerNightmare(mobj, line);
+			P_CreateFadeThinker(mobj, line);
 		}
 		else if (mobj->type != MT_DEMON2 && mobj->type != MT_NIGHTMAREDEMON) {
 			mobj->alpha = 0;
@@ -1082,6 +1067,7 @@ mobj_t* P_SpawnMapThing(mapthing_t* mthing) {
 	fixed_t             x;
 	fixed_t             y;
 	fixed_t             z;
+	boolean				ismonster;
 
 	// count deathmatch start positions
 
@@ -1134,18 +1120,17 @@ mobj_t* P_SpawnMapThing(mapthing_t* mthing) {
 		return NULL;
 	}
 
-	// don't spawn any monsters if -nomonsters
+	ismonster = (i == MT_SKULL || (mobjinfo[i].flags & MF_COUNTKILL));
 
-	if (nomonsters
-		&& (i == MT_SKULL
-			|| (mobjinfo[i].flags & MF_COUNTKILL))) {
+	// don't spawn any monsters if -nomonsters
+	if (ismonster && nomonsters) {
 		return NULL;
 	}
 
 	if (mthing->options & MTF_SPAWN) {
-		mthing->options &= ~MTF_SPAWN;
-		dmemcpy(&spawnlist[numspawnlist++], mthing, sizeof(mapthing_t));
-
+		mapthing_t temp = *mthing;
+		temp.options &= ~MTF_SPAWN;
+		dmemcpy(&spawnlist[numspawnlist++], &temp, sizeof(mapthing_t));
 		return NULL;
 	}
 
@@ -1162,14 +1147,14 @@ mobj_t* P_SpawnMapThing(mapthing_t* mthing) {
 	}
 
 	mobj = P_SpawnMobj(x, y, z, i);
-	mobj->z += INT2F(mthing->z);
-	mobj->spawnpoint = *mthing;
+	mobj->z += (mthing->z << FRACBITS);
+	mobj->angle = ANG45 * (mthing->angle / 45);
 	mobj->tid = mthing->tid;
 
 	// styd: added a new Ultra Nightmare difficulty
 	if (gameskill == sk_ultranightmare) {
 
-		if (mobj->flags & MF_COUNTKILL && mthing->options & MTF_NIGHTMARE) 
+		if (mobj->flags & MF_COUNTKILL && mthing->options & MTF_NIGHTMARE)
 		{
 			// check if things have the nightmare flag if things have the nightmare flag do not add the nightmare flag to avoid the problem where monsters HP are multiplied by 4
 		}
@@ -1179,12 +1164,6 @@ mobj_t* P_SpawnMapThing(mapthing_t* mthing) {
 			mthing->options |= MTF_NIGHTMARE;
 		}
 
-	}
-
-	if (mobj->flags & MF_SOLID &&
-		compatflags & COMPATF_MOBJPASS &&
-		!(mobj->flags & (MF_NOCLIP | MF_SPECIAL))) {
-		mobj->blockflag |= BF_MOBJPASS;
 	}
 
 	//
@@ -1244,6 +1223,11 @@ mobj_t* P_SpawnMapThing(mapthing_t* mthing) {
 	if (mobj->flags == 0) {
 		mobj->blockflag |= BF_MIDPOINTONLY;
 	}
+	
+	// for nightmare difficulty (-skill 5) and any difficulty with -respawn
+	if (ismonster && respawnmonsters) {
+		mobj->spawnpoint = *mthing;
+	}
 
 	return mobj;
 }
@@ -1287,9 +1271,9 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage) {
 	int i = 0;
 
 	for (i = 0; i < 3; i++) {
-		x += ((P_Random() - P_Random()) << 12);
-		y += ((P_Random() - P_Random()) << 12);
-		z += ((P_Random() - P_Random()) << 11);
+		x += (((int32_t)P_SubRandom()) << 12);
+		y += (((int32_t)P_SubRandom()) << 12);
+		z += (((int32_t)P_SubRandom()) << 11);
 
 		th = P_SpawnMobj(x, y, z, MT_BLOOD);
 		th->momz = FRACUNIT * 2;
@@ -1316,9 +1300,9 @@ void P_SpawnBloodGreen(fixed_t x, fixed_t y, fixed_t z, int damage) {
 	int i = 0;
 
 	for (i = 0; i < 3; i++) {
-		x += ((P_Random() - P_Random()) << 12);
-		y += ((P_Random() - P_Random()) << 12);
-		z += ((P_Random() - P_Random()) << 11);
+		x += (((int32_t)P_SubRandom()) << 12);
+		y += (((int32_t)P_SubRandom()) << 12);
+		z += (((int32_t)P_SubRandom()) << 11);
 
 		th = P_SpawnMobj(x, y, z, MT_BLOOD_GREEN);
 		th->momz = FRACUNIT * 2;
@@ -1345,9 +1329,9 @@ void P_SpawnBloodPurple(fixed_t x, fixed_t y, fixed_t z, int damage) {
 	int i = 0;
 
 	for (i = 0; i < 3; i++) {
-		x += ((P_Random() - P_Random()) << 12);
-		y += ((P_Random() - P_Random()) << 12);
-		z += ((P_Random() - P_Random()) << 11);
+		x += (((int32_t)P_SubRandom()) << 12);
+		y += (((int32_t)P_SubRandom()) << 12);
+		z += (((int32_t)P_SubRandom()) << 11);
 
 		th = P_SpawnMobj(x, y, z, MT_BLOOD_PURPLE);
 		th->momz = FRACUNIT * 2;
@@ -1513,9 +1497,8 @@ mobj_t* P_SpawnMissile(mobj_t* source, mobj_t* dest, mobjtype_t type,
 	th = P_SpawnMobj(x, y, z, type);
 
 	if (th->info->seesound) {
-
 		if (m_reworkedvanillasounds.value == 1)
-		{ 
+		{
 			// reworked vanilla sounds
 			if (th->type == MT_PROJ_FATSO) {
 				th->info->seesound = sfx_bdmissile1;
@@ -1542,16 +1525,16 @@ mobj_t* P_SpawnMissile(mobj_t* source, mobj_t* dest, mobjtype_t type,
 				th->info->seesound = sfx_bdmissile1;
 			}
 
-				switch (th->info->seesound) {
-				case sfx_bdmissile1:
-				case sfx_bdmissile2:
-					sound = sfx_bdmissile1 + (P_Random() % 2);
-					break;
+			switch (th->info->seesound) {
+			case sfx_bdmissile1:
+			case sfx_bdmissile2:
+				sound = sfx_bdmissile1 + (P_Random() % 2);
+				break;
 
-				default:
-					sound = th->info->seesound;
-					break;
-				}
+			default:
+				sound = th->info->seesound;
+				break;
+			}
 
 			S_StartSound(th, sound);
 		}
@@ -1607,9 +1590,9 @@ mobj_t* P_SpawnMissile(mobj_t* source, mobj_t* dest, mobjtype_t type,
 	
 	// [kex] nightmare missiles move faster
     if(source && source->flags & MF_NIGHTMARE) {
-        th->flags |= MF_NIGHTMARE;
+		th->flags |= MF_NIGHTMARE;
 		th->flags |= MF_SHADOW;
-        speed *= 2;
+		speed *= 2;
 		th->alpha = 128;
     }
 

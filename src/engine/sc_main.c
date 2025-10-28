@@ -19,31 +19,48 @@
 //-----------------------------------------------------------------------------
 
 #include <stdbool.h>
+#include <SDL3/SDL_stdinc.h>
 
-#ifdef _MSC_VER
-#include "i_opndir.h"
-#else
-#include <dirent.h>
-#endif
-
-#ifdef __APPLE__
-#include <ctype.h> // toupper
-#endif
-
-#ifndef _WIN32 // toupper for linux
-#include <ctype.h>
-#include <stdio.h>
-#endif
-
+#include "sc_main.h"
 #include "doomdef.h"
-#include "doomtype.h"
 #include "z_zone.h"
 #include "w_wad.h"
 #include "m_misc.h"
-#include "sc_main.h"
 #include "con_console.h"
+#include "i_system.h"
 
 scparser_t sc_parser;
+
+//
+// SC_ParseColorValue
+//
+static int SC_ParseColorValue(const char* token) {
+	int len = dstrlen(token);
+	if (len >= 2 && token[0] >= '0' && token[0] <= '9') {
+		for (int i = 1; i < len; i++) {
+			char c = token[i];
+			if ((c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) {
+				char firstDigit[2] = { token[0], '\0' };
+				return datoi(firstDigit);
+			}
+		}
+	}
+
+	boolean hasHexLetters = false;
+	for (int i = 0; i < len; i++) {
+		char c = token[i];
+		if ((c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f')) {
+			hasHexLetters = true;
+			break;
+		}
+	}
+
+	if (hasHexLetters) {
+		return dhtoi((char*)token);
+	}
+
+	return datoi(token);
+}
 
 //
 // SC_Open
@@ -57,7 +74,7 @@ static void SC_Open(const char* name) {
 	lump = W_CheckNumForName(name);
 
 	if (lump <= -1) {
-		sc_parser.buffsize = M_ReadFile(name, &sc_parser.buffer);
+		sc_parser.buffsize = M_ReadFile((char *)name, &sc_parser.buffer);
 
 		if (sc_parser.buffsize == -1) {
 			I_Error("SC_Open: %s not found", name);
@@ -168,21 +185,31 @@ static int SC_SetData(void* data, const scdatatable_t* table) {
 				*(boolean*)pointer = true;
 				break;
 			case 'c':
-				sc_parser.compare("="); // expect a '='
+				sc_parser.compare("=");
 				sc_parser.find(false);
-				rgb[0] = dhtoi(sc_parser.token);
+				rgb[0] = SC_ParseColorValue(sc_parser.token);
 				sc_parser.find(false);
-				rgb[1] = dhtoi(sc_parser.token);
+				rgb[1] = SC_ParseColorValue(sc_parser.token);
 				sc_parser.find(false);
-				rgb[2] = dhtoi(sc_parser.token);
+				rgb[2] = SC_ParseColorValue(sc_parser.token);
+
 				*(rcolor*)pointer = D_RGBA(rgb[0], rgb[1], rgb[2], 0xFF);
 				break;
-			}
+			case 'F':
+				sc_parser.compare("=");
+				sc_parser.find(false);
+				rgb[0] = SC_ParseColorValue(sc_parser.token);
+				sc_parser.find(false);
+				rgb[1] = SC_ParseColorValue(sc_parser.token);
+				sc_parser.find(false);
+				rgb[2] = SC_ParseColorValue(sc_parser.token);
 
+				*(rcolor*)pointer = rgb[0] | (rgb[1] << 8) | (rgb[2] << 16) | (0xFF << 24);
+				break;
+			}
 			break;
 		}
 	}
-
 	return ok;
 }
 
@@ -241,9 +268,18 @@ static int SC_Find(boolean forceupper) {
 
 			if (!string) {
 				if (c > ' ') {
+					if (havetoken && i > 0) {
+						char prev = sc_parser.token[i - 1];
+						if (prev >= '0' && prev <= '9' &&
+							((c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'))) {
+							sc_parser.rewind();
+							return true;
+						}
+					}
+
 					havetoken = true;
 					sc_parser.token[i++] =
-						forceupper ? toupper(c) : c;
+						forceupper ? SDL_toupper(c) : c;
 				}
 				else if (havetoken) {
 					return true;
@@ -253,7 +289,7 @@ static int SC_Find(boolean forceupper) {
 				if (c >= ' ' && c != '"') {
 					havetoken = true;
 					sc_parser.token[i++] =
-						forceupper ? toupper(c) : c;
+						forceupper ? SDL_toupper(c) : c;
 				}
 			}
 		}
@@ -298,7 +334,7 @@ static void SC_Error(const char* function) {
 		return;
 	}
 
-	I_Warning("%s: Unknown token: '%s' (line = %i, pos = %i)",
+	I_Warning("%s: Unknown token: '%s' (line = %i, pos = %i)\n",
 		function, sc_parser.token, sc_parser.linepos, sc_parser.rowpos);
 }
 

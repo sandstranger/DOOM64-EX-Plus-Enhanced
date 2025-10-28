@@ -19,19 +19,18 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <math.h>
-
+#include "r_lights.h"
 #include "doomstat.h"
-
-#include "r_local.h"
-#include "d_keywds.h"
+#include "i_swap.h"
 #include "p_local.h"
+#include "con_cvar.h"
 
 rcolor    bspColor[5];
 
 CVAR_CMD(i_brightness, 100) {
 	R_RefreshBrightness();
 }
+CVAR(i_overbright, 0);
 
 CVAR_EXTERNAL(r_texturecombiner);
 
@@ -44,9 +43,13 @@ void R_LightToVertex(vtx_t* v, int idx, word c) {
 
 	for (i = 0; i < c; i++) {
 		v[i].a = 0xff;
-		v[i].r = lights[idx].active_r;
-		v[i].g = lights[idx].active_g;
-		v[i].b = lights[idx].active_b;
+		if (i_overbright.value) {
+			v[i].r = v[i].g = v[i].b = 0xff;
+		} else {
+			v[i].r = lights[idx].active_r;
+			v[i].g = lights[idx].active_g;
+			v[i].b = lights[idx].active_b;
+		}
 	}
 }
 
@@ -193,9 +196,9 @@ void R_LightGetRGB(int h, int s, int v, byte* r, byte* g, byte* b) {
 		xr = xg = xb = i;
 	}
 
-	*r = (byte)(xr * 255.0f);
-	*g = (byte)(xg * 255.0f);
-	*b = (byte)(xb * 255.0f);
+    *r = (byte)(xr * 255.0f);
+    *g = (byte)(xg * 255.0f);
+    *b = (byte)(xb * 255.0f);
 }
 
 //
@@ -248,6 +251,9 @@ void R_RefreshBrightness(void) {
 //
 
 rcolor R_GetSectorLight(byte alpha, word ptr) {
+	if (i_overbright.value) {
+		return D_RGBA(0xff, 0xff, 0xff, alpha);
+	}
 	return D_RGBA((byte)lights[ptr].active_r,
 		(byte)lights[ptr].active_g, (byte)lights[ptr].active_b, alpha);
 }

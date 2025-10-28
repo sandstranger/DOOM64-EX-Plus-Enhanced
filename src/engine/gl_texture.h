@@ -75,8 +75,11 @@ void        GL_BindDummyTexture(void);
 void        GL_UpdateEnvTexture(rcolor color);
 void        GL_BindEnvTexture(void);
 dtexture    GL_ScreenToTexture(void);
-void        GL_ResampleTexture(unsigned int* in, int inwidth, int inheight,
-	unsigned int* out, int outwidth, int outheight,
-	int type);
-
+int			GL_WorldTextureIsTranslucent(int texnum);
+int			GL_WorldTextureIsMasked(int texnum);
+void		GL_WorldTextureEnsureClassified(int texnum);
+int			GL_GetGfxIdForLump(int lump);
+void		GL_Env_RGB_Modulate_Alpha_FromTexture(void);
+void		I_ShaderBind(void);
+void		I_ShaderUnBind(void);
 #endif

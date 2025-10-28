@@ -20,35 +20,28 @@
 //-----------------------------------------------------------------------------
 
 #include <SDL3/SDL_timer.h>
+#include <SDL3/SDL_platform_defines.h>
 
 #include <stdlib.h>
 #include <stdio.h>
-
-#ifndef _WIN32
-#include <unistd.h>
-#include <sys/types.h>
-#include <pwd.h>
-#include <time.h>
-#else
-#include <windows.h>
-#include <direct.h>
-#include <io.h>
-#endif
-
 #include <stdarg.h>
 #include <sys/stat.h>
+
+#include "i_system.h"
+#include "i_system_io.h"
+#include "i_audio.h"
 #include "doomstat.h"
 #include "doomdef.h"
 #include "m_misc.h"
 #include "i_video.h"
 #include "i_sdlinput.h"
-#include "d_net.h"
 #include "g_demo.h"
 #include "d_main.h"
 #include "con_console.h"
-#include "z_zone.h"
-#include "i_system.h"
+#include "con_cvar.h"
 #include "gl_draw.h"
+#include "steam.h"
+#include "w_file.h"
 
 extern void I_ShutdownSound(void);
 
@@ -56,55 +49,22 @@ CVAR(i_interpolateframes, 1);
 CVAR(v_accessibility, 0);
 CVAR(v_fadein, 1);
 
-// Gibbon - hack from curl to deal with some crap
-#if !defined(S_ISREG) && defined(S_IFMT) && defined(S_IFREG)
-#define S_ISREG(m) (((m) & S_IFMT) == S_IFREG)
-#endif
-
-#ifdef DOOM_UNIX_INSTALL
-#define GetBasePath()	SDL_GetPrefPath("", "doom64ex-plus");
-#elif !defined DOOM_UNIX_INSTALL || defined _WIN32 || !defined __ANDROID__
-#define GetBasePath()	(char *)SDL_GetBasePath();
-#elif defined __ANDROID__
-#define GetBasePath()   SDL_GetAndroidInternalStoragePath();
-#endif
-
 ticcmd_t        emptycmd;
 
 //
-// I_uSleep
+// I_Sleep
 //
-
-void I_Sleep(unsigned long usecs) {
-#ifdef _WIN32
-	Sleep((DWORD)usecs);
-#else
-	struct timespec tc;
-	tc.tv_sec = usecs / 1000;
-	tc.tv_nsec = (usecs % 1000) * 1000000;
-	nanosleep(&tc, NULL);
-#endif
+void I_Sleep(unsigned long ms) {
+	SDL_Delay(ms);
 }
 
 static Uint64 basetime = 0;
 
 //
-// I_GetTimeNormal
+// I_GetTimeNormal: returns time elapsed in number of ticks: 1s -> TICRATE, 2s -> 2*TICRATE, ...
 //
-
-static int I_GetTimeNormal(void) {
-	Uint64 ticks;
-	Uint64 tic_division = 1000;
-
-	ticks = SDL_GetTicks();
-
-	if (basetime == 0) {
-		basetime = ticks;
-	}
-
-	ticks -= basetime;
-
-	return (ticks * TICRATE) / tic_division;
+SDL_INLINE static int I_GetTimeNormal(void) {
+	return (I_GetTimeMS() * TICRATE) / 1000;
 }
 
 //
@@ -138,7 +98,7 @@ fixed_t         rendertic_frac = 0;
 Uint64			rendertic_start;
 Uint64			rendertic_step;
 Uint64			rendertic_next;
-const float     rendertic_msec = 100 * TICRATE / 100000.0f;
+const float     rendertic_msec = TICRATE / 1000.0f;
 
 //
 // I_StartDisplay
@@ -162,7 +122,9 @@ boolean I_StartDisplay(void) {
 //
 
 void I_EndDisplay(void) {
-	displaytime = SDL_GetTicks() - start_displaytime;
+	if (i_interpolateframes.value) {
+		displaytime = SDL_GetTicks() - start_displaytime;
+	}
 	InDisplay = false;
 }
 
@@ -227,141 +189,121 @@ ticcmd_t* I_BaseTiccmd(void) {
 	return &emptycmd;
 }
 
-/**
- * @brief Get the user-writeable directory.
- *
- * Assume this is the only user-writeable directory on the system.
- *
- * @return Fully-qualified path that ends with a separator or NULL if not found.
- */
-
+ 
+// return fully qualified non-NULL path that ends with a separator. Must not be freed by caller.
 char* I_GetUserDir(void) 
 {
-	return GetBasePath();
+	static char* g_user_dir = NULL;
+
+	if (!g_user_dir) {
+		g_user_dir = SDL_GetPrefPath("", "doom64ex-plus"); // string allocated by SDL
+		if (g_user_dir) {
+			I_Printf("User data dir: %s\n", g_user_dir);
+		} else {
+			I_Error("Failed to get user data dir\n");
+		}
+	}
+
+	return g_user_dir;
 }
 
-/*
- * @brief Get the directory which contains this program.
- *
- * @return Fully-qualified path that ends with a separator or NULL if not 
 
- * @brief Find a regular file in the user-writeable directory.
- *
- * @return Fully-qualified path or NULL if not found.
- */
 
-char* I_GetUserFile(char* file) {
-	char* path, * userdir;
+// return a fully qualified non-NULL file path. Must be freed by caller
+char* I_GetUserFile(char* filename) {
+	filepath_t path;
+	SDL_snprintf(path, MAX_PATH, "%s%s", I_GetUserDir(), filename);
+	return M_StringDuplicate(path);
+}
 
-	if (!(userdir = I_GetUserDir()))
-		return NULL;
-
-	path = malloc(512);
-
-	snprintf(path, 511, "%s%s", userdir, file);
-
-#ifdef DOOM_UNIX_INSTALL
-	// SDL_GetPrefPath() returns an allocated string
-	SDL_free(userdir);
+// return a fully qualified path or NULL if not found. Must be freed by caller
+static char* FindDataFile(char* file) {
+	char* path;
+	steamgame_t game;
+#ifdef SDL_PLATFORM_WIN32
+	filepath_t gog_install_dir;
 #endif
 
-	return path;
-}
+	static boolean steam_install_dir_found = false;
+	static filepath_t steam_install_dir;
 
-/**
- * @brief Find a regular read-only data file.
- *
- * @return Fully-qualified path or NULL if not found.
- */
-
-char* I_FindDataFile(char* file) {
-	char* path = malloc(512);
-	const char* dir;
-
-	if (path == NULL) {
-		return NULL;
-	}
-
-	if ((dir = SDL_GetBasePath())) {
-		snprintf(path, 511, "%s%s", dir, file);
-		if (I_FileExists(path)) {
-			return path;
-		}
-	}
-
-#if !defined(_WIN32)
-
-#ifdef DOOM_UNIX_INSTALL
-	if ((dir = I_GetUserDir())) {
-		snprintf(path, 511, "%s%s", dir, file);
-		if (I_FileExists(path)) {
-			return path;
-		}
-	}
-#endif    
-    
+	char* dirs[] = {
+		(char *)SDL_GetBasePath(), // install dir (where executable is located)
+		".", // cur dir from where executable is launched
+		I_GetUserDir(), 
 #ifdef DOOM_UNIX_SYSTEM_DATADIR
-	snprintf(path, 511, "%s/%s", DOOM_UNIX_SYSTEM_DATADIR, file);
-	if (I_FileExists(path)) {
-		return path;
-	}
+		DOOM_UNIX_SYSTEM_DATADIR
 #endif
+	};
 
-	snprintf(path, 511, "%s", file);
-	if (I_FileExists(path)) {
-		return path;
-	}
+	// discard unsupported ROM DOOM64.WAD, by their size largely < 10 MB
+	long min_size = dstreq(file, IWAD_FILENAME) ? 10*1024*1024 : 0;
 
-	const char* homeDir = getenv("HOME");
-	if (homeDir) {
-		snprintf(path, 511, "%s/.steam/steam/steamapps/common/Doom 64/%s", homeDir, file);
-		if (I_FileExists(path)) {
-			I_Printf("I_FindDataFile: Adding Steam Path %s\n", path);
-			return path;
-		}
-
-		snprintf(path, 511, "%s/.local/share/Steam/steamapps/common/Doom 64/%s", homeDir, file);
-		if (I_FileExists(path)) {
-			I_Printf("I_FindDataFile: Adding Steam Path %s\n", path);
-			return path;
+	for (int i = 0; i < SDL_arraysize(dirs); i++) {
+		if ((path = M_FileOrDirExistsInDirectory(dirs[i], file, true))) {
+			if (min_size == 0 || M_FileLengthFromPath(path) > min_size)	return path;
+			I_Printf("Discarding not usable IWAD: %s\n", path);
 		}
 	}
 
-	snprintf(path, 511, "%s/GOG Games/DOOM 64/%s", homeDir, file);
-	if (I_FileExists(path)) {
-		I_Printf("I_FindDataFile: Adding GOG Path %s\n", path);
-		return path;
+#ifdef SDL_PLATFORM_WIN32
+
+	// detect GOG prior to Steam because it is faster
+
+	if (I_GetRegistryString(HKEY_LOCAL_MACHINE,
+		L"SOFTWARE\\Wow6432Node\\GOG.com\\Games\\1456611261", L"path", gog_install_dir, MAX_PATH)) {
+		if ((path = M_FileOrDirExistsInDirectory(gog_install_dir, file, true))) return path;
 	}
 
-#elif defined(_WIN32)
-	const char* steamPath = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\DOOM 64";
-	snprintf(path, 511, "%s\\%s", steamPath, file);
-	if (I_FileExists(path)) {
-		I_Printf("I_FindDataFile: Adding Steam Path %s\n", path);
-		return path;
-	}
-
-	const char* gogPath = "C:\\Program Files (x86)\\GOG Galaxy\\Games\\DOOM 64";
-	snprintf(path, 511, "%s\\%s", gogPath, file);
-	if (I_FileExists(path)) {
-		I_Printf("I_FindDataFile: Adding GOG Path %s\n", path);
-		return path;
-	}
 #endif
 
-	free(path);
+#if defined(SDL_PLATFORM_WIN32) || defined(SDL_PLATFORM_LINUX)  
+
+    // cache Steam install dir value as calling Steam_FindGame is a bit expensive
+
+	if(!steam_install_dir_found) {
+        steam_install_dir_found = Steam_FindGame(&game, DOOM64_STEAM_APPID)
+            && Steam_ResolvePath(steam_install_dir, &game);
+    }
+
+    if(steam_install_dir_found && (path = M_FileOrDirExistsInDirectory(steam_install_dir, file, true))) return path;
+    
+#endif
+
 	return NULL;
 }
 
-/**
- * @brief Checks to see if the given absolute path is a regular file.
- * @param path Absolute path to check.
- */
+// return a full qualified path that is cached, or NULL if not found. Must NOT be freed by caller
+char* I_FindDataFile(char* file) {
 
-boolean I_FileExists(const char* path)
-{
-	struct stat st;
-	return !stat(path, &st) && S_ISREG(st.st_mode);
+	typedef struct {
+		char* filename;
+		char* path;
+	} datafile_t;
+
+	static datafile_t** cached_datafiles = NULL;
+	static int num_cached_datafiles = 0;
+
+	datafile_t* entry = NULL;
+
+	for (int i = 0; i < num_cached_datafiles; i++) {
+		if (dstreq(file, cached_datafiles[i]->filename)) {
+			entry = cached_datafiles[i];
+			break;
+		}
+	}
+
+	if (!entry) {
+		entry = malloc(sizeof(datafile_t));
+		entry->filename = M_StringDuplicate(file);
+		entry->path = FindDataFile(file);
+
+		cached_datafiles = realloc(cached_datafiles, (num_cached_datafiles + 1) * sizeof(datafile_t *));
+		cached_datafiles[num_cached_datafiles] = entry;
+		num_cached_datafiles++;
+	}
+
+	return entry->path; 
 }
 
 //
@@ -402,32 +344,14 @@ void I_Error(const char* string, ...) {
 	I_ShutdownSound();
 
 	va_start(va, string);
-	vsprintf(buff, string, va);
+	SDL_vsnprintf(buff, sizeof(buff), string, va);
 	va_end(va);
 
-	fprintf(stderr, "Error - %s\n", buff);
-	fflush(stderr);
+	I_Printf("ERROR: %s", buff);
 
-	I_Printf("\n********* ERROR *********\n");
-	I_Printf("%s", buff);
-
-	if (usingGL) {
-		while (1) {
-			GL_ClearView(0xFF000000);
-			Draw_Text(0, 0, WHITE, 1, 1, "Error - %s\n", buff);
-			GL_SwapBuffers();
-
-			if (I_ShutdownWait()) {
-				break;
-			}
-
-			I_Sleep(1);
-		}
-	}
-	else {
-		I_ShutdownVideo();
-	}
-	exit(0);    // just in case...
+	I_ShutdownVideo();
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "ERROR", buff, NULL);
+	exit(0);
 }
 
 void I_Warning(const char* string, ...) {
@@ -435,14 +359,10 @@ void I_Warning(const char* string, ...) {
 	va_list    va;
 
 	va_start(va, string);
-	vsprintf(buff, string, va);
+	SDL_vsnprintf(buff, sizeof(buff), string, va);
 	va_end(va);
 
-	fprintf(stderr, "Warning - %s\n", buff);
-	fflush(stderr);
-
-	I_Printf("\n********* WARNING *********\n");
-	I_Printf("%s", buff);
+	I_Printf("WARNING: %s", buff);
 
 	if (usingGL) {
 		while (1) {
@@ -479,12 +399,11 @@ void I_Printf(const char* string, ...) {
 	char buff[1024];
 	va_list    va;
 
-	dmemset(buff, 0, 1024);
-
 	va_start(va, string);
-	vsprintf(buff, string, va);
+	SDL_vsnprintf(buff, sizeof(buff), string, va);
 	va_end(va);
 	printf("%s", buff);
+	fflush(stdout);
 	if (console_initialized) {
 		CON_AddText(buff);
 	}
@@ -513,26 +432,60 @@ void I_BeginRead(void) {
 // I_RegisterCvars
 //
 
-#if defined(_WIN32) && defined(USE_XINPUT)
-CVAR_EXTERNAL(i_rsticksensitivity);
-CVAR_EXTERNAL(i_rstickthreshold);
-CVAR_EXTERNAL(i_xinputscheme);
-#endif
-
 CVAR_EXTERNAL(i_gamma);
 CVAR_EXTERNAL(i_brightness);
+CVAR_EXTERNAL(i_overbright);
 CVAR_EXTERNAL(v_accessibility);
 CVAR_EXTERNAL(v_fadein);
 
 void I_RegisterCvars(void) {
-#if defined(_WIN32) && defined(USE_XINPUT)
-	CON_CvarRegister(&i_rsticksensitivity);
-	CON_CvarRegister(&i_rstickthreshold);
-	CON_CvarRegister(&i_xinputscheme);
-#endif
 	CON_CvarRegister(&i_gamma);
 	CON_CvarRegister(&i_brightness);
+	CON_CvarRegister(&i_overbright);
 	CON_CvarRegister(&i_interpolateframes);
 	CON_CvarRegister(&v_accessibility);
 	CON_CvarRegister(&v_fadein);
 }
+
+
+#ifdef SDL_PLATFORM_WIN32
+
+boolean I_GetRegistryString (HKEY root, const wchar_t *dir, const wchar_t *keyname, char *out, size_t maxchars)
+{
+	LSTATUS		err;
+	HKEY		key;
+	WCHAR		wpath[MAX_PATH + 1];
+	DWORD		size, type;
+
+	if (!maxchars)
+		return false;
+	*out = 0;
+
+	err = RegOpenKeyExW (root, dir, 0, KEY_READ, &key);
+	if (err != ERROR_SUCCESS)
+		return false;
+
+	// Note: string might not contain a terminating null character
+	// https://docs.microsoft.com/en-us/windows/win32/api/winreg/nf-winreg-regqueryvalueexw#remarks
+
+	err = RegQueryValueExW (key, keyname, NULL, &type, NULL, &size);
+	if (err != ERROR_SUCCESS || type != REG_SZ || size > sizeof (wpath) - sizeof (wpath[0]))
+	{
+		RegCloseKey (key);
+		return false;
+	}
+
+	err = RegQueryValueExW (key, keyname, NULL, &type, (BYTE *)wpath, &size);
+	RegCloseKey (key);
+	if (err != ERROR_SUCCESS || type != REG_SZ)
+		return false;
+
+	wpath[size / sizeof (wpath[0])] = 0;
+
+	if (WideCharToMultiByte (CP_UTF8, 0, wpath, -1, out, maxchars, NULL, NULL) != 0)
+		return true;
+	*out = 0;
+	return false;
+}
+
+#endif

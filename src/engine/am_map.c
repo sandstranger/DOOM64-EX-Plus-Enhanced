@@ -20,29 +20,24 @@
 //
 //-----------------------------------------------------------------------------
 
-#include <stdio.h>
-#include <stdlib.h>
-#include "i_video.h"
+#include <math.h>
+
+#include "am_map.h"
 #include "i_sdlinput.h"
-#include "z_zone.h"
 #include "doomdef.h"
-#include "st_stuff.h"
 #include "p_local.h"
-#include "w_wad.h"
 #include "t_bsp.h"
-#include "m_cheat.h"
 #include "m_fixed.h"
-#include "i_system.h"
 #include "doomstat.h"
 #include "d_englsh.h"
 #include "tables.h"
-#include "am_map.h"
 #include "am_draw.h"
 #include "m_misc.h"
-#include "m_random.h"
 #include "gl_draw.h"
 #include "g_actions.h"
 #include "g_controls.h"
+#include "r_lights.h"
+#include "r_main.h"
 
 // automap flags
 
@@ -84,6 +79,9 @@ static fixed_t automap_prev_x_interpolation = 0;
 static fixed_t automap_prev_y_interpolation = 0;
 static angle_t automap_prev_ang_interpolation = 0;
 
+static const float min_scale = 200.0f;
+static const float max_scale = 2000.0f;
+
 void AM_Start(void);
 
 // automap cvars
@@ -113,6 +111,7 @@ static CMD(Automap) {
 	}
 
 	if (!automapactive) {
+		if (menuactive) return;
 		AM_Start();
 	}
 	else {
@@ -242,6 +241,7 @@ void AM_Start(void) {
 	automapangle = plr->mo->angle;
 }
 
+/* StevenSYS: I don't know if this is going to be used at some point, so I've commented it out instead of removing it
 static bool AM_HandleGamepadEvent(const SDL_Event* e)
 {
 	if (!automapactive) return false;
@@ -312,8 +312,8 @@ static bool AM_HandleGamepadEvent(const SDL_Event* e)
 		float x = (fabsf(s_leftx) > dead) ? s_leftx : 0.0f;
 		float y = (fabsf(s_lefty) > dead) ? s_lefty : 0.0f;
 
-		float sx = x * 32767.0f * v_msensitivityx.value / (1500.0f / scale);
-		float sy = y * 32767.0f * v_msensitivityx.value / (1500.0f / scale);
+		float sx = x * 32767.0f * v_msensitivityx.value / (max_scale / scale);
+		float sy = y * 32767.0f * v_msensitivityx.value / (max_scale / scale);
 
 		mpanx = (fixed_t)(sx * (float)FRACUNIT);
 		mpany = (fixed_t)(sy * (float)FRACUNIT);
@@ -323,6 +323,7 @@ static bool AM_HandleGamepadEvent(const SDL_Event* e)
 
 	return false;
 }
+*/
 
 //
 // AM_GetBounds
@@ -391,15 +392,16 @@ static void AM_GetBounds(void) {
 
 boolean AM_Responder(event_t* ev) {
 	int rc = false;
+	bool useHeld = (plr && (plr->cmd.buttons & BT_USE));
 
-	if (am_flags & AF_PANMODE) {
+	if (automapactive && ((am_flags & AF_PANMODE) || useHeld)) {
 		if (ev->type == ev_mouse) {
-			mpanx = ev->data2;
-			mpany = ev->data3;
+ 			mpanx = (fixed_t)ev->data2;
+			mpany = (fixed_t)ev->data3;
 			rc = true;
 		}
 		else {
-			if (ev->type == ev_mousedown && ev->data1) {
+			if (!useHeld && ev->type == ev_mousedown && ev->data1) {
 				if (fmod(ev->data1, 2.0) != 0.0) {
 					am_flags &= ~AF_ZOOMOUT;
 					am_flags |= AF_ZOOMIN;
@@ -417,7 +419,7 @@ boolean AM_Responder(event_t* ev) {
 			}
 		}
 	}
-	
+
 	return rc;
 }
 
@@ -428,39 +430,38 @@ boolean AM_Responder(event_t* ev) {
 
 void AM_Ticker(void) {
 	float speed;
-	float oldautomapx;
-	float oldautomapy;
+	fixed_t oldautomapx;
+	fixed_t oldautomapy;
 
-	if (!automapactive) {
+	bool useHeld = (plr && (plr->cmd.buttons & BT_USE));
+
+	if (!automapactive)
 		return;
-	}
 
 	AM_GetBounds();
 
 	if (am_flags & AF_ZOOMOUT) {
 		scale += 32.0f;
-		if (scale > 1500.0f) {
-			scale = 1500.0f;
-		}
+		if (scale > max_scale) scale = max_scale;
 	}
 	if (am_flags & AF_ZOOMIN) {
 		scale -= 32.0f;
-		if (scale < 200.0f) {
-			scale = 200.0f;
-		}
+		if (scale < min_scale) scale = min_scale;
 	}
 
 	speed = (scale / 16.0f) * FRACUNIT;
 	oldautomapx = automappanx;
 	oldautomapy = automappany;
 
-	if (followplayer) {
-		if (am_flags & AF_PANMODE) {
-			float panscalex = v_msensitivityx.value / (150.0f / scale);
-			float panscaley = v_msensitivityy.value / (150.0f / scale);
+	bool updated_follow_target = false;
 
-			fixed_t dx = (fixed_t)((I_MouseAccel(mpanx) * panscalex) * (FRACUNIT / 128.0f));
-			fixed_t dy = (fixed_t)((I_MouseAccel(mpany) * panscaley) * (FRACUNIT / 128.0f));
+	if (followplayer) {
+		if ((am_flags & AF_PANMODE) || useHeld) {
+			float panscalex = v_msensitivityx.value / ((max_scale / 2) / scale);
+			float panscaley = v_msensitivityy.value / ((max_scale / 2) / scale);
+
+			fixed_t dx = (fixed_t)((I_MouseAccel((float)mpanx) * panscalex) * (FRACUNIT / 128.0f));
+			fixed_t dy = (fixed_t)((I_MouseAccel((float)mpany) * panscaley) * (FRACUNIT / 128.0f));
 
 			automappanx += dx;
 			automappany += dy;
@@ -476,14 +477,16 @@ void AM_Ticker(void) {
 			automapx = plr->mo->x;
 			automapy = plr->mo->y;
 			automapangle = plr->mo->angle;
+			updated_follow_target = true;
 		}
 	}
+
 	if (am_flags & AF_PANGAMEPAD) {
 		automappanx += mpanx;
 		automappany += mpany;
 		mpanx = mpany = 0;
 	}
-	else {
+	else if (!updated_follow_target) {
 		if (i_interpolateframes.value) {
 			automap_prev_x_interpolation = automapx;
 			automap_prev_y_interpolation = automapy;
@@ -492,63 +495,33 @@ void AM_Ticker(void) {
 		automapx = plr->mo->x;
 		automapy = plr->mo->y;
 		automapangle = plr->mo->angle;
+		updated_follow_target = true;
 	}
+
 	if ((!followplayer || (am_flags & AF_PANGAMEPAD)) &&
-		am_flags & (AF_PANLEFT | AF_PANRIGHT | AF_PANTOP | AF_PANBOTTOM)) {
-		if (am_flags & AF_PANTOP) {
-			automappany += speed;
-		}
-
-		if (am_flags & AF_PANLEFT) {
-			automappanx -= speed;
-		}
-
-		if (am_flags & AF_PANRIGHT) {
-			automappanx += speed;
-		}
-
-		if (am_flags & AF_PANBOTTOM) {
-			automappany -= speed;
-		}
+		(am_flags & (AF_PANLEFT | AF_PANRIGHT | AF_PANTOP | AF_PANBOTTOM))) {
+		if (am_flags & AF_PANTOP)    automappany += (fixed_t)speed;
+		if (am_flags & AF_PANLEFT)   automappanx -= (fixed_t)speed;
+		if (am_flags & AF_PANRIGHT)  automappanx += (fixed_t)speed;
+		if (am_flags & AF_PANBOTTOM) automappany -= (fixed_t)speed;
 	}
 
-	//
-	// check bounding box collision
-	//
-
-	if (am_box[BOXRIGHT] < (automappanx + automapx)) {
+	if (am_box[BOXRIGHT] < (automappanx + automapx) ||
+		(automappanx + automapx) < am_box[BOXLEFT]) {
 		automappanx = oldautomapx;
 	}
-	else if ((automappanx + automapx) < am_box[BOXLEFT]) {
-		automappanx = oldautomapx;
-	}
-
-	if (am_box[BOXTOP] < (automappany + automapy)) {
+	if (am_box[BOXTOP] < (automappany + automapy) ||
+		(automappany + automapy) < am_box[BOXBOTTOM]) {
 		automappany = oldautomapy;
 	}
-	else if ((automappany + automapy) < am_box[BOXBOTTOM]) {
-		automappany = oldautomapy;
-	}
-
-	//
-	// blinking tics
-	//
 
 	if (am_blink & 0x100) {
-		if ((am_blink & 0xff) == 0xff) {
-			am_blink = 0xff;
-		}
-		else {
-			am_blink += 0x10;
-		}
+		if ((am_blink & 0xff) == 0xff) am_blink = 0xff;
+		else am_blink += 0x10;
 	}
 	else {
-		if (am_blink < 0x5F) {
-			am_blink = 0x5F | 0x100;
-		}
-		else {
-			am_blink -= 0x10;
-		}
+		if (am_blink < 0x5F) am_blink = 0x5F | 0x100;
+		else am_blink -= 0x10;
 	}
 }
 
@@ -720,7 +693,7 @@ static void AM_DrawNodes(void) {
 // This is LineDef based, not LineSeg based.
 //
 
-void AM_DrawWalls(void) {
+static void AM_DrawWalls(void) {
 	int i;
 	int x1, x2, y1, y2;
 
@@ -803,7 +776,7 @@ void AM_DrawWalls(void) {
 //
 // AM_drawPlayers
 //
-void AM_drawPlayers(void) {
+static void AM_drawPlayers(void) {
 	int i;
 	player_t* p_loop_player;
 	byte flash;
@@ -905,7 +878,7 @@ void AM_drawPlayers(void) {
 // AM_drawThings
 //
 
-void AM_drawThings(void) {
+static void AM_drawThings(void) {
 	int     i;
 	mobj_t* t;
 
@@ -1066,7 +1039,7 @@ void AM_Drawer(void) {
 		render_y += quakeviewy;
 	}
 	view_for_draw = base_angle - ANG90;
-	
+
 	AM_BeginDraw(view_for_draw, render_x, render_y);
 
 	if (!amModeCycle) {

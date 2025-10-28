@@ -19,23 +19,21 @@
 //
 //-----------------------------------------------------------------------------
 
+#include <stdlib.h>
+#include <SDL3/SDL_stdinc.h>
+
+#include "g_demo.h"
 #include "doomdef.h"
 #include "doomstat.h"
 #include "z_zone.h"
 #include "p_tick.h"
-#include "g_local.h"
-#include "g_demo.h"
+#include "g_game.h"
 #include "m_misc.h"
-#include "m_random.h"
 #include "con_console.h"
-
-#ifdef _WIN32
-#include "i_opndir.h"
-#endif
-
-#if !defined _WIN32
-#include <unistd.h>
-#endif
+#include "i_system.h"
+#include "w_wad.h"
+#include "d_main.h"
+#include "i_system_io.h"
 
 void        G_DoLoadLevel(void);
 boolean    G_CheckDemoStatus(void);
@@ -65,22 +63,18 @@ extern int      starttime;
 //
 
 void G_ReadDemoTiccmd(ticcmd_t* cmd) {
-	unsigned int lowbyte;
-
 	if (*demo_p == DEMOMARKER) {
 		// end of demo data stream
 		G_CheckDemoStatus();
 		return;
 	}
 
-	cmd->forwardmove = ((char)*demo_p++);
-	cmd->sidemove = ((char)*demo_p++);
-	lowbyte = (unsigned char)(*demo_p++);
-	cmd->angleturn = (((int)(*demo_p++)) << 8) + lowbyte;
-	lowbyte = (unsigned char)(*demo_p++);
-	cmd->pitch = (((int)(*demo_p++)) << 8) + lowbyte;
-	cmd->buttons = (unsigned char)*demo_p++;
-	cmd->buttons2 = (unsigned char)*demo_p++;
+	cmd->forwardmove = (int8_t)*demo_p++;
+	cmd->sidemove = (int8_t)*demo_p++;
+	cmd->angleturn = (int16_t)(demo_p[0] | (demo_p[1] << 8)); demo_p += 2;
+	cmd->pitch = (int16_t)(demo_p[0] | (demo_p[1] << 8)); demo_p += 2;
+	cmd->buttons = *demo_p++;
+	cmd->buttons2 = *demo_p++;
 }
 
 //
@@ -89,21 +83,16 @@ void G_ReadDemoTiccmd(ticcmd_t* cmd) {
 
 void G_WriteDemoTiccmd(ticcmd_t* cmd) {
 	char buf[8];
-	short angleturn;
-	short pitch;
 	char* p = buf;
 
-	angleturn = cmd->angleturn;
-	pitch = cmd->pitch;
-
-	*p++ = cmd->forwardmove;
-	*p++ = cmd->sidemove;
-	*p++ = angleturn & 0xff;
-	*p++ = (angleturn >> 8) & 0xff;
-	*p++ = pitch & 0xff;
-	*p++ = (pitch >> 8) & 0xff;
-	*p++ = cmd->buttons;
-	*p++ = cmd->buttons2;
+	*demo_p++ = (byte)cmd->forwardmove;        // int8
+	*demo_p++ = (byte)cmd->sidemove;           // int8
+	*demo_p++ = (byte)(cmd->angleturn & 0xff); // lo
+	*demo_p++ = (byte)(cmd->angleturn >> 8);   // hi
+	*demo_p++ = (byte)(cmd->pitch & 0xff);     // lo
+	*demo_p++ = (byte)(cmd->pitch >> 8);       // hi
+	*demo_p++ = (byte)cmd->buttons;
+	*demo_p++ = (byte)cmd->buttons2;
 
 	if (fwrite(buf, p - buf, 1, demofp) != 1) {
 		I_Error("G_WriteDemoTiccmd: error writing demo");
@@ -127,11 +116,7 @@ void G_RecordDemo(const char* name) {
 
 	dstrcpy(demoname, name);
 	dstrcat(demoname, ".lmp");
-#ifdef _WIN32
-	if (_access(demoname, F_OK))
-#else
 	if (access(demoname, F_OK))
-#endif
 	{
 		demofp = fopen(demoname, "wb");
 	}
@@ -140,11 +125,7 @@ void G_RecordDemo(const char* name) {
 
 		while (demonum < 10000) {
 			sprintf(demoname, "%s%i.lmp", name, demonum);
-#ifdef _WIN32
-			if (_access(demoname, F_OK))
-#else
 			if (access(demoname, F_OK))
-#endif
 			{
 				demofp = fopen(demoname, "wb");
 				break;
@@ -208,7 +189,7 @@ void G_RecordDemo(const char* name) {
 void G_PlayDemo(const char* name) {
 	int i;
 	int p;
-	char filename[256];
+	filepath_t filename;
 
 	gameaction = ga_nothing;
 	endDemo = false;
@@ -220,7 +201,7 @@ void G_PlayDemo(const char* name) {
 			dstrcpy(filename, myargv[p + 1]);
 		}
 		else {
-			dsprintf(filename, "%s.lmp", myargv[p + 1]);
+			SDL_snprintf(filename, sizeof(filename), "%s.lmp", myargv[p + 1]);
 		}
 
 		CON_DPrintf("--------Reading demo %s--------\n", filename);

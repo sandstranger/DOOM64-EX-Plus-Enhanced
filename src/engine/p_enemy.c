@@ -32,9 +32,8 @@
 #include "p_local.h"
 #include "p_macros.h"
 #include "s_sound.h"
-#include "g_game.h"
 #include "doomstat.h"
-#include "r_local.h"
+#include "r_main.h"
 #include "sounds.h"
 #include "tables.h"
 #include "info.h"
@@ -42,6 +41,7 @@
 
 CVAR(m_reworkedvanillasounds, 1);
 CVAR(m_limitpain, 1);
+CVAR(m_revenantprojectilespeed, 0);
 
 typedef enum {
 	DI_EAST,
@@ -304,7 +304,7 @@ static mobj_t* P_MissileAttack(mobj_t* actor, int direction) {
 		type = MT_PROJ_NIGHTMAREHEAD;
 		aim = true;
 		break;
-default:
+	default:	
 		break;
 	}
 
@@ -334,9 +334,9 @@ void T_MobjExplode(mobjexp_t* mexp) {
 	mexp->delay = mexp->delaymax;
 
 	if (mobj->state != (state_t*)S_NULL) {
-		x = (((P_Random() - P_Random()) << 14) + mobj->x);
-		y = (((P_Random() - P_Random()) << 14) + mobj->y);
-		z = (((P_Random() - P_Random()) << 14) + mobj->z);
+		x = ((((int32_t)P_SubRandom()) << 14) + mobj->x);
+		y = ((((int32_t)P_SubRandom()) << 14) + mobj->y);
+		z = ((((int32_t)P_SubRandom()) << 14) + mobj->z);
 
 		exp = P_SpawnMobj(x, y, z + (mobj->height << 1), MT_EXPLOSION2);
 
@@ -688,12 +688,6 @@ void A_Look(mobj_t* actor) {
 			sound = sfx_impsit1 + (P_Random() & 1);
 			break;
 
-		case sfx_dscgsit1:
-		case sfx_dscgsit2:
-		case sfx_dscgsit3:
-			sound = sfx_dscgsit1 + (P_Random() % 3);
-			break;
-
 		default:
 			sound = actor->info->seesound;
 			break;
@@ -979,7 +973,7 @@ void A_SPosAttack(mobj_t* actor) {
 	slope = P_AimLineAttack(actor, bangle, 0, MISSILERANGE);
 
 	for (i = 0; i < 3; i++) {
-		angle = bangle + ((P_Random() - P_Random()) << 20);
+		angle = bangle + (((int32_t)P_SubRandom()) << 20);
 		damage = ((P_Random() % 5) * 3) + 3;
 		P_LineAttack(actor, angle, MISSILERANGE, slope, damage);
 	}
@@ -1000,7 +994,7 @@ void A_CPosAttack(mobj_t* actor)
 	bangle = actor->angle;
 	slope = P_AimLineAttack(actor, bangle, 0, MISSILERANGE);
 
-	angle = bangle + ((P_Random() - P_Random()) << 20);
+	angle = bangle + (((int32_t)P_SubRandom()) << 20);
 	damage = ((P_Random() % 5) * 3) + 3;
 	P_LineAttack(actor, angle, MISSILERANGE, slope, damage);
 }
@@ -1042,7 +1036,7 @@ void A_PlayAttack(mobj_t* actor) {
 
 	slope = P_AimLineAttack(actor, bangle, 0, MISSILERANGE);
 
-	angle = bangle + ((P_Random() - P_Random()) << 20);
+	angle = bangle + (((int32_t)P_SubRandom()) << 20);
 	hitdice = (P_Random() % 5);
 	damage = ((hitdice << 2) - hitdice) + 3;
 	P_LineAttack(actor, angle, MISSILERANGE, slope, damage);
@@ -1112,21 +1106,17 @@ void A_TroopMelee(mobj_t* actor) {
 	}
 
 	if (P_CheckMeleeRange(actor)) {
-
 		if (m_reworkedvanillasounds.value == 1)
 		{
 			// reworked vanilla sounds
 			switch (actor->type) {
 			case MT_IMP1:
-				sound = sfx_scratch1;
-				break;
-
 			case MT_IMP2:
 				sound = sfx_scratch1;
 				break;
 			}
 			sound += P_Random() % 4; // four different melee attack sounds
-			
+
 		}
 		else if (m_reworkedvanillasounds.value == 0)
 		{
@@ -1190,7 +1180,6 @@ void A_HeadAttack(mobj_t* actor) {
 
 	A_FaceTarget(actor);
 	if (P_CheckMeleeRange(actor)) {
-
 		if (m_reworkedvanillasounds.value == 1)
 		{
 			// reworked vanilla sounds
@@ -1201,7 +1190,7 @@ void A_HeadAttack(mobj_t* actor) {
 				break;
 			}
 			sound += P_Random() % 4; // four different melee attack sounds
-			
+
 		}
 		else if (m_reworkedvanillasounds.value == 0)
 		{
@@ -1260,7 +1249,7 @@ void A_CyberDeathEvent(mobj_t* actor) {
 void A_BruisAttack(mobj_t* actor) {
 	int    damage;
 	int    hitdice;
-	int sound;
+	int    sound;
 
 	if (!actor->target)
 	{
@@ -1274,15 +1263,12 @@ void A_BruisAttack(mobj_t* actor) {
 			// reworked vanilla sounds
 			switch (actor->type) {
 			case MT_BRUISER1:
-				sound = sfx_scratch1;
-				break;
-
 			case MT_BRUISER2:
 				sound = sfx_scratch1;
 				break;
 			}
 			sound += P_Random() % 4; // four different melee attack sounds
-			
+
 		}
 		else if (m_reworkedvanillasounds.value == 0)
 		{
@@ -1319,7 +1305,7 @@ void A_RectChase(mobj_t* actor) {
 		A_Chase(actor);
 		return;
 	}
-	
+
 	A_FaceTarget(actor);
 	S_StartSound(actor, actor->info->attacksound);
 	P_SetMobjState(actor, actor->info->meleestate);
@@ -1465,7 +1451,6 @@ void A_RectGroundFire(mobj_t* actor) {
 	}
 
 	A_FaceTarget(actor);
-
 
 	mo = P_SpawnMobj(actor->x, actor->y, actor->z, MT_PROJ_RECTFIRE);
 	// styd: Fixed when the mother demon has the nightmare flag it's fire projectiles and tracers projectiles are now in nightmare mode
@@ -1725,13 +1710,13 @@ void A_PainShootSkull(mobj_t* actor, angle_t angle) {
 			count++;
 		}
 
-	// if there are all ready 17 skulls on the level, don't spit another one
-	// styd: Adds an option to enable or disable the limit on the number of lost souls spit by pain elemental
-	    if (m_limitpain.value == 1) {
-		   if (count >= 17) {
-			   return;
-		   }
-	    }
+		// if there are all ready 17 skulls on the level, don't spit another one
+		// styd: Adds an option to enable or disable the limit on the number of lost souls spit by pain elemental
+		if (m_limitpain.value == 1) {
+			if (count >= 17) {
+				return;
+			}
+		}
 	}
 
 	an = angle >> ANGLETOFINESHIFT;
@@ -1827,31 +1812,25 @@ void A_FadeIn(mobj_t* actor) {
 void A_Scream(mobj_t* actor) {
 	int sound;
 
-		switch (actor->info->deathsound) {
-		case 0:
-			return;
+	switch (actor->info->deathsound) {
+	case 0:
+		return;
 
-		case sfx_posdie1:
-		case sfx_posdie2:
-		case sfx_posdie3:
-			sound = sfx_posdie1 + (P_Random() % 3);
-			break;
+	case sfx_posdie1:
+	case sfx_posdie2:
+	case sfx_posdie3:
+		sound = sfx_posdie1 + (P_Random() % 3);
+		break;
 
-		case sfx_impdth1:
-		case sfx_impdth2:
-			sound = sfx_impdth1 + (P_Random() & 1);
-			break;
+	case sfx_impdth1:
+	case sfx_impdth2:
+		sound = sfx_impdth1 + (P_Random() & 1);
+		break;
 
-		case sfx_dscgdth1:
-		case sfx_dscgdth2:
-		case sfx_dscgdth3:
-			sound = sfx_dscgdth1 + (P_Random() % 3);
-			break;
-
-		default:
-			sound = actor->info->deathsound;
-			break;
-		}
+	default:
+		sound = actor->info->deathsound;
+		break;
+	}
 
 	S_StartSound(actor, sound);
 }
@@ -2024,7 +2003,17 @@ void A_SkelMissile(mobj_t* actor, int direction)
 		true);
 	mo->x += mo->momx;
 	mo->y += mo->momy;
-	mo->tracer = actor->target;
+	P_SetTarget(&mo->tracer, actor->target);
+
+	// Styd: Add an option to change the speed of the revenant projectile in style PSX DOOM or in style Classic DOOM
+	if (m_revenantprojectilespeed.value == 0) {
+		// Revenant Projectile Speed PSX DOOM
+		mo->info->speed = 7 * FRACUNIT;
+	}
+	else if (m_revenantprojectilespeed.value == 1) {
+		// Revenant Projectile Speed DOOM Classic
+		mo->info->speed = 10 * FRACUNIT;
+	}
 }
 
 //
@@ -2095,7 +2084,7 @@ void A_SpidAttack(mobj_t* actor)
 
 	for (i = 0; i < 3; i++)
 	{
-		angle = bangle + ((P_Random() - P_Random()) << 20);
+		angle = bangle + (((int32_t)P_SubRandom()) << 20);
 		damage = ((P_Random() & 5) * 3) + 3;
 		P_LineAttack(actor, angle, MISSILERANGE, slope, damage);
 	}
@@ -2114,7 +2103,7 @@ void A_SpidDeathEvent(mobj_t* actor)
 	exp->thinker.function.acp1 = (actionf_p1)T_MobjExplode;
 	exp->delaymax = 2;
 	exp->delay = 0;
-	exp->lifetime = 20;
+	exp->lifetime = 14;
 	P_SetTarget(&exp->mobj, actor);
 
 	if (actor->info->deathsound) {
@@ -2190,8 +2179,8 @@ boolean PIT_VileCheck(mobj_t* thing)
 
 	maxdist = thing->info->radius + mobjinfo[MT_VILE].radius;
 
-	if (abs(thing->x - viletryx) > maxdist
-		|| abs(thing->y - viletryy) > maxdist)
+	if (D_abs(thing->x - viletryx) > maxdist
+		|| D_abs(thing->y - viletryy) > maxdist)
 		return true;		// not actually touching
 
 	corpsehit = thing;
@@ -2260,7 +2249,7 @@ void A_VileChase(mobj_t* actor)
 					corpsehit->height <<= 2;
 					corpsehit->flags = info->flags | corpsehit->flags & MF_NIGHTMARE; // styd: Fixed Nightmare type monsters resurrected by Arch Vile not preserving their transparency and colors
 					corpsehit->health = info->spawnhealth;
-					corpsehit->target = NULL;
+					P_SetTarget(&corpsehit->target, NULL);
 
 					// styd: Fixes for Nightmare type monsters resurrected by Arch Vile not having x2 health
 					if (corpsehit->flags & MF_NIGHTMARE) {
@@ -2270,9 +2259,6 @@ void A_VileChase(mobj_t* actor)
 						corpsehit->alpha = 128;
 					}
 
-					// styd: Fixes a vanilla bug of Doom engine when Arch Vile resurrects monsters, monsters that are resurrected by Arch Vile are not counted in the total kill counter of intermission, which means that you can exceed more than 100% kill on the total kill counter.
-					totalkills++;
-					
 					return;
 				}
 			}
@@ -2305,12 +2291,10 @@ void A_VileTarget(mobj_t* actor)
 
 	A_FaceTarget(actor);
 
-	
-
 	// killough 12/98: fix Vile fog coordinates (with without demo_version)
-	fog = P_SpawnMobj(actor->target->x, 
-		              actor->target->y,
-		              actor->target->z, MT_FIRE);
+	fog = P_SpawnMobj(actor->target->x,
+		actor->target->y,
+		actor->target->z, MT_FIRE);
 
 	// styd: Fixes when Arch Vile has the nightmare flag his fire attack is now in nightmare mode
 	if (actor->flags & MF_NIGHTMARE) {
@@ -2407,4 +2391,3 @@ void A_AnnihilatorAttack(mobj_t* actor) {
 	P_MissileAttack(actor, DP_LEFT);
 	P_MissileAttack(actor, DP_RIGHT);
 }
-

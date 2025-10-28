@@ -25,9 +25,9 @@
 //-----------------------------------------------------------------------------
 
 #include <stdio.h>
-#include "doomdef.h"
-#include "g_game.h"
+
 #include "st_stuff.h"
+#include "doomdef.h"
 #include "r_main.h"
 #include "p_local.h"
 #include "m_cheat.h"
@@ -37,7 +37,6 @@
 #include "sounds.h"
 #include "m_shift.h"
 #include "con_console.h"
-#include "i_system.h"
 #include "am_map.h"
 #include "gl_texture.h"
 #include "g_actions.h"
@@ -45,6 +44,11 @@
 #include "p_setup.h"
 #include "gl_draw.h"
 #include "g_demo.h"
+#include "dgl.h"
+#include "i_swap.h"
+#include "w_wad.h"
+#include "i_shaders.h"
+#include "i_video.h"
 
 void M_DrawXInputButton(int x, int y, int button);
 
@@ -66,6 +70,17 @@ CVAR_EXTERNAL(v_accessibility);
 CVAR_EXTERNAL(r_texturecombiner);
 CVAR_EXTERNAL(r_hudFilter);
 
+extern int game_world_shader_scope;
+
+static float st_flash_target_r = 1.0f;
+static float st_flash_target_g = 1.0f;
+static float st_flash_target_b = 1.0f;
+static float st_flash_target_a = 0.0f;
+static float st_flash_smooth_r = 1.0f;
+static float st_flash_smooth_g = 1.0f;
+static float st_flash_smooth_b = 1.0f;
+static float st_flash_smooth_a = 0.0f;
+
 //
 // STATUS BAR DATA
 //
@@ -82,10 +97,10 @@ static keyflash_t flashCards[NUMCARDS];    /* INFO FOR FLASHING CARDS & SKULLS *
 #define    FLASHDELAY      8       /* # of tics delay (1/30 sec) */
 #define FLASHTIMES      6       /* # of times to flash new frag amount (EVEN!) */
 
-#define ST_HEALTHTEXTX  29
+#define ST_HEALTHTEXTX  32
 #define ST_HEALTHTEXTY  203
 
-#define ST_ARMORTEXTX   253
+#define ST_ARMORTEXTX   232
 #define ST_ARMORTEXTY   203
 
 #define ST_KEYX         78
@@ -582,8 +597,8 @@ static void ST_DrawStatus(void) {
 	width = (float)gfxwidth[lump];
 	height = (float)gfxheight[lump];
 
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, DGL_CLAMP);
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, DGL_CLAMP);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (int)r_hudFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
 	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (int)r_hudFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
 
@@ -684,10 +699,11 @@ void ST_DrawCrosshair(int x, int y, int slot, byte scalefactor, rcolor color) {
 	GL_BindGfxTexture("CRSHAIRS", true);
 	GL_SetState(GLSTATE_BLEND, 1);
 
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, DGL_CLAMP);
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, DGL_CLAMP);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 	u = 1.0f / st_crosshairs;
+
 	scale = scalefactor == 0 ? ST_CROSSHAIRSIZE : (ST_CROSSHAIRSIZE / (1 << scalefactor));
 
 	GL_SetupAndDraw2DQuad((float)x, (float)y, scale, scale,
@@ -703,19 +719,19 @@ void ST_DrawCrosshair(int x, int y, int slot, byte scalefactor, rcolor color) {
 static void ST_DrawJMessage(int pic) {
 	int lump = st_jmessages[pic];
 
-	GL_BindGfxTexture(lumpinfo[lump].name, true);
+	int gfxid = GL_BindGfxTexture(lumpinfo[lump].name, true);
 	GL_SetState(GLSTATE_BLEND, 1);
 
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, DGL_CLAMP);
-	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, DGL_CLAMP);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 	GL_SetupAndDraw2DQuad(
 		20,
 		20,
-		gfxwidth[lump - g_start],
-		gfxheight[lump - g_start],
+		gfxwidth[gfxid],
+		gfxheight[gfxid],
 		0,
 		1,
 		0,
@@ -738,11 +754,22 @@ void ST_Drawer(void) {
 	// flash overlay
 	//
 
-    if((st_flashoverlay.value ||
-            gl_max_texture_units <= 2 ||
-            r_texturecombiner.value <= 0) && flashcolor) {
-        ST_FlashingScreen(st_flash_r, st_flash_g, st_flash_b, st_flash_a);
-    }
+	// atsb: this one was easy, replace with a shader and point the values to the GLSL..  done
+	if (v_accessibility.value < 1) {
+		float smoothing = 0.90;
+
+		st_flash_smooth_r = st_flash_smooth_r * smoothing + st_flash_target_r * (1.0f - smoothing);
+		st_flash_smooth_g = st_flash_smooth_g * smoothing + st_flash_target_g * (1.0f - smoothing);
+		st_flash_smooth_b = st_flash_smooth_b * smoothing + st_flash_target_b * (1.0f - smoothing);
+		st_flash_smooth_a = st_flash_smooth_a * smoothing + st_flash_target_a * (1.0f - smoothing);
+
+		if (st_flash_smooth_a > 0.012f) {
+			I_ShaderFullscreenTint(st_flash_smooth_r, st_flash_smooth_g, st_flash_smooth_b, st_flash_smooth_a);
+		}
+	}
+
+	I_ShaderUnBind();
+	game_world_shader_scope = 0;
 
 	if (iwadDemo) {
 		return;
@@ -814,7 +841,7 @@ void ST_Drawer(void) {
 			case am_cell:
 				Draw_Sprite2D(SPR_CELL, 0, 0, 524, 464, 0.5f, 0, WHITEALPHA(0xC0));
 				break;
-		default:
+			default:
 				break;
 			}
 
@@ -870,7 +897,7 @@ void ST_Drawer(void) {
 	}
 	else if (st_msg && (int)m_messages.value && plyr->messagepic == 40 && hud_disablesecretmessages.value != 1) {
 		const int pos = stats_always_on ? 180 : 80;
-		Draw_Text(pos, pos, YELLOW, scale, false, st_msg);
+		Draw_TextSecret(pos, pos, YELLOW, scale, false, st_msg);
 	}
 
 	// Standard messages
@@ -923,7 +950,7 @@ void ST_Drawer(void) {
 	// draw crosshairs
 	//
 
-	if (st_crosshairs && !automapactive) {
+	if (st_crosshairs && !(automapactive || menuactive || console_enabled)) {
 		int x = (SCREENWIDTH / 2) - (ST_CROSSHAIRSIZE / 8);
 		int y = (SCREENHEIGHT / 2) - (ST_CROSSHAIRSIZE / 8);
 		int alpha = (int)st_crosshairopacity.value;
@@ -936,7 +963,13 @@ void ST_Drawer(void) {
 			alpha = 0;
 		}
 
-		ST_DrawCrosshair(x, y, (int)st_crosshair.value, 2, WHITEALPHA(alpha));
+		// nominal scale value for 1080p is 2
+		// for [1080p; 1620p[ => 2
+		// for [1620p; 2640p[ => 3
+
+		int scale = 1 + SDL_lroundf(win_px_h / 1080.f);
+
+		ST_DrawCrosshair(x, y, (int)st_crosshair.value, scale, WHITEALPHA(alpha));
 	}
 
 	//
@@ -949,21 +982,12 @@ void ST_Drawer(void) {
 			char contextstring[32];
 			float x;
 
-#if defined(_WIN32) && defined(USE_XINPUT)  // XINPUT
-			if (xgamepad.connected) {
-				M_DrawXInputButton(140, 156, XINPUT_GAMEPAD_A);
-				Draw_Text(213, 214, WHITEALPHA(0xA0), 0.75, false, "Use");
-			}
-			else
-#endif
-			{
-				G_GetActionBindings(usestring, "+use");
-				sprintf(contextstring, "(%s)Use", usestring);
+			G_GetActionBindings(usestring, "+use");
+			sprintf(contextstring, "(%s)Use", usestring);
 
-				x = (160 / 0.75f) - ((dstrlen(contextstring) * 8) / 2);
+			x = (160 / 0.75f) - ((dstrlen(contextstring) * 8) / 2);
 
-				Draw_Text((int)x, 214, WHITEALPHA(0xA0), 0.75f, false, contextstring);
-			}
+			Draw_Text((int)x, 214, WHITEALPHA(0xA0), 0.75f, false, contextstring);
 		}
 	}
 
@@ -1012,7 +1036,10 @@ void ST_Drawer(void) {
 		Draw_Text(520, 40, RED, 0.5f, false,
 			"T:%2.2d:%2.2d", (leveltime / TICRATE) / 60, (leveltime / TICRATE) % 60);
 	}
+	I_ShaderBind();
+	game_world_shader_scope = 1;
 }
+
 
 //
 // ST_UpdateFlash
@@ -1027,81 +1054,90 @@ void ST_UpdateFlash(void) {
 
 	flashcolor = 0;
 
+	st_flash_target_a = 0.0f;
+
 	// invulnerability flash (white)
 	if (p->powers[pw_invulnerability] > 61 || (p->powers[pw_invulnerability] & 8)) {
 		flashcolor = LONG(D_RGBA(128, 128, 128, 0xff));
-		st_flash_r = 255;
-		st_flash_g = 255;
-		st_flash_b = 255;
-		st_flash_a = 64;
+		st_flash_target_r = 1.0f;
+		st_flash_target_g = 1.0f;
+		st_flash_target_b = 1.0f;
+		st_flash_target_a = 64.0f / 255.0f;
 	}
 	// bfg flash (green)
 	else if (p->bfgcount) {
 		flashcolor = LONG(D_RGBA(0, p->bfgcount & 0xff, 0, 0xff));
-		st_flash_r = 0;
-		st_flash_g = 255;
-		st_flash_b = 0;
-		st_flash_a = p->bfgcount;
+		st_flash_target_r = 0.0f;
+		st_flash_target_g = 1.0f;
+		st_flash_target_b = 0.0f;
+
+		float raw_alpha = (float)p->bfgcount / 255.0f;
+
+		if (raw_alpha > 0.0f) {
+			float min_flash = 0.08f;
+			float max_flash = 0.6f;
+
+			st_flash_target_a = min_flash + (raw_alpha * (max_flash - min_flash));
+		}
+		else {
+			st_flash_target_a = 0.0f;
+		}
 	}
 	// damage and strength flash (red)
 	else if (p->damagecount || (p->powers[pw_strength] > 1)) {
 		int r1 = p->damagecount;
 		int r2 = p->powers[pw_strength];
 
-		if (r1) {
-			if (r1 > ST_MAXDMGCOUNT) {
-				r1 = ST_MAXDMGCOUNT;
-			}
-		}
+		if (r1 > ST_MAXDMGCOUNT) r1 = ST_MAXDMGCOUNT;
+		if (r2 == 1) r2 = 0;
+		else if (r2 > ST_MAXSTRCOUNT) r2 = ST_MAXSTRCOUNT;
 
-		if (r2 == 1) {
-			r2 = 0;
-		}
-		else if (r2 > ST_MAXSTRCOUNT) {
-			r2 = ST_MAXSTRCOUNT;
-		}
-
-		// take priority based on value
 		if (r1 > r2) {
 			flashcolor = LONG(D_RGBA(r1 & 0xff, 0, 0, 0xff));
-			st_flash_r = 255;
-			st_flash_g = 0;
-			st_flash_b = 0;
-			st_flash_a = r1;
+			st_flash_target_a = (float)r1 / 255.0f;
 		}
 		else {
 			flashcolor = LONG(D_RGBA(r2 & 0xff, 0, 0, 0xff));
-			st_flash_r = 255;
-			st_flash_g = 0;
-			st_flash_b = 0;
-			st_flash_a = r2;
+			st_flash_target_a = (float)r2 / 255.0f;
 		}
+		st_flash_target_r = 1.0f;
+		st_flash_target_g = 0.0f;
+		st_flash_target_b = 0.0f;
+	}
+	// light amplification goggles
+	else if (p->powers[pw_infrared] > 61 || (p->powers[pw_infrared] & 8)) {
+		flashcolor = LONG(D_RGBA(64, 64, 64, 0xff));
+		st_flash_target_r = 1.0f;
+		st_flash_target_g = 1.0f;
+		st_flash_target_b = 1.0f;
+		st_flash_target_a = 44.0f / 255.0f;
 	}
 	// suit flash (green/yellow)
 	else if (p->powers[pw_ironfeet] > 61 || (p->powers[pw_ironfeet] & 8)) {
 		flashcolor = LONG(D_RGBA(0, 32, 4, 0xff));
-		st_flash_r = 0;
-		st_flash_g = 255;
-		st_flash_b = 31;
-		st_flash_a = 64;
+		st_flash_target_r = 0.0f;
+		st_flash_target_g = 1.0f;
+		st_flash_target_b = 31.0f / 255.0f;
+		st_flash_target_a = 64.0f / 255.0f;
 	}
 	// bonus flash (yellow)
 	else if (p->bonuscount) {
 		int c1 = (p->bonuscount + 8) >> 3;
 		int c2;
 
-		if (c1 > ST_MAXBONCOUNT) {
-			c1 = ST_MAXBONCOUNT;
-		}
-
+		if (c1 > ST_MAXBONCOUNT) c1 = ST_MAXBONCOUNT;
 		c2 = (((c1 << 2) + c1) << 1);
 
 		flashcolor = LONG(D_RGBA(c2 & 0xff, c2 & 0xff, c1 & 0xff, 0xff));
-		st_flash_r = 255;
-		st_flash_g = 255;
-		st_flash_b = 0;
-		st_flash_a = (p->bonuscount + 8) << 1;
+		st_flash_target_r = 1.0f;
+		st_flash_target_g = 1.0f;
+		st_flash_target_b = 0.0f;
+		st_flash_target_a = (float)((p->bonuscount + 8) << 1) / 255.0f;
 	}
+	st_flash_r = (byte)(st_flash_target_r * 255.0f);
+	st_flash_g = (byte)(st_flash_target_g * 255.0f);
+	st_flash_b = (byte)(st_flash_target_b * 255.0f);
+	st_flash_a = (byte)(st_flash_target_a * 255.0f);
 }
 
 //
@@ -1129,7 +1165,7 @@ void ST_Init(void) {
 
 	for (i = 0; i < MAXPLAYERS; i++) {
 		if (playeringame[i] && net_player_names[i][0]) {
-			snprintf(player_names[i], MAXPLAYERNAME, "%s", net_player_names[i]);
+			SDL_snprintf(player_names[i], MAXPLAYERNAME, "%s", net_player_names[i]);
 		}
 	}
 
@@ -1149,8 +1185,11 @@ void ST_Init(void) {
 	st_crosshairs = 0;
 	lump = W_CheckNumForName("CRSHAIRS");
 
-	if (!(lump <= -1)) {
-		st_crosshairs = (gfxwidth[lump - g_start] / ST_CROSSHAIRSIZE);
+	if (lump >= 0) {
+		int gfxid = GL_GetGfxIdForLump(lump);
+		if (gfxid != -1) {
+			st_crosshairs = (gfxwidth[gfxid] / ST_CROSSHAIRSIZE);
+		}
 	}
 
 	dmgmarkers.next = dmgmarkers.prev = &dmgmarkers;
@@ -1516,7 +1555,7 @@ static void ST_DisplayName(int playernum) {
 	color |= ((255 - (int)((float)distance * 0.19921875f)) << 24);
 
 	// display player name
-	dsnprintf(name, MAXPLAYERNAME, "%s", player_names[playernum]);
+	SDL_snprintf(name, MAXPLAYERNAME, "%s", player_names[playernum]);
 	Draw_Text(screenx, screeny, color, 1.0f, 0, name);
 }
 

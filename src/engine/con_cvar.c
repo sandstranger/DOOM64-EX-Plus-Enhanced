@@ -19,13 +19,12 @@
 //
 //-----------------------------------------------------------------------------
 
-#include "doomstat.h"
+#include "con_cvar.h"
 #include "i_video.h"
 #include "i_sdlinput.h"
 #include "con_console.h"
 #include "z_zone.h"
 #include "i_system.h"
-#include "con_cvar.h"
 #include "am_map.h"
 #include "s_sound.h"
 #include "r_main.h"
@@ -154,7 +153,7 @@ void CON_CvarRegister(cvar_t* variable) {
 	dstrcpy(variable->string, oldstr);
 	variable->value = datof(variable->string);
 	variable->defvalue = Z_Malloc(dstrlen(variable->string) + 1, PU_STATIC, 0);
-	dstrcpy((char*)variable->defvalue, variable->string);
+	dstrcpy((char *)variable->defvalue, variable->string);
 
 	// link the variable in
 	variable->next = cvarcap;
@@ -176,6 +175,7 @@ void CON_CvarInit(void) {
 	M_RegisterCvars();
 	P_RegisterCvars();
 	G_RegisterCvars();
+	LOC_RegisterCvars();
 
 	G_AddCommand("listcvars", CMD_ListCvars, 0);
 }

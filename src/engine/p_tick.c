@@ -21,6 +21,7 @@
 //
 //-----------------------------------------------------------------------------
 
+#include "p_tick.h"
 #include "doomstat.h"
 #include "z_zone.h"
 #include "p_local.h"
@@ -34,6 +35,7 @@
 #include "r_wipe.h"
 #include "p_setup.h"
 #include "g_demo.h"
+#include "con_cvar.h"
 
 CVAR_EXTERNAL(i_interpolateframes);
 CVAR_EXTERNAL(p_damageindicator);
@@ -236,7 +238,7 @@ static void P_UpdateFrameStates(void) {
 		sector->frame_z1[0] = sector->floorheight;
 		sector->frame_z2[0] = sector->ceilingheight;
 		sector->frame_z1[1] = sector->frame_z1[0];
-		sector->frame_z2[1] = sector->frame_z1[0];
+		sector->frame_z2[1] = sector->frame_z2[0];
 	}
 
 	//
@@ -328,12 +330,12 @@ void P_Stop(void) {
 		ST_ClearDamageMarkers();
 	}
 
-	// free level tags
-	Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
-
 	if (automapactive) {
 		AM_Stop();
 	}
+
+	// free level tags
+	Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
 
 	// music continues on exit if defined
 	if (!P_GetMapInfo(gamemap)->contmusexit) {
