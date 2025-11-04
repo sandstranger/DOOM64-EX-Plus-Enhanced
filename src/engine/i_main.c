@@ -473,3 +473,13 @@ int main(int argc, char *argv[]) {
 
 	return 0;
 }
+
+#ifdef ANDROID
+void resumeSound() {}
+
+void pauseSound() {}
+
+bool needToShowScreenControls() {
+    return true;
+}
+#endif
