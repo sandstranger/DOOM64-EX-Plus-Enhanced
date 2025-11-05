@@ -463,7 +463,7 @@ int main(int argc, char *argv[]) {
 	myargv = argv;
 
 #ifdef ANDROID
-    pathToDoom64MainWadsFolder = getenv ("PATH_TO_DOOM64_MAIN_WADS_FOLDER");
+    pathToDoom64MainWadsFolder = getenv ("PATH_TO_RESOURCES");
     pathToDoom64ModsFolder = getenv("PATH_TO_DOOM64_MODS_FOLDER");
     pathToDoom64UserFolder = getenv("PATH_TO_DOOM_64_USER_FOLDER");
     chdir(pathToDoom64UserFolder);
