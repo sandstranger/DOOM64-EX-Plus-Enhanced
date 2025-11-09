@@ -1498,8 +1498,8 @@ menuitem_t MouseMenu[] = {
 };
 
 menudefault_t MouseDefault[] = {
-	{ &v_msensitivityx, 5 },
-	{ &v_msensitivityy, 5 },
+	{ &v_msensitivityx, 32 },
+	{ &v_msensitivityy, 32 },
 	{ &v_macceleration, 0 },
 #ifdef HAS_MENU_MOUSE_LOOK
 	{ &v_mlook, 0 },
@@ -3595,8 +3595,13 @@ static boolean M_CursorHighlightItem(menu_t* menu) {
 	max = (menu->numpageitems == -1) ? menu->numitems : menu->numpageitems;
 	x = menu->x;
 	y = menu->y;
-	mx = cursor_x;
+#if ANDROID
+	mx = mouse_x;
+	my = mouse_y;
+#else
+    mx = cursor_x;
 	my = cursor_y;
+#endif
 	scalex = ((float)video_width /
 		((float)SCREENHEIGHT * video_ratio)) * menu->scale;
 	scaley = ((float)video_height /
@@ -3866,7 +3871,11 @@ boolean M_Responder(event_t* ev) {
 			shiftdown = false;
 		}
 	}
+#ifdef ANDROID
+	else if (ev->type == ev_mouse) {
+#else
 	else if (ev->type == ev_mouse && (ev->data2 != 0.0 || ev->data3 != 0.0)) {
+#endif
 		// handle mouse-over selection
 		if (m_menumouse.value) {
 			M_CheckDragThermoBar(ev, currentMenu);
@@ -4322,8 +4331,14 @@ static void M_DrawCursor()
 	if (gfxIdx < 0)
 		return;
 
-	factor = (((float)SCREENHEIGHT * video_ratio) / (float)video_width) / scale;
-
+#ifdef ANDROID
+    int screen_w = SCREENWIDTH;
+    int screen_h = SCREENHEIGHT;
+    float factorX = (float)screen_w  / (float)video_width  / scale;
+    float factorY = (float)screen_h  / (float)video_height / scale;
+#else
+    factor = (((float)SCREENHEIGHT * video_ratio) / (float)video_width) / scale;
+#endif
 	// atsb: fixes cursor alpha
 	dglDisable(GL_COLOR_LOGIC_OP);
 	dglDisable(GL_DEPTH_TEST);
@@ -4342,9 +4357,16 @@ static void M_DrawCursor()
 
 	dglColor4ub(255, 255, 255, 255);
 
-	GL_SetupAndDraw2DQuad((float)cursor_x * factor, (float)cursor_y * factor,
-		gfxwidth[gfxIdx], gfxheight[gfxIdx], 0, 1.0f, 0, 1.0f, WHITE, 0);
+#ifdef ANDROID
+    float draw_x = (float)cursor_x * factorX;
+    float draw_y = (float)cursor_y * factorY;
 
+    GL_SetupAndDraw2DQuad(draw_x, draw_y,
+		gfxwidth[gfxIdx], gfxheight[gfxIdx], 0, 1.0f, 0, 1.0f, WHITE, 0);
+#else
+    GL_SetupAndDraw2DQuad((float)cursor_x * factor, (float)cursor_y * factor,
+		gfxwidth[gfxIdx], gfxheight[gfxIdx], 0, 1.0f, 0, 1.0f, WHITE, 0);
+#endif
 	GL_SetState(GLSTATE_BLEND, 0);
 	dglDepthMask(GL_TRUE);
 	GL_SetOrthoScale(1.0f);

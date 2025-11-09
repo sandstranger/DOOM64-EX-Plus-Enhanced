@@ -35,8 +35,8 @@
 #include <stdlib.h>
 #endif
 
-CVAR(v_msensitivityx, 5);
-CVAR(v_msensitivityy, 5);
+CVAR(v_msensitivityx, 32);
+CVAR(v_msensitivityy, 32);
 CVAR(v_macceleration, 0);
 CVAR(v_mlookinvert, 0);
 CVAR(v_yaxismove, 0);
@@ -657,12 +657,18 @@ void I_GetEvent(SDL_Event* Event) {
 		if (!window_focused)
 			break;
 
+#if ANDROID
+        if (Event->type == SDL_EVENT_MOUSE_BUTTON_DOWN){
+            I_ReadMouse();
+        }
+#endif
 		event.type = (Event->type == SDL_EVENT_MOUSE_BUTTON_UP) ? ev_mouseup : ev_mousedown;
 		event.data1 =
 			I_SDLtoDoomMouseState(SDL_GetMouseState(NULL, NULL));
 		event.data2 = event.data3 = 0;
 
 		D_PostEvent(&event);
+
 		break;
 
 	case SDL_EVENT_MOUSE_WHEEL:
