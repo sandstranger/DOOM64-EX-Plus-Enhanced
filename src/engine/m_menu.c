@@ -3524,9 +3524,14 @@ static void M_CheckDragThermoBar(event_t* ev, menu_t* menu) {
 	bar = menu->thermobars;
 	x = menu->x;
 	y = menu->y;
-	mx = cursor_x;
+#if ANDROID
+	mx = mouse_x;
+	my = mouse_y;
+#else
+    mx = cursor_x;
 	my = cursor_y;
-	scalex = ((float)video_width /
+#endif
+    scalex = ((float)video_width /
 		((float)SCREENHEIGHT * video_ratio)) * menu->scale;
 	scaley = ((float)video_height /
 		(float)SCREENHEIGHT) * menu->scale;
