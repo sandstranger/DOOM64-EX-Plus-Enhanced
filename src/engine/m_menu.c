@@ -95,8 +95,8 @@ static boolean     inputEnter = false;
 static int          inputCharIndex;
 static int          inputMax = 0;
 
-static float cursor_x;
-static float cursor_y;
+float cursor_x;
+float cursor_y;
 
 //
 // fade-in/out stuff

@@ -115,6 +115,11 @@ extern void D_PostEvent(event_t*);
 extern boolean menuactive;
 extern gamestate_t gamestate;
 
+#if ANDROID
+extern float cursor_x;
+extern float cursor_y;
+#endif
+
 static SDL_INLINE float I_GamepadClamp(float x) { return SDL_clamp(x, 0.f, 1.f); }
 
 static void I_GamepadRadialLookSmoothing(float x, float y,
@@ -535,6 +540,11 @@ void I_ReadMouse(void) {
 
 	SDL_GetRelativeMouseState(&x, &y);
 	btn = SDL_GetMouseState(&mouse_x, &mouse_y);
+
+#if ANDROID
+    cursor_x = mouse_x;
+    cursor_y = mouse_y;
+#endif
 
 	if (x != 0 || y != 0 || btn || (lastmbtn != btn)) {
 		ev.type = ev_mouse;
