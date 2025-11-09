@@ -475,9 +475,16 @@ int main(int argc, char *argv[]) {
 }
 
 #ifdef ANDROID
-void resumeSound() {}
+extern void FMOD_PauseAll();
+extern void FMOD_ResumeAll();
 
-void pauseSound() {}
+void resumeSound() {
+    FMOD_ResumeAll();
+}
+
+void pauseSound() {
+    FMOD_PauseAll();
+}
 
 bool needToShowScreenControls() {
     return true;

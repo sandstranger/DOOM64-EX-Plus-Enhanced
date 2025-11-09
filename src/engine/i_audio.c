@@ -1929,3 +1929,40 @@ void FMOD_ResumeSFXLoop(void) {
         FMOD_ERROR_CHECK(FMOD_Channel_SetPaused(sound.fmod_studio_channel_loop, false));
     }
 }
+
+void FMOD_PausePlasmaLoop(void) {
+    if(sound.fmod_studio_channel_plasma_loop) {
+        FMOD_ERROR_CHECK(FMOD_Channel_SetPaused(sound.fmod_studio_channel_plasma_loop, true));
+    }
+}
+
+void FMOD_ResumePlasmaLoop(void) {
+    if(sound.fmod_studio_channel_plasma_loop) {
+        FMOD_ERROR_CHECK(FMOD_Channel_SetPaused(sound.fmod_studio_channel_plasma_loop, false));
+    }
+}
+
+#ifdef ANDROID
+
+static void PauseOrResumeMasterChannels(bool pause){
+    if (sound.master && sound.master_music){
+        FMOD_ChannelGroup_SetPaused(sound.master, pause);
+        FMOD_ChannelGroup_SetPaused(sound.master_music, pause);
+    }
+}
+
+void FMOD_PauseAll(){
+    FMOD_PauseSFXLoop();
+    FMOD_PausePlasmaLoop();
+    FMOD_PauseMusic();
+    PauseOrResumeMasterChannels(true);
+}
+
+void FMOD_ResumeAll(){
+    FMOD_ResumeSFXLoop();
+    FMOD_ResumeMusic();
+    FMOD_ResumePlasmaLoop();
+    PauseOrResumeMasterChannels(false);
+}
+
+#endif
