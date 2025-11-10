@@ -475,6 +475,7 @@ int main(int argc, char *argv[]) {
 }
 
 #ifdef ANDROID
+extern boolean menuactive;
 extern void FMOD_PauseAll();
 extern void FMOD_ResumeAll();
 
@@ -487,6 +488,6 @@ void pauseSound() {
 }
 
 bool needToShowScreenControls() {
-    return true;
+    return !menuactive;
 }
 #endif
