@@ -308,8 +308,13 @@ static GLuint I_3PointShaderCompile(GLenum type, const char* src) {
 	if (!ok) {
 		char log[1024]; GLsizei n = 0;
 		pglGetShaderInfoLog(shader, sizeof(log), &n, log);
-		fprintf(stderr, "I_3PointShaderCompile: %s compilation error:\\n%.*s\\n",
+#ifdef ANDROID
+		SDL_Log("I_3PointShaderCompile: %s compilation error:\\n%.*s\\n",
 			type == GL_VERTEX_SHADER ? "vertex" : "fragment", (int)n, log);
+#else
+        fprintf(stderr, "I_3PointShaderCompile: %s compilation error:\\n%.*s\\n",
+			type == GL_VERTEX_SHADER ? "vertex" : "fragment", (int)n, log);
+#endif
 	}
 	return shader;
 }
@@ -333,7 +338,11 @@ static void I_3PointShaderInit(void) {
 	GLint ok = 0; pglGetProgramiv(shader_struct.prog, GL_LINK_STATUS, &ok);
 	if (!ok) {
 		char log[1024]; GLsizei n = 0; pglGetProgramInfoLog(shader_struct.prog, sizeof(log), &n, log);
-		fprintf(stderr, "I_3PointShaderInit: Linkage error:\n%.*s\n", (int)n, log);
+#ifdef ANDROID
+		SDL_Log("I_3PointShaderInit: Linkage error:\n%.*s\n", (int)n, log);
+#else
+        fprintf(stderr, "I_3PointShaderInit: Linkage error:\n%.*s\n", (int)n, log);
+#endif
 	}
 	shader_struct.locTex = pglGetUniformLocation(shader_struct.prog, "uTex");
 	sLocTexel = pglGetUniformLocation(shader_struct.prog, "uTexel");
