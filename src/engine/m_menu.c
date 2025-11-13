@@ -1313,7 +1313,9 @@ void M_MiscChoice(int choice) {
 		break;
 
 	case misc_reworkedvanillasounds:
+#ifndef ANDROID
 		M_SetOptionValue(choice, 0, 1, 1, &m_reworkedvanillasounds);
+#endif
 		break;
 
 	case misc_revenantprojectilespeed:
