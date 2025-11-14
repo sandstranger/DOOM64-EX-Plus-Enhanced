@@ -4285,6 +4285,7 @@ static void M_DrawMenuSkull(int x, int y) {
 
 static void M_DrawCursor()
 {
+#ifndef ANDROID
 	if (!m_menumouse.value) return;
 
 	cursor_x = mouse_x;
@@ -4338,7 +4339,7 @@ static void M_DrawCursor()
 	GL_SetState(GLSTATE_BLEND, 0);
 	dglDepthMask(GL_TRUE);
 	GL_SetOrthoScale(1.0f);
-
+#endif
 }
 
 //
