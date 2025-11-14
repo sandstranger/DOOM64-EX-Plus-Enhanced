@@ -490,4 +490,8 @@ void pauseSound() {
 bool needToShowScreenControls() {
     return !menuactive;
 }
+
+bool needToInvokeMouseButtonsEvents(){
+    return menuactive;
+}
 #endif
