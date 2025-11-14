@@ -475,7 +475,6 @@ int main(int argc, char *argv[]) {
 }
 
 #ifdef ANDROID
-extern boolean menuactive;
 extern void FMOD_PauseAll();
 extern void FMOD_ResumeAll();
 
@@ -488,10 +487,10 @@ void pauseSound() {
 }
 
 bool needToShowScreenControls() {
-    return !menuactive;
+    return !menuactive && gamestate == GS_LEVEL && !demoplayback;
 }
 
 bool needToInvokeMouseButtonsEvents(){
-    return menuactive;
+    return menuactive || gamestate == GS_NONE || gamestate == GS_SKIPPABLE || demoplayback;
 }
 #endif
