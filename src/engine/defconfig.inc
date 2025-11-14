@@ -15,7 +15,7 @@
 "bind Space \"+use\"\n"
 "bind W \"+forward\"\n"
 "bind D \"+straferight\"\n"
-"bind Ctrl \"+fire\"\n"
+"bind Enter \"+fire\"\n"
 "bind Left \"+left\"\n"
 "bind Right \"+right\"\n"
 "bind Caps \"autorun\"\n"
