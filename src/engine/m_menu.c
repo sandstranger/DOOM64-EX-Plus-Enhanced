@@ -2001,8 +2001,8 @@ menudefault_t VideoDefault[] = {
 };
 
 menuthermobar_t VideoBars[] = {
-	{ video_empty1, 300, &i_brightness },
-	{ video_empty2, 20,  &i_gamma },
+	{ video_empty1, 600, &i_brightness },
+	{ video_empty2, 40,  &i_gamma },
 	{ -1, 0 }
 };
 
@@ -2063,12 +2063,12 @@ void M_DrawVideo(void) {
 		(video_dbrightness + 1) - currentMenu->menupageoffset < currentMenu->numpageitems)
 	{
 		y = video_dbrightness - currentMenu->menupageoffset;
-		M_DrawThermo(VideoDef.x, VideoDef.y + LINEHEIGHT * (y + 1), 300, i_brightness.value);
+		M_DrawThermo(VideoDef.x, VideoDef.y + LINEHEIGHT * (y + 1), 600, i_brightness.value);
 	}
 	if (currentMenu->menupageoffset <= video_dgamma + 1 &&
 		(video_dgamma + 1) - currentMenu->menupageoffset < currentMenu->numpageitems) {
 		y = video_dgamma - currentMenu->menupageoffset;
-		M_DrawThermo(VideoDef.x, VideoDef.y + LINEHEIGHT * (y + 1), 20, i_gamma.value);
+		M_DrawThermo(VideoDef.x, VideoDef.y + LINEHEIGHT * (y + 1), 40, i_gamma.value);
 	}
 
 #define DRAWVIDEOITEM(a, b) \
@@ -2116,13 +2116,13 @@ void M_ChangeBrightness(int choice)
 		}
 		break;
 	case 1:
-		if (i_brightness.value < 300.0f)
+		if (i_brightness.value < 600.0f)
 		{
 			M_SetCvar(&i_brightness, i_brightness.value + 1);
 		}
 		else
 		{
-			CON_CvarSetValue(i_brightness.name, 300);
+			CON_CvarSetValue(i_brightness.name, 600);
 		}
 		break;
 	}
@@ -2142,15 +2142,15 @@ void M_ChangeGammaLevel(int choice)
 		}
 		break;
 	case 1:
-		if (i_gamma.value < 20.0f) {
+		if (i_gamma.value < 40.0f) {
 			M_SetCvar(&i_gamma, i_gamma.value + 1);
 		}
 		else {
-			CON_CvarSetValue(i_gamma.name, 20);
+			CON_CvarSetValue(i_gamma.name, 40);
 		}
 		break;
 	case 2:
-		if (i_gamma.value >= 20) {
+		if (i_gamma.value >= 40) {
 			CON_CvarSetValue(i_gamma.name, 0);
 		}
 		else {
