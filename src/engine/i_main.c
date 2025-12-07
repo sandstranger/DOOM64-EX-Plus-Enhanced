@@ -39,7 +39,6 @@ const char version_date[] = __DATE__;
 
 #ifdef ANDROID
 char* pathToDoom64MainWadsFolder = nullptr;
-char* pathToDoom64ModsFolder = nullptr;
 char* pathToDoom64UserFolder = nullptr;
 #endif
 
@@ -464,7 +463,6 @@ int main(int argc, char *argv[]) {
 
 #ifdef ANDROID
     pathToDoom64MainWadsFolder = getenv ("PATH_TO_RESOURCES");
-    pathToDoom64ModsFolder = getenv("PATH_TO_DOOM64_MODS_FOLDER");
     pathToDoom64UserFolder = getenv("PATH_TO_DOOM_64_USER_FOLDER");
     chdir(pathToDoom64UserFolder);
 #endif

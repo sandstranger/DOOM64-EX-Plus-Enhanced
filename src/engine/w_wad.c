@@ -58,10 +58,6 @@ typedef struct memlump_s {
 static memlump_t g_memlumps[MAX_MEMLUMPS];
 static int g_nmemlumps = 0;
 
-#ifdef ANDROID
-extern char* pathToDoom64ModsFolder;
-#endif
-
 static char* g_kpf_files[8]; // "8 kpf ought to be enough for anybody"
 static int g_num_kpf = 0;
 
@@ -283,11 +279,6 @@ wad_file_t* W_AddFile(char* filename) {
 char * W_HandleModParam(void) {
 	char* mod_dir = NULL;
 
-#ifdef ANDROID
-    if (pathToDoom64ModsFolder != nullptr && strlen(pathToDoom64ModsFolder) > 0){
-        mod_dir = pathToDoom64ModsFolder;
-    }
-#else
 	int p = M_CheckParm("-mod");
 
 	if (p) {
@@ -302,7 +293,6 @@ char * W_HandleModParam(void) {
 			}
 		}
 	}
-#endif
 
 	if (mod_dir) {
 
