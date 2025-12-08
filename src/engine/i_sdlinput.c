@@ -91,7 +91,7 @@ gamepad64_t gamepad64;
 #define GAMEPAD_KEY_MOVE_BACK     SDLK_S
 #define GAMEPAD_KEY_MOVE_LEFT     SDLK_A
 #define GAMEPAD_KEY_MOVE_RIGHT    SDLK_D
-#define GAMEPAD_KEY_FIRE          KEY_CTRL
+#define GAMEPAD_KEY_FIRE          KEY_ENTER
 #define GAMEPAD_KEY_USE           SDLK_E
 #define GAMEPAD_KEY_RUN			  KEY_SHIFT
 #define GAMEPAD_KEY_AUTOMAP		  SDLK_TAB
