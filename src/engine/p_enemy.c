@@ -2395,3 +2395,94 @@ void A_AnnihilatorAttack(mobj_t* actor) {
 	P_MissileAttack(actor, DP_LEFT);
 	P_MissileAttack(actor, DP_RIGHT);
 }
+
+//
+// A_TriteChase
+//
+
+void A_TriteChase(mobj_t* actor) {
+	int    sound;
+	int    dist;
+
+	switch (actor->type) {
+	case MT_TRITE:
+		sound = sfx_tritestp1;
+		break;
+	}
+	sound += P_Random() % 2; // plays two different step sounds
+
+	S_StartSound(actor, sound);
+
+	dist = P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y);
+
+	if (P_CheckSight(actor, actor->target))
+	{
+		// Added a checker to see if the target is in the same sector as the Trite to avoid the bug or when the player or Trite is in a high or low sector the Trite triggers its jump attack even if it is not at the same sector level as the player
+		if (actor->z == actor->target->floorz)
+		{
+			if (dist > ((MELEERANGE + 20) * 2) && dist < ((MELEERANGE + 20) * 3) && (P_Random() > 192))
+			{
+				S_StartSound(actor, sfx_triteatk2);
+				A_FaceTarget(actor);
+				P_SetMobjState(actor, S_TSPI_ATK1);
+			}
+		}
+	}
+
+	A_Chase(actor);
+}
+
+//
+// A_TriteAttack
+//
+
+void A_TriteAttack(mobj_t* actor) {
+	int    damage;
+	int    hitdice;
+
+	if (!actor->target) {
+		return;
+	}
+
+	A_FaceTarget(actor);
+	S_StartSound(actor, sfx_triteatk1);
+	if (P_CheckMeleeRange(actor)) {
+		hitdice = (P_Random() & 7);
+		damage = ((hitdice << 2) - hitdice) + 3;
+		P_DamageMobj(actor->target, actor, actor, damage);
+	}
+}
+
+//
+// A_TriteJump
+// Styd: This code can always be improved in the future.
+//
+#define    TRITESPEED      (60*FRACUNIT)
+
+void A_TriteJump(mobj_t* actor) {
+	mobj_t* dest;
+	angle_t        an;
+	int            dist;
+
+	if (!actor->target) {
+		return;
+	}
+
+	dest = actor->target;
+	//actor->flags |= MF_SKULLFLY;
+
+	//S_StartSound(actor, actor->info->attacksound);
+	A_FaceTarget(actor);
+
+	an = actor->angle >> ANGLETOFINESHIFT;
+	actor->momx = FixedMul(TRITESPEED, finecosine[an]);
+	actor->momy = FixedMul(TRITESPEED, finesine[an]);
+	dist = P_AproxDistance(actor->x - dest->x, actor->y - dest->y);
+	dist = dist / TRITESPEED;
+
+	if (dist < 1) {
+		dist = 1;
+	}
+
+	//actor->momz = (dest->z + (dest->height >> 1) - actor->z) / dist;
+}

@@ -56,7 +56,7 @@ char* sprnames[NUMSPRITES + 1] = {  //0x5FA30
 	"SPID", "VFIR", "VILE", "TEST", "BLUG", "BLUP", "SH1R", "SH2R",
 	"PUNR", "POS1", "POS2", "SAR1", "SAR2", "TRO1", "TRO2", "TROM",
 	"BOS1", "BOS2", "GECH", "A64A", "SAR3", "HEA2", "NCAC", "PAI2",
-	 NULL
+	"TSPI",  NULL
 };
 
 // Doesn't work with g++, needs actionf_p1
@@ -152,6 +152,9 @@ void A_HellhoundAttack();
 void A_HellhoundMelee();
 void A_AnnihilatorAttack();
 void A_CheckVanillaAnimationsOrReworked();
+void A_TriteChase();
+void A_TriteAttack();
+void A_TriteJump();
 
 #ifdef _MSC_VER
 // disable "identifier1' differs in parameter lists from 'identifier2'":
@@ -1660,6 +1663,32 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_NCBALL_DIE3*/{ SPR_NCAC, 32773, 2, {NULL}, S_NCBALL_DIE4 },
 	/*S_NCBALL_DIE4*/{ SPR_NCAC, 32774, 2, {NULL}, S_NCBALL_DIE5 },
 	/*S_NCBALL_DIE5*/{ SPR_NCAC, 32775, 2, {NULL}, S_NULL },
+
+	// TRITE
+	/*S_TSPI_STND*/{ SPR_TSPI, 0, 10, {A_Look}, S_TSPI_STND2 },
+	/*S_TSPI_STND2*/{ SPR_TSPI, 1, 10, {A_Look}, S_TSPI_STND },
+	/*S_TSPI_RUN1*/{ SPR_TSPI, 0, 3, {A_TriteChase}, S_TSPI_RUN2 },
+	/*S_TSPI_RUN2*/{ SPR_TSPI, 0, 3, {A_TriteChase}, S_TSPI_RUN3 },
+	/*S_TSPI_RUN3*/{ SPR_TSPI, 1, 3, {A_TriteChase}, S_TSPI_RUN4 },
+	/*S_TSPI_RUN4*/{ SPR_TSPI, 1, 3, {A_TriteChase}, S_TSPI_RUN5 },
+	/*S_TSPI_RUN5*/{ SPR_TSPI, 2, 3, {A_TriteChase}, S_TSPI_RUN6 },
+	/*S_TSPI_RUN6*/{ SPR_TSPI, 2, 3, {A_TriteChase}, S_TSPI_RUN7 },
+	/*S_TSPI_RUN7*/{ SPR_TSPI, 3, 3, {A_TriteChase}, S_TSPI_RUN8 },
+	/*S_TSPI_RUN8*/{ SPR_TSPI, 3, 3, {A_TriteChase}, S_TSPI_RUN1 },
+	/*S_TSPI_ATK1*/{ SPR_TSPI, 7, 12, {A_FaceTarget}, S_TSPI_ATK2 },
+	/*S_TSPI_ATK2*/{ SPR_TSPI, 8, 6, {A_TriteJump}, S_TSPI_ATK3 },
+	/*S_TSPI_ATK3*/{ SPR_TSPI, 9, 8, {A_TriteAttack}, S_TSPI_RUN1 },
+	/*S_TSPI_MELEE1*/{ SPR_TSPI, 4, 5, {A_FaceTarget}, S_TSPI_MELEE2 },
+	/*S_TSPI_MELEE2*/{ SPR_TSPI, 5, 5, {A_FaceTarget}, S_TSPI_MELEE3 },
+	/*S_TSPI_MELEE3*/{ SPR_TSPI, 6, 8, {A_TriteAttack}, S_TSPI_RUN1 },
+	/*S_TSPI_PAIN*/{ SPR_TSPI, 10, 4, {NULL}, S_TSPI_PAIN2 },
+	/*S_TSPI_PAIN2*/{ SPR_TSPI, 10, 4, {A_Pain}, S_TSPI_RUN1 },
+	/*S_TSPI_DIE1*/{ SPR_TSPI, 11, 2, {NULL}, S_TSPI_DIE2 },
+	/*S_TSPI_DIE2*/{ SPR_TSPI, 12, 2, {A_Scream}, S_TSPI_DIE3 },
+	/*S_TSPI_DIE3*/{ SPR_TSPI, 13, 2, {NULL}, S_TSPI_DIE4 },
+	/*S_TSPI_DIE4*/{ SPR_TSPI, 14, 2, {A_Fall}, S_TSPI_DIE5 },
+	/*S_TSPI_DIE5*/{ SPR_TSPI, 15, 3, {A_OnDeathTrigger}, S_TSPI_DIE6 },
+	/*S_TSPI_DIE6*/{ SPR_TSPI, 16, 3, {NULL}, S_NULL },
 	
 };
 
@@ -6818,5 +6847,34 @@ MF_SOLID,// flags
 		MF_NOBLOCKMAP | MF_DROPOFF | MF_MISSILE,        //flags
 		0,        //palette
 		100        //alpha
+	},
+
+	{
+		/*MT_TRITE*/
+		9004,        //doomednum
+		S_TSPI_STND,        //spawnstate
+		50,        //spawnhealth
+		S_TSPI_RUN1,        //seestate
+		sfx_tritesit,        //seesound
+		8,        //reactiontime
+		sfx_None/*sfx_000*/,        //attacksound
+		S_TSPI_PAIN,        //painstate
+		96,        //painchance
+		sfx_tritepain,        //painsound
+		S_TSPI_MELEE1,        //meleestate
+		S_NULL,        //missilestate
+		S_TSPI_DIE1,        //deathstate
+		S_NULL,        //xdeathstate
+		sfx_tritedie,        //deathsound
+		24,        //speed
+		40 * FRACUNIT,        //radius
+		56 * FRACUNIT,        //height
+		100,        //mass
+		0,        //damage
+		sfx_triteact,        //activesound
+		MF_SOLID | MF_SHOOTABLE | MF_GRAVITY | MF_COUNTKILL,        //flags
+		0,        //palette
+		255,        //alpha
+		S_NULL        //raisestate
 	},
 };

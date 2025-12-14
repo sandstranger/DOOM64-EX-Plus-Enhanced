@@ -886,6 +886,9 @@ static void P_Obituary(mobj_t* source, mobj_t* target) {
 		case MT_NIGHTMARECACODEMON:
 			sprintf(omsg, "was scorched\nby a Nightmare Cacodemon.");
 			break;
+		case MT_TRITE:
+			sprintf(omsg, "you were killed\nby a Trite.");
+			break;
 		default:
 			sprintf(omsg, "you died.");
 			break;
