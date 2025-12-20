@@ -93,7 +93,7 @@ extern episodedef_t* episodedefs;
 // [kex] cvars
 //
 
-CVAR(p_autorun, 1);
+CVAR(p_autorun, 0);
 CVAR(p_fdoubleclick, 0);
 CVAR(p_sdoubleclick, 0);
 CVAR(p_usecontext, 0);
