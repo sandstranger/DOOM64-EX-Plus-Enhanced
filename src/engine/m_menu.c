@@ -1140,7 +1140,7 @@ menudefault_t MiscDefault[] = {
 	{ &m_menufadetime, 0 },
 	{ &m_menumouse, 1 },
 	{ &m_cursorscale, 8 },
-	{ &p_autorun, 1 },
+	{ &p_autorun, 0 },
 	{ &p_usecontext, 0 },
 	{ &r_wipe, 1 },
 	{ &r_weaponswitch, 1 },
