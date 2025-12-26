@@ -204,7 +204,8 @@ static SDL_INLINE void I_MouseRelease(int dx, int dy) {
 }
 
 static void I_GamepadInit(void) {
-	int n = 0; SDL_JoystickID* ids = SDL_GetGamepads(&n);
+    SDL_UpdateGamepads();
+    int n = 0; SDL_JoystickID* ids = SDL_GetGamepads(&n);
 	if (ids && n > 0) {
 		gamepad64.gamepad = SDL_OpenGamepad(ids[0]);
 		if (gamepad64.gamepad) gamepad64.active_id = SDL_GetGamepadID(gamepad64.gamepad);
@@ -234,7 +235,22 @@ static void I_GamepadClose(void) {
 
 static void I_GamepadInitOnce(void) {
 	if (gamepad64.init) return;
-	if (!SDL_WasInit(SDL_INIT_GAMEPAD)) SDL_InitSubSystem(SDL_INIT_GAMEPAD);
+#ifdef ANDROID
+    SDL_SetHint(SDL_HINT_JOYSTICK_RAWINPUT, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_RAWINPUT_CORRELATE_XINPUT, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS3, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_STEAMDECK, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_WII, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_COMBINE_JOY_CONS, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_SWITCH, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_JOY_CONS, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_STEAM, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_GAMECUBE, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS5, "1");
+#endif
+	if (!SDL_WasInit(SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD)) SDL_InitSubSystem(SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD);
 	I_GamepadInit();
 
 #ifdef ANDROID
@@ -250,32 +266,26 @@ static void I_GamepadInitOnce(void) {
     gamepad64.init = true;
 }
 
+static void RescanGameControllers (){
+    I_GamepadClose();
+    I_GamepadInit();
+}
+
+#if ANDROID
+void rescanGameControllersForced() {
+    RescanGameControllers();
+}
+#endif
+
 static void I_GamepadHandleSDLEvent(const SDL_Event* e) {
 	if (!gamepad64.init) return;
 	switch (e->type) {
-	case SDL_EVENT_GAMEPAD_ADDED:
-		if (!gamepad64.gamepad && !gamepad64.joy) {
-			gamepad64.gamepad = SDL_OpenGamepad(e->gdevice.which);
-			if (gamepad64.gamepad) gamepad64.active_id = SDL_GetGamepadID(gamepad64.gamepad);
-		}
-		break;
-	case SDL_EVENT_GAMEPAD_REMOVED:
-		if (gamepad64.active_id == e->gdevice.which) I_GamepadClose();
-		break;
-	case SDL_EVENT_JOYSTICK_ADDED:
-		if (!gamepad64.gamepad && !gamepad64.joy) {
-			if (SDL_IsGamepad(e->jdevice.which)) {
-				gamepad64.gamepad = SDL_OpenGamepad(e->jdevice.which);
-				if (gamepad64.gamepad) gamepad64.active_id = SDL_GetGamepadID(gamepad64.gamepad);
-			}
-			else {
-				gamepad64.joy = SDL_OpenJoystick(e->jdevice.which);
-				if (gamepad64.joy) gamepad64.active_id = e->jdevice.which;
-			}
-		}
-		break;
-	case SDL_EVENT_JOYSTICK_REMOVED:
-		if (gamepad64.active_id == e->jdevice.which) I_GamepadClose();
+    	case SDL_EVENT_GAMEPAD_ADDED:
+    	case SDL_EVENT_GAMEPAD_REMAPPED:
+        case SDL_EVENT_GAMEPAD_REMOVED:
+        case SDL_EVENT_JOYSTICK_ADDED:
+        case SDL_EVENT_JOYSTICK_REMOVED:
+            RescanGameControllers();
 		break;
 	default: break;
 	}
