@@ -203,10 +203,6 @@ static SDL_INLINE void I_MouseRelease(int dx, int dy) {
 	D_PostEvent(&ev);
 }
 
-#if ANDROID
-char *virtualControllerGUID = nullptr;
-#endif
-
 static void I_GamepadInit(void) {
     SDL_UpdateGamepads();
 
@@ -218,25 +214,10 @@ static void I_GamepadInit(void) {
     }
 
 #if ANDROID
-    if (virtualControllerGUID!= nullptr) {
-        for (int i = 0; i < jn; i++) {
-            SDL_Joystick *js = SDL_OpenJoystick(jids[i]);
-            if (js!= nullptr){
-                SDL_GUID guid = SDL_GetJoystickGUID(js);
-                SDL_CloseJoystick(js);
-                char guid_str[33];
-                for (int j = 0; j < 16; ++j) {
-                    int written = snprintf(&guid_str[j * 2], 3, "%02x", guid.data[j]);
-                    if (written != 2) {
-                        guid_str[0] = '\0';
-                        break;
-                    }
-                }
-                if (strcmp(guid_str, virtualControllerGUID) == 0) {
-                    virtualControllerIndex = i;
-                    break;
-                }
-            }
+    for (int i = 0; i < jn; i++) {
+        if (SDL_IsJoystickVirtual(jids[i])) {
+            virtualControllerIndex = i;
+            break;
         }
     }
 #endif
@@ -326,10 +307,7 @@ static void RescanGameControllers (){
 }
 
 #if ANDROID
-void rescanGameControllersForced(char *targetVirtualControllerGUID){
-    if (targetVirtualControllerGUID!= nullptr && strlen(targetVirtualControllerGUID) > 0 && virtualControllerGUID== nullptr){
-        virtualControllerGUID = strdup(targetVirtualControllerGUID);
-    }
+void rescanGameControllersForced(){
     RescanGameControllers();
 }
 #endif
