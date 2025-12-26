@@ -205,27 +205,65 @@ static SDL_INLINE void I_MouseRelease(int dx, int dy) {
 
 static void I_GamepadInit(void) {
     SDL_UpdateGamepads();
+
+    const char* virtualControllerName = "Xbox Series X Controller";
+    const int virtualButtonsCount = 25;
+    int virtualControllerIndex = -1;
+    int jn = 0; SDL_JoystickID* jids = SDL_GetJoysticks(&jn);
+
+    if (!jids || jn <= 0){
+        return;
+    }
+
+    for (int i = 0; i < jn; i++) {
+        SDL_Joystick *js = SDL_OpenJoystick(jids[i]);
+        const char* joystickName = SDL_GetJoystickName(js);
+        const int buttonsCount = SDL_GetNumJoystickButtons(js);
+        SDL_CloseJoystick(js);
+        if (virtualButtonsCount == buttonsCount && joystickName && strcmp(joystickName, virtualControllerName) == 0){
+            virtualControllerIndex = i;
+            break;
+        }
+    }
     int n = 0; SDL_JoystickID* ids = SDL_GetGamepads(&n);
-	if (ids && n > 0) {
-		gamepad64.gamepad = SDL_OpenGamepad(ids[0]);
-		if (gamepad64.gamepad) gamepad64.active_id = SDL_GetGamepadID(gamepad64.gamepad);
+    if (ids && n > 0) {
+        for (int i = 0; i < n; i++) {
+            if (virtualControllerIndex!=-1 && i!=virtualControllerIndex){
+                continue;
+            }
+            gamepad64.gamepad = SDL_OpenGamepad(ids[i]);
+            if (gamepad64.gamepad) {
+                gamepad64.active_id = SDL_GetGamepadID(gamepad64.gamepad);
+                break;
+            }
+        }
 	}
 	if (ids) SDL_free(ids);
 
 	if (!gamepad64.gamepad) {
-		int jn = 0; SDL_JoystickID* jids = SDL_GetJoysticks(&jn);
 		if (jids && jn > 0) {
-			if (SDL_IsGamepad(jids[0])) {
-				gamepad64.gamepad = SDL_OpenGamepad(jids[0]);
-				if (gamepad64.gamepad) gamepad64.active_id = SDL_GetGamepadID(gamepad64.gamepad);
-			}
-			if (!gamepad64.gamepad) {
-				gamepad64.joy = SDL_OpenJoystick(jids[0]);
-				if (gamepad64.joy) gamepad64.active_id = jids[0];
-			}
+            for (int i = 0; i < n; i++) {
+                if (virtualControllerIndex!=-1 && i!=virtualControllerIndex){
+                    continue;
+                }
+                if (SDL_IsGamepad(jids[i])) {
+                    gamepad64.gamepad = SDL_OpenGamepad(jids[i]);
+                    if (gamepad64.gamepad) {
+                        gamepad64.active_id = SDL_GetGamepadID(gamepad64.gamepad);
+                        break;
+                    }
+                }
+                if (!gamepad64.gamepad) {
+                    gamepad64.joy = SDL_OpenJoystick(jids[i]);
+                    if (gamepad64.joy) {
+                        gamepad64.active_id = jids[i];
+                        break;
+                    }
+                }
+            }
 		}
-		if (jids) SDL_free(jids);
 	}
+    if (jids) SDL_free(jids);
 }
 static void I_GamepadClose(void) {
 	if (gamepad64.gamepad) { SDL_CloseGamepad(gamepad64.gamepad); gamepad64.gamepad = NULL; }
