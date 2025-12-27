@@ -271,6 +271,7 @@ static void I_GamepadClose(void) {
 static void I_GamepadInitOnce(void) {
 	if (gamepad64.init) return;
 #ifdef ANDROID
+    SDL_SetHint(SDL_HINT_TV_REMOTE_AS_JOYSTICK, "0");
     SDL_SetHint(SDL_HINT_JOYSTICK_RAWINPUT, "1");
     SDL_SetHint(SDL_HINT_JOYSTICK_RAWINPUT_CORRELATE_XINPUT, "1");
     SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS3, "1");
