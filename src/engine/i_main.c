@@ -478,10 +478,12 @@ extern void FMOD_ResumeAll();
 
 void resumeSound() {
     FMOD_ResumeAll();
+    window_focused = true;
 }
 
 void pauseSound() {
     FMOD_PauseAll();
+    window_focused = false;
 }
 
 bool needToShowScreenControls() {

@@ -71,7 +71,7 @@ int	DualMouse;
 
 boolean	DigiJoy;
 boolean	MouseMode;
-boolean	window_mouse;
+boolean	window_mouse = true;
 
 gamepad64_t gamepad64;
 
@@ -748,6 +748,7 @@ void I_GetEvent(SDL_Event* Event) {
 		D_PostEvent(&event);
 		break;
 
+#ifndef ANDROID
 	case SDL_EVENT_WINDOW_FOCUS_GAINED:
 		window_focused = true;
 		break;
@@ -755,7 +756,7 @@ void I_GetEvent(SDL_Event* Event) {
 	case SDL_EVENT_WINDOW_FOCUS_LOST:
 		window_focused = false;
 		break;
-
+#endif
 	case SDL_EVENT_WINDOW_MOUSE_ENTER:
 		window_mouse = true;
 		break;
