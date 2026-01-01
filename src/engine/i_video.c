@@ -419,6 +419,13 @@ void RecalculateScreenResolution (int native_w, int native_h){
     I_SetMenuCursorMouseRect();
 }
 
+void UpdateScreenResolution(){
+    if (!window) return;
+    int native_w = 0, native_h = 0;
+    SDL_GetWindowSizeInPixels(window,&native_w, &native_h);
+    RecalculateScreenResolution (native_w, native_h);
+}
+
 void I_SetMenuCursorMouseRect() {
     if (!window) return;
     if (m_menumouse.value) {

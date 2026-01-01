@@ -757,6 +757,11 @@ void I_GetEvent(SDL_Event* Event) {
 		window_focused = false;
 		break;
 #endif
+        case SDL_EVENT_WINDOW_RESIZED:
+            extern void UpdateScreenResolution();
+            UpdateScreenResolution();
+            break;
+
 	case SDL_EVENT_WINDOW_MOUSE_ENTER:
 		window_mouse = true;
 		break;
