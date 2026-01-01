@@ -491,6 +491,7 @@ void I_InitVideo(void) {
 //
 
 void I_ToggleFullscreen(void) {
+#ifndef ANDROID
     if (!window) return;
 
     int native_w = 0, native_h = 0;
@@ -555,6 +556,7 @@ void I_ToggleFullscreen(void) {
     GL_OnResize(win_px_w, win_px_h);
 
     I_SetMenuCursorMouseRect();
+#endif
 }
 
 //
