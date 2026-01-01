@@ -748,11 +748,11 @@ void I_GetEvent(SDL_Event* Event) {
 		D_PostEvent(&event);
 		break;
 
-	case SDL_EVENT_WILL_ENTER_FOREGROUND:
+	case SDL_EVENT_WINDOW_FOCUS_GAINED:
 		window_focused = true;
 		break;
 
-	case SDL_EVENT_WILL_ENTER_BACKGROUND:
+	case SDL_EVENT_WINDOW_FOCUS_LOST:
 		window_focused = false;
 		break;
 
