@@ -497,4 +497,8 @@ bool needToInvokeMouseButtonsEvents(){
 bool MouseCursorCanBeDrawn() {
     return menuactive;
 }
+__attribute__((used)) __attribute__((visibility("default")))
+bool needToReInitGameControllers (){
+    return false;
+}
 #endif
