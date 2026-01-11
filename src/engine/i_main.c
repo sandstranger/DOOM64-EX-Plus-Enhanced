@@ -476,27 +476,30 @@ int main(int argc, char *argv[]) {
 extern void FMOD_PauseAll();
 extern void FMOD_ResumeAll();
 
-void resumeSound() {
+__attribute__((used)) __attribute__((visibility("default")))
+void onNativeResume() {
     FMOD_ResumeAll();
     window_focused = true;
 }
 
-void pauseSound() {
+__attribute__((used)) __attribute__((visibility("default")))
+void onNativePause() {
     FMOD_PauseAll();
     window_focused = false;
 }
-
+__attribute__((used)) __attribute__((visibility("default")))
 bool needToShowScreenControls() {
     return !menuactive && gamestate == GS_LEVEL && !demoplayback;
 }
-
+__attribute__((used)) __attribute__((visibility("default")))
 bool needToInvokeMouseButtonsEvents(){
     return menuactive || gamestate == GS_NONE || gamestate == GS_SKIPPABLE || demoplayback;
 }
-
+__attribute__((used)) __attribute__((visibility("default")))
 bool MouseCursorCanBeDrawn() {
     return menuactive;
 }
+
 __attribute__((used)) __attribute__((visibility("default")))
 bool needToReInitGameControllers (){
     return false;
