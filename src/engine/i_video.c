@@ -359,7 +359,10 @@ void I_InitScreen(void) {
 
 void RecalculateScreenResolution (int native_w, int native_h){
     if (!window) return;
-
+#if ANDROID
+    video_width = native_w;
+    video_height = native_h;
+#else
     if ((int)v_fullscreen.value) {
         SDL_DisplayID displayid = SDL_GetDisplayForWindow(window);
         if (!displayid) displayid = SDL_GetPrimaryDisplay();
@@ -410,7 +413,7 @@ void RecalculateScreenResolution (int native_w, int native_h){
         setUseDXGISwapChainNVIDIA(true);
 #endif
     }
-
+#endif
     video_ratio = (float)video_width / (float)video_height;
 
     SDL_GetWindowSizeInPixels(window, &win_px_w, &win_px_h);
