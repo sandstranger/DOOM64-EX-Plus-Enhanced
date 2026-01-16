@@ -64,6 +64,22 @@ float mouse_y = 0.0f;
 int win_px_w = 0;
 int win_px_h = 0;
 
+#if ANDROID
+static int g_screenWidth = -1;
+static int g_screenHeight = -1;
+static bool g_useGLES2_0 = false;
+
+__attribute__((used)) __attribute__((visibility("default")))
+void setScreenResolution (const int screenWidth, const int screenHeight){
+    g_screenWidth = screenWidth;
+    g_screenHeight = screenHeight;
+}
+__attribute__((used)) __attribute__((visibility("default")))
+void setUseGLES2_0State (const bool useGLES2_0){
+    g_useGLES2_0 = useGLES2_0;
+}
+#endif
+
 void GL_OnResize(int w, int h);
 
 static void GetNativeDisplayPixels(int* out_w, int* out_h, SDL_Window* window) {
@@ -201,13 +217,9 @@ void I_InitScreen(void) {
 
 #ifdef ANDROID
     v_fullscreen.value = 1;
-
-    char* screenWidthString = getenv("SCREEN_WIDTH");
-    char* screenHeightString = getenv("SCREEN_HEIGHT");
-
-    if (screenWidthString && strlen(screenWidthString)> 0 && screenHeightString && strlen(screenHeightString) >0){
-        native_w = atoi(screenWidthString);
-        native_h = atoi(screenHeightString);
+    if (g_screenWidth > 0 && g_screenHeight >0){
+        native_w = g_screenWidth;
+        native_h = g_screenHeight;
     } else{
         GetNativeDisplayPixels(&native_w, &native_h, window);
     }
@@ -241,12 +253,11 @@ void I_InitScreen(void) {
 	}
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 #else
-    bool useLegacyOpenGLES2_0 = strcmp(getenv("LIBGL_ES"), "2") == 0;
-    SDL_Log(useLegacyOpenGLES2_0 ? "Legacy OpenGL ES 2.0 is using for rendering" :
+    SDL_Log(g_useGLES2_0 ? "Legacy OpenGL ES 2.0 is using for rendering" :
             "OpenGL ES 3.2 is using for rendering");
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, useLegacyOpenGLES2_0 ? 2 : 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, useLegacyOpenGLES2_0 ? 0 : 2);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, g_useGLES2_0 ? 2 : 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, g_useGLES2_0 ? 0 : 2);
 #endif
 
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 0);

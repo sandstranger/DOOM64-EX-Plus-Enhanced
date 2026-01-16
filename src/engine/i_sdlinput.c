@@ -299,12 +299,12 @@ static void I_GamepadInitOnce(void) {
 	I_GamepadInit();
 
 #ifdef ANDROID
-    char *pathToSdlControllerDb = getenv("PATH_TO_SDL2_CONTROLLER_DB");
+    extern char *g_pathToSDLControllerDB;
 
-    if (SDL_AddGamepadMappingsFromFile(pathToSdlControllerDb) < 0) {
+    if (SDL_AddGamepadMappingsFromFile(g_pathToSDLControllerDB) < 0) {
         SDL_Log("Couldn't load mappings: %s\n", SDL_GetError());
     } else{
-        SDL_Log("Custom controller db was loaded from: %s", pathToSdlControllerDb);
+        SDL_Log("Custom controller db was loaded from: %s", g_pathToSDLControllerDB);
     }
 #endif
 

@@ -37,9 +37,19 @@
 
 const char version_date[] = __DATE__;
 
-#ifdef ANDROID
-char* pathToDoom64MainWadsFolder = nullptr;
-char* pathToDoom64UserFolder = nullptr;
+#if ANDROID
+char* g_pathToDoom64MainWadsFolder = nullptr;
+char* g_pathToDoom64UserFolder = nullptr;
+char *g_pathToSDLControllerDB = nullptr;
+
+static void freeChars(char **targetChars)
+{
+    if (targetChars && *targetChars)
+    {
+        free(*targetChars);
+        *targetChars = nullptr;
+    }
+}
 #endif
 
 //
@@ -462,13 +472,15 @@ int main(int argc, char *argv[]) {
 	myargv = argv;
 
 #ifdef ANDROID
-    pathToDoom64MainWadsFolder = getenv ("PATH_TO_RESOURCES");
-    pathToDoom64UserFolder = getenv("PATH_TO_DOOM_64_USER_FOLDER");
-    chdir(pathToDoom64UserFolder);
+    chdir(g_pathToDoom64UserFolder);
 #endif
 
 	D_DoomMain();
-
+#if ANDROID
+    freeChars(&g_pathToDoom64UserFolder);
+    freeChars(&g_pathToDoom64MainWadsFolder);
+    freeChars(&g_pathToSDLControllerDB);
+#endif
 	return 0;
 }
 
@@ -503,5 +515,18 @@ bool MouseCursorCanBeDrawn() {
 __attribute__((used)) __attribute__((visibility("default")))
 bool needToReInitGameControllers (){
     return false;
+}
+__attribute__((used)) __attribute__((visibility("default")))
+void setPathsToResources (const char *pathToWadsFolder, const char *pathToUserFolder) {
+    freeChars(&g_pathToDoom64UserFolder);
+    freeChars(&g_pathToDoom64MainWadsFolder);
+    g_pathToDoom64UserFolder = strdup(pathToUserFolder);
+    g_pathToDoom64MainWadsFolder = strdup(pathToWadsFolder);
+}
+
+__attribute__((used)) __attribute__((visibility("default")))
+void setPathToSDLControllerDB (const char *pathToSDLControllerDB){
+    freeChars(&g_pathToSDLControllerDB);
+    g_pathToSDLControllerDB = strdup(pathToSDLControllerDB);
 }
 #endif

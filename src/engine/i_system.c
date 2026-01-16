@@ -54,9 +54,9 @@ CVAR(v_fadein, 1);
 ticcmd_t        emptycmd;
 
 #ifdef ANDROID
-extern char* pathToDoom64MainWadsFolder;
-extern char* pathToRootUserFolder;
-extern char* pathToDoom64UserFolder;
+extern char* g_pathToDoom64MainWadsFolder;
+extern char* g_pathToRootUserFolder;
+extern char* g_pathToDoom64UserFolder;
 #endif
 
 //
@@ -218,7 +218,7 @@ char* I_GetUserDir(void)
 #ifndef ANDROID
 		g_user_dir = SDL_GetPrefPath("", "doom64ex-plus"); // string allocated by SDL
 #else
-        g_user_dir = pathToDoom64UserFolder;
+        g_user_dir = g_pathToDoom64UserFolder;
 #endif
 		if (g_user_dir) {
 			I_Printf("User data dir: %s\n", g_user_dir);
@@ -252,7 +252,7 @@ static char* FindDataFile(char* file) {
 
 	char* dirs[] = {
 #ifdef ANDROID
-        pathToDoom64MainWadsFolder,
+        g_pathToDoom64MainWadsFolder,
 #else
         (char *)SDL_GetBasePath(), // install dir (where executable is located)
 		".", // cur dir from where executable is launched
