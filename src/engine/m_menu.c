@@ -2056,7 +2056,9 @@ void M_Video(int choice) {
 void M_DrawVideo(void) {
 	static const char* filterType2[2] = { "Linear", "Nearest" };
 	static const char* onofftype[2] = { "Off", "On" };
-	static const char* fullscreenType[2] = { "Resizable Window", "Exclusive" };
+#ifdef HAS_FULLSCREEN_BORDERLESS
+	static const char* fullscreenType[2] = { "Borderless", "Exclusive" };
+#endif
 	int y;
 
 	if (currentMenu->menupageoffset <= video_dbrightness + 1 &&
