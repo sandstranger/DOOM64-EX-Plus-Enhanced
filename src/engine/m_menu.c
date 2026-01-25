@@ -2088,8 +2088,6 @@ void M_DrawVideo(void) {
 #define DRAWVIDEOITEM2(a, b, c) DRAWVIDEOITEM(a, c[(int)b])
 
 	DRAWVIDEOITEM2(video_fullscreen, v_fullscreen.value, fullscreenType);
-	DRAWVIDEOITEM2(filter, r_filter.value, filterType1);
-	DRAWVIDEOITEM2(object_filter, r_objectFilter.value, filterType2);
 	DRAWVIDEOITEM2(weapon_filter, r_weaponFilter.value, filterType2);
 	DRAWVIDEOITEM2(hud_filter, r_hudFilter.value, filterType2);
 	DRAWVIDEOITEM2(sky_filter, r_skyFilter.value, filterType2);
