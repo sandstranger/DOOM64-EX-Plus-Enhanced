@@ -292,12 +292,14 @@ void I_InitScreen(void) {
 
     // GL context attributes (same as before)
     video_driver = SDL_GetCurrentVideoDriver();
+#ifndef ANDROID
     if (!video_driver || !dstreq(video_driver, "wayland")) {
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
     }
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+#endif
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
@@ -308,16 +310,16 @@ void I_InitScreen(void) {
     flags |= (int)v_fullscreen.value ? SDL_WINDOW_FULLSCREEN : SDL_WINDOW_BORDERLESS;
 #else
     flags |= SDL_WINDOW_FULLSCREEN;
-#endif
-#else
-    flags |= SDL_WINDOW_FULLSCREEN;
-#endif
     if ((int)v_fullscreen.value) {
         flags |= SDL_WINDOW_FULLSCREEN;
     }
     else {
         flags |= SDL_WINDOW_RESIZABLE;
     }
+#endif
+#else
+    flags |= SDL_WINDOW_FULLSCREEN;
+#endif
 
 #ifdef SDL_PLATFORM_WIN32
     setUseDXGISwapChainNVIDIA(flags & SDL_WINDOW_RESIZABLE);
@@ -326,14 +328,13 @@ void I_InitScreen(void) {
     if (glContext) { SDL_GL_DestroyContext(glContext); glContext = NULL; }
     if (window) { SDL_DestroyWindow(window); window = NULL; }
 
-    sprintf(title, "Doom64EX+Enhanced - Version Date: %s", version_date);
+    sprintf(title, "Doom64EX-Plus-Enhanced compiled on: %s", version_date);
+
 #ifdef ANDROID
     window = SDL_CreateWindow(title, 0, 0, flags);
 #else
-    window = SDL_CreateWindow(title, video_width, video_height, flags);
-#endif
-    sprintf(title, "Doom64EX-Plus-Enhanced compiled on: %s", version_date);
     window = SDL_CreateWindow(title, initial_w, initial_h, flags);
+#endif
     if (!window) {
         I_Error("I_InitScreen: Failed to create window");
         return;
