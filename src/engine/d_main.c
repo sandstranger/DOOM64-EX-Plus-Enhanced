@@ -655,7 +655,6 @@ void D_DoomLoop(void) {
 			G_RunGame();
 		}
 		else {
-
             if (gameaction == ga_title) {
                 continue;
             }

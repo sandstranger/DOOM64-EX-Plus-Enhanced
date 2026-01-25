@@ -153,7 +153,7 @@ void IN_Drawer(void) {
 			alpha = 0xff;
 		}
 
-		Draw_SmallText(-1, y - fTextOffset, D_RGBA(255, 255, 255, alpha), fInterString[i]);
+		Draw_BigText(-1, y - fTextOffset, D_RGBA(255, 255, 255, alpha), fInterString[i]);
 		y += 14;
 
 		if (i == fInterSlot || !fInterString[i][0]) {

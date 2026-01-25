@@ -327,11 +327,14 @@ void P_XYMovement(mobj_t* mo) {
 					if ((tmhitline->backsector &&
 						tmhitline->backsector->ceilingpic == skyflatnum) ||
 						sides[tmhitline->sidenum[0]].midtexture == 1) {
+						if (mo->z > tmhitline->backsector->ceilingheight) //killough
+					    {
 						// Hack to prevent missiles exploding
 						// against the sky.
 						// Does not handle sky floors.
 						mo->mobjfunc = P_RemoveMobj;
 						return;
+						}
 					}
 				}
 

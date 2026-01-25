@@ -45,6 +45,26 @@ SDL_GLContext   glContext = NULL;
 
 CVAR(r_trishader, 1);
 CVAR(v_checkratio, 0);
+CVAR_CMD(v_maxfps, 500) {
+
+    /*
+     This max fps limit is only enforced with vsync off and interpolation enabled
+
+     The default picked is 500 because it handles the case of maximizing fps on a 480Hz monitor
+     and it is not too CPU/GPU intensive when it can be reached
+
+	 limit max fps to 1000 because:
+
+	- more than 1000 is not really needed (until monitors reach that some day)
+	- very high refresh rates cause higher GPU/CPU wattage and more importantly
+	  can cause nasty GPU coil whine at 1500+ fps.
+	  A RTX 4080S can reach > 2000 fps, producing heavy coil whine and not good for the GPU
+	- RTSS, a well known external framerate limiter, cap max fps to 1000
+
+	*/
+
+	v_maxfps.value = SDL_clamp(v_maxfps.value, 60, 1000);
+}
 CVAR(v_fullscreen, 0);
 CVAR_EXTERNAL(m_menumouse);
 CVAR_CMD(v_vsync, 1) {
@@ -269,6 +289,15 @@ void I_InitScreen(void) {
     SDL_GL_SetAttribute(SDL_GL_ACCUM_GREEN_SIZE, 0);
     SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE, 0);
     SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE, 0);
+
+    // GL context attributes (same as before)
+    video_driver = SDL_GetCurrentVideoDriver();
+    if (!video_driver || !dstreq(video_driver, "wayland")) {
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+    }
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
@@ -283,6 +312,13 @@ void I_InitScreen(void) {
 #else
     flags |= SDL_WINDOW_FULLSCREEN;
 #endif
+    if ((int)v_fullscreen.value) {
+        flags |= SDL_WINDOW_FULLSCREEN;
+    }
+    else {
+        flags |= SDL_WINDOW_RESIZABLE;
+    }
+
 #ifdef SDL_PLATFORM_WIN32
     setUseDXGISwapChainNVIDIA(flags & SDL_WINDOW_RESIZABLE);
 #endif
@@ -296,6 +332,8 @@ void I_InitScreen(void) {
 #else
     window = SDL_CreateWindow(title, video_width, video_height, flags);
 #endif
+    sprintf(title, "Doom64EX-Plus-Enhanced compiled on: %s", version_date);
+    window = SDL_CreateWindow(title, initial_w, initial_h, flags);
     if (!window) {
         I_Error("I_InitScreen: Failed to create window");
         return;
@@ -349,7 +387,6 @@ void I_InitScreen(void) {
 
     SDL_GetWindowSizeInPixels(window, &win_px_w, &win_px_h);
     GL_OnResize(win_px_w, win_px_h);
-
     SDL_DisplayID displayid = SDL_GetDisplayForWindow(window);
     if (displayid) {
         float f = SDL_GetDisplayContentScale(displayid);
@@ -357,7 +394,6 @@ void I_InitScreen(void) {
     }
 
     SDL_GL_SetSwapInterval((int)v_vsync.value);
-
     glViewport(0, 0, win_px_w, win_px_h);
     glScissor(0, 0, win_px_w, win_px_h);
     glClearColor(0.f, 0.f, 0.f, 1.f);
@@ -575,6 +611,7 @@ void V_RegisterCvars(void) {
     CON_CvarRegister(&r_trishader);
     CON_CvarRegister(&v_checkratio);
     CON_CvarRegister(&v_vsync);
+    CON_CvarRegister(&v_maxfps);
     CON_CvarRegister(&v_fullscreen);
 }
 

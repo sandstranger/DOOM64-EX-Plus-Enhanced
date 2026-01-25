@@ -1362,17 +1362,14 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_SKEL_RAISE5*/		{ SPR_SKEL, 12, 6, {NULL}, S_SKEL_RAISE6 },
 	/*S_SKEL_RAISE6*/		{ SPR_SKEL, 11, 6, {NULL}, S_SKEL_RUN1 },
 
-	/*S_ARCR1*/				{ SPR_ARCR, 32768, 3, {A_Tracer}, S_ARCR2 },
-	/*S_ARCR2*/				{ SPR_ARCR, 32769, 3, {A_Tracer}, S_ARCR1 },
-
-	/*S_POW1_DIE1*/			{ SPR_POW1, 32768, 4, {A_FadeAlpha}, S_POW1_DIE2 },
-	/*S_POW1_DIE2*/			{ SPR_POW1, 32769, 3, {A_FadeAlpha}, S_POW1_DIE3 },
-	/*S_POW1_DIE3*/			{ SPR_POW1, 32770, 2, {A_FadeAlpha}, S_POW1_DIE4 },
-	/*S_POW1_DIE4*/			{ SPR_POW1, 32771, 2, {NULL}, S_POW1_DIE5 },
-	/*S_POW1_DIE5*/			{ SPR_POW1, 32772, 2, {NULL}, S_POW1_DIE6 },
-	/*S_POW1_DIE6*/			{ SPR_POW1, 32773, 2, {NULL}, S_POW1_DIE7 },
-	/*S_POW1_DIE7*/			{ SPR_POW1, 32774, 2, {NULL}, S_POW1_DIE8 },
-	/*S_POW1_DIE8*/			{ SPR_POW1, 32775, 2, {NULL}, S_NULL },
+	/*S_REVENANTBALL1*/{ SPR_RBAL, 0, 2, {A_Tracer}, S_REVENANTBALL2 },
+	/*S_REVENANTBALL2*/{ SPR_RBAL, 1, 2, {A_Tracer}, S_REVENANTBALL1 },
+	/*S_REVENANTBALL_DIE1*/{ SPR_RBAL, 32770, 4, {NULL}, S_REVENANTBALL_DIE2 },
+	/*S_REVENANTBALL_DIE2*/{ SPR_RBAL, 32771, 3, {A_MissileSetAlpha}, S_REVENANTBALL_DIE3 },
+	/*S_REVENANTBALL_DIE3*/{ SPR_RBAL, 32772, 2, {NULL}, S_REVENANTBALL_DIE4 },
+	/*S_REVENANTBALL_DIE4*/{ SPR_RBAL, 32773, 2, {NULL}, S_REVENANTBALL_DIE5 },
+	/*S_REVENANTBALL_DIE5*/{ SPR_RBAL, 32774, 2, {NULL}, S_REVENANTBALL_DIE6 },
+	/*S_REVENANTBALL_DIE6*/{ SPR_RBAL, 32775, 2, {NULL}, S_NULL },
 
 	/*S_SPID_STND*/			{ SPR_SPID, 25, 5, {A_Look}, S_SPID_STND },
 	/*S_SPID_RUN1*/			{ SPR_SPID, 0, 3, {A_Metal}, S_SPID_RUN2 },
@@ -6517,7 +6514,7 @@ MF_SOLID,// flags
 	{
 		/*MT_PROJ_UNDEAD*/
 		-1,        //doomednum
-		S_ARCR1,        //spawnstate
+		S_REVENANTBALL1,        //spawnstate
 		1000,        //spawnhealth
 		S_NULL,        //seestate
 		sfx_tracer,        //seesound
@@ -6528,7 +6525,7 @@ MF_SOLID,// flags
 		sfx_None,        //painsound
 		S_NULL,        //meleestate
 		S_NULL,        //missilestate
-		S_POW1_DIE1,        //deathstate
+		S_REVENANTBALL_DIE1,        //deathstate
 		S_NULL,        //xdeathstate
 		sfx_explode,        //deathsound
 		7 * FRACUNIT,        //speed
