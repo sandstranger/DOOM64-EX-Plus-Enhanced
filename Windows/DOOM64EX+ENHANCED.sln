@@ -2,7 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.3.32922.545
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DOOM64_x64", "Doom64EX+ENHANCED.vcxproj", "{F7595469-0B54-4529-B8FD-B73F4C061494}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DOOM64EX+ENHANCED", "Doom64EX+ENHANCED.vcxproj", "{F7595469-0B54-4529-B8FD-B73F4C061494}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
