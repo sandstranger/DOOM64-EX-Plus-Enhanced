@@ -20,6 +20,7 @@
 //
 //-----------------------------------------------------------------------------
 
+#include "doomstat.h"
 #include "m_random.h"
 
 /*
@@ -54,24 +55,40 @@ unsigned char rndtable[256] = { // 8005A190
 	120, 163, 236, 249
 };
 
+rng_t rng;                      // the random number state
+
+unsigned int rngseed = 1993;   // killough 3/26/98: The seed
+
 int	rndindex = 0;   // 8005A18C
 int prndindex = 0;  // 8005A188
 
-int P_Random(void) // 80002928
+int P_Random(pr_class_t pr_class)
 {
-	prndindex = (prndindex + 1) & 0xff;
-	return rndtable[prndindex];
+	unsigned long boom;
+
+    boom = rng.seed[pr_class];
+    rng.seed[pr_class] = boom * 1664525ul + 221297ul + pr_class*2;
+
+    boom >>= 20;
+    boom += (gametic - basetic) * 7;
+
+    return boom & 255;
 }
 
 int M_Random(void) // 80002954
 {
-	rndindex = (rndindex + 1) & 0xff;
-	return rndtable[rndindex];
+	return P_Random(pr_misc);
 }
 
 void M_ClearRandom(void) // 80002980
 {
-	rndindex = prndindex = 0;
+	int i;
+    unsigned int seed = rngseed*2+1;    // add 3/26/98: add rngseed
+
+    for(i = 0; i < NUMPRCLASS; i++)     // go through each pr_class and set
+        rng.seed[i] = seed *= 69069ul;  // each starting seed differently
+    
+    rng.prndindex = rng.rndindex = 0;   // clear two compatibility indices
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
@@ -79,9 +96,9 @@ void M_ClearRandom(void) // 80002980
 // to be evaluated first. Required because C/C++ is free to evaluate either side of the '-' operator first, which can change the result
 // depending on the compiler. Inspired by the function of the same name in the 'Calico' Jaguar DOOM source port.
 //------------------------------------------------------------------------------------------------------------------------------------------
-int32_t P_SubRandom(void)
+int32_t P_SubRandom(pr_class_t pr_class)
 {
-	const int32_t r1 = P_Random();
-	const int32_t r2 = P_Random();
+	const int32_t r1 = P_Random(pr_class);
+	const int32_t r2 = P_Random(pr_class);
 	return r1 - r2;
 }

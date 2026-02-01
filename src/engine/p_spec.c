@@ -725,7 +725,7 @@ int P_RandomLineTrigger(line_t* line, mobj_t* thing, int side) {
 		}
 	}
 
-	P_UseSpecialLine(thing, linelist[(P_Random() % count)], side);
+	P_UseSpecialLine(thing, linelist[(P_Random(pr_randomtrigger) % count)], side);
 	Z_Free(linelist);
 
 	return 1;
@@ -774,8 +774,8 @@ void T_Quake(quake_t* quake) { // 0x8000EDE8
 		return;
 	}
 
-	quakeviewy = (((P_Random() & 1) << 18) - (2 * FRACUNIT));
-	quakeviewx = (((P_Random() & 1) << 24) - (128 * FRACUNIT));
+	quakeviewy = (((P_Random(pr_quake) & 1) << 18) - (2 * FRACUNIT));
+	quakeviewx = (((P_Random(pr_quake) & 1) << 24) - (128 * FRACUNIT));
 }
 
 //
@@ -1849,7 +1849,7 @@ void P_PlayerInSpecialSector(player_t* player) {
 			}
 	}
 	if (sector->flags & MS_DAMAGEX20) {
-		if (!player->powers[pw_ironfeet] || (P_Random() < 5)) {
+		if (!player->powers[pw_ironfeet] || (P_Random(pr_slimehurt) < 5)) {
 			if (!(leveltime & 0x1f)) {
 				P_DamageMobj(player->mo, NULL, NULL, 20);
 			}

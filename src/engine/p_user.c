@@ -412,7 +412,7 @@ void P_DeathThink(player_t* player) {
 
     //mocking text
     if (!((gametic - deathmocktics) < MAXMOCKTIME)) {
-        player->message = mockstrings[(P_Random() % MAXMOCKTEXT)];
+        player->message = mockstrings[(P_Random(pr_playermock) % MAXMOCKTEXT)];
         deathmocktics = gametic;
     }
 

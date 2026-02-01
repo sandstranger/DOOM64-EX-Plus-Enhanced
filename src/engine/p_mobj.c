@@ -138,7 +138,7 @@ void P_ExplodeMissile(mobj_t* mo) {
 
 	mo->momx = mo->momy = mo->momz = 0;
 
-	mo->tics -= P_Random() & 1;
+	mo->tics -= P_Random(pr_explode) & 1;
 
 	if (mo->tics < 1) {
 		mo->tics = 1;
@@ -179,7 +179,7 @@ void P_ExplodeMissile(mobj_t* mo) {
 			switch (mo->info->deathsound) {
 			case sfx_implod1:
 			case sfx_implod2:
-				sound = sfx_implod1 + (P_Random() % 2);
+				sound = sfx_implod1 + (P_Random(pr_explode) % 2);
 				break;
 
 			default:
@@ -235,7 +235,7 @@ void P_MissileHit(mobj_t* mo) {
 	damage = 0;
 
 	if (missilething) {
-		damage = ((P_Random() & 7) + 1) * mo->info->damage;
+		damage = ((P_Random(pr_damage) & 7) + 1) * mo->info->damage;
 		P_DamageMobj(missilething, mo, mo->target, damage);
 
 		if (mo->type == MT_PROJ_RECTFIRE) {
@@ -271,7 +271,7 @@ void P_SkullBash(mobj_t* mo) {
 	skullthing = (mobj_t*)mo->extradata;
 
 	if (skullthing) {
-		damage = ((P_Random() & 7) + 1) * mo->info->damage;
+		damage = ((P_Random(pr_skullfly) & 7) + 1) * mo->info->damage;
 		P_DamageMobj(skullthing, mo, mo, damage);
 	}
 
@@ -475,7 +475,7 @@ void P_NightmareRespawn(mobj_t* mobj) {
 		return;
 	}
 
-	if (P_Random() > 4) {
+	if (P_Random(pr_respawn) > 4) {
 		return;
 	}
 
@@ -1180,7 +1180,7 @@ mobj_t* P_SpawnMapThing(mapthing_t* mthing) {
 	}
 
 	if (mobj->tics > 0) {
-		mobj->tics = 1 + (P_Random() % mobj->tics);
+		mobj->tics = 1 + (P_Random(pr_spawnthing) % mobj->tics);
 	}
 
 	mobj->angle = ANG45 * (mthing->angle / 45);
@@ -1248,13 +1248,13 @@ void P_SpawnPuff(fixed_t x, fixed_t y, fixed_t z) {
 	mobj_t* th;
 	int rnd1, rnd2;
 
-	rnd1 = P_Random();
-	rnd2 = P_Random();
+	rnd1 = P_Random(pr_spawnpuff);
+	rnd2 = P_Random(pr_spawnpuff);
 
 	z += ((rnd2 - rnd1) << 10);
 	th = P_SpawnMobj(x, y, z, MT_SMOKE_SMALL);
 	th->momz = FRACUNIT;
-	th->tics -= P_Random() & 1;
+	th->tics -= P_Random(pr_spawnpuff) & 1;
 
 	if (th->tics < 1) {
 		th->tics = 1;
@@ -1274,13 +1274,13 @@ void P_SpawnBlood(fixed_t x, fixed_t y, fixed_t z, int damage) {
 	int i = 0;
 
 	for (i = 0; i < 3; i++) {
-		x += (((int32_t)P_SubRandom()) << 12);
-		y += (((int32_t)P_SubRandom()) << 12);
-		z += (((int32_t)P_SubRandom()) << 11);
+		x += (((int32_t)P_SubRandom(pr_spawnblood)) << 12);
+		y += (((int32_t)P_SubRandom(pr_spawnblood)) << 12);
+		z += (((int32_t)P_SubRandom(pr_spawnblood)) << 11);
 
 		th = P_SpawnMobj(x, y, z, MT_BLOOD);
 		th->momz = FRACUNIT * 2;
-		th->tics -= (P_Random() & 1);
+		th->tics -= (P_Random(pr_spawnblood) & 1);
 
 		if (th->tics < 1) {
 			th->tics = 1;
@@ -1303,13 +1303,13 @@ void P_SpawnBloodGreen(fixed_t x, fixed_t y, fixed_t z, int damage) {
 	int i = 0;
 
 	for (i = 0; i < 3; i++) {
-		x += (((int32_t)P_SubRandom()) << 12);
-		y += (((int32_t)P_SubRandom()) << 12);
-		z += (((int32_t)P_SubRandom()) << 11);
+		x += (((int32_t)P_SubRandom(pr_spawnbloodgreen)) << 12);
+		y += (((int32_t)P_SubRandom(pr_spawnbloodgreen)) << 12);
+		z += (((int32_t)P_SubRandom(pr_spawnbloodgreen)) << 11);
 
 		th = P_SpawnMobj(x, y, z, MT_BLOOD_GREEN);
 		th->momz = FRACUNIT * 2;
-		th->tics -= (P_Random() & 1);
+		th->tics -= (P_Random(pr_spawnbloodgreen) & 1);
 
 		if (th->tics < 1) {
 			th->tics = 1;
@@ -1332,13 +1332,13 @@ void P_SpawnBloodPurple(fixed_t x, fixed_t y, fixed_t z, int damage) {
 	int i = 0;
 
 	for (i = 0; i < 3; i++) {
-		x += (((int32_t)P_SubRandom()) << 12);
-		y += (((int32_t)P_SubRandom()) << 12);
-		z += (((int32_t)P_SubRandom()) << 11);
+		x += (((int32_t)P_SubRandom(pr_spawnbloodpurple)) << 12);
+		y += (((int32_t)P_SubRandom(pr_spawnbloodpurple)) << 12);
+		z += (((int32_t)P_SubRandom(pr_spawnbloodpurple)) << 11);
 
 		th = P_SpawnMobj(x, y, z, MT_BLOOD_PURPLE);
 		th->momz = FRACUNIT * 2;
-		th->tics -= (P_Random() & 1);
+		th->tics -= (P_Random(pr_spawnbloodpurple) & 1);
 
 		if (th->tics < 1) {
 			th->tics = 1;
@@ -1361,13 +1361,13 @@ void P_SpawnBloodNightmareColor(fixed_t x, fixed_t y, fixed_t z, int damage) {
 	int i = 0;
 
 	for (i = 0; i < 3; i++) {
-		x += ((P_Random() - P_Random()) << 12);
-		y += ((P_Random() - P_Random()) << 12);
-		z += ((P_Random() - P_Random()) << 11);
+		x += (((int32_t)P_SubRandom(pr_spawnbloodnightmareColor)) << 12);
+		y += (((int32_t)P_SubRandom(pr_spawnbloodnightmareColor)) << 12);
+		z += (((int32_t)P_SubRandom(pr_spawnbloodnightmareColor)) << 11);
 
 		th = P_SpawnMobj(x, y, z, MT_BLOOD);
 		th->momz = FRACUNIT * 2;
-		th->tics -= (P_Random() & 1);
+		th->tics -= (P_Random(pr_spawnbloodnightmareColor) & 1);
 		th->flags |= MF_NIGHTMARE;
 		th->flags |= MF_SHADOW;
 		th->alpha = 128;
@@ -1531,7 +1531,7 @@ mobj_t* P_SpawnMissile(mobj_t* source, mobj_t* dest, mobjtype_t type,
 			switch (th->info->seesound) {
 			case sfx_bdmissile1:
 			case sfx_bdmissile2:
-				sound = sfx_bdmissile1 + (P_Random() % 2);
+				sound = sfx_bdmissile1 + (P_Random(pr_spawnmissile) % 2);
 				break;
 
 			default:
@@ -1584,8 +1584,8 @@ mobj_t* P_SpawnMissile(mobj_t* source, mobj_t* dest, mobjtype_t type,
 
 	if (dest && (dest->flags & MF_SHADOW))
 	{
-		rnd1 = P_Random();
-		rnd2 = P_Random();
+		rnd1 = P_Random(pr_shadow);
+		rnd2 = P_Random(pr_shadow);
 		an += ((rnd2 - rnd1) << 20);
 	}
 

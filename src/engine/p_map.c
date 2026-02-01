@@ -1291,8 +1291,8 @@ boolean PIT_ChangeSector(mobj_t* thing)
             else {
                 mo = P_SpawnMobj(thing->x, thing->y, thing->z + thing->height / 2, MT_BLOOD);
             }
-            mo->momx = (P_Random() - P_Random()) << 12;
-            mo->momy = (P_Random() - P_Random()) << 12;
+            mo->momx = (P_Random(pr_crush) - P_Random(pr_crush)) << 12;
+            mo->momy = (P_Random(pr_crush) - P_Random(pr_crush)) << 12;
         }
     }
     return true;

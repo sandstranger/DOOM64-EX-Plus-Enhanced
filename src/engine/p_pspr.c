@@ -543,14 +543,14 @@ void A_Punch(player_t* player, pspdef_t* psp) {
 	int         damage;
 	int         slope = 0;
 
-	damage = ((P_Random() & 7) + 1) * 3;
+	damage = ((P_Random(pr_punch) & 7) + 1) * 3;
 
 	if (player->powers[pw_strength]) {
 		damage *= 10;
 	}
 
 	angle = player->mo->angle;
-	angle += (angle_t)((int32_t)P_SubRandom()) << 18;
+	angle += (angle_t)((int32_t)P_SubRandom(pr_punchangle)) << 18;
 
 	slope = P_AimLineAttack(player->mo, angle, 0, MELEERANGE);
 
@@ -575,10 +575,10 @@ void A_Saw (player_t *player, pspdef_t *psp) // 8001BC1C
 	int     rnd1, rnd2;
 	int     slope = 0;
 
-	damage = ((P_Random()&7)+1)*3;
+	damage = ((P_Random(pr_saw)&7)+1)*3;
 	angle = player->mo->angle;
-	rnd1 = P_Random();
-	rnd2 = P_Random();
+	rnd1 = P_Random(pr_saw);
+	rnd2 = P_Random(pr_saw);
 	angle += (angle_t)(rnd2-rnd1)<<18;
 
 	/* use meleerange + 1 se the puff doesn't skip the flash */
@@ -701,11 +701,11 @@ void P_GunShot(mobj_t* mo, boolean accurate) {
 	angle_t     angle;
 	int         damage;
 
-	damage = ((P_Random() & 3) * 4) + 4;
+	damage = ((P_Random(pr_gunshot) & 3) * 4) + 4;
 	angle = mo->angle;
 
 	if (!accurate) {
-		angle += ((angle_t) P_SubRandom()) << 18;
+		angle += ((angle_t) P_SubRandom(pr_misfire)) << 18;
 	}
 
 	P_LineAttack(mo, angle, MISSILERANGE, bulletslope, damage);
@@ -769,11 +769,11 @@ void A_FireShotgun2(player_t* player, pspdef_t* psp) {
 	}
 
 	for (i = 0; i < 20; i++) {
-		damage = (P_Random() % 3 + 1) * 5;
+		damage = (P_Random(pr_shotgun) % 3 + 1) * 5;
 		angle = player->mo->angle;
-		angle += ((int32_t)P_SubRandom()) << 19;
+		angle += ((int32_t)P_SubRandom(pr_shotgun)) << 19;
 		P_LineAttack(player->mo, angle, MISSILERANGE, bulletslope +
-			(((int32_t)P_SubRandom()) << 5), damage);
+			(((int32_t)P_SubRandom(pr_shotgun)) << 5), damage);
 	}
 }
 
@@ -795,7 +795,7 @@ void A_FireCGun(player_t* player, pspdef_t* psp) {
 	player->ammo[weaponinfo[player->readyweapon].ammo]--;
 
 	// randomize sx
-	rand = (((P_Random() & 1) << 1) - 1);
+	rand = (((P_Random(pr_chaingun) & 1) << 1) - 1);
 	psp->sx = (rand * FRACUNIT);
 
 	// randomize sy
@@ -863,7 +863,7 @@ void A_BFGSpray(mobj_t* mo) {
 
 		damage = 0;
 		for (j = 0; j < 15; j++) {
-			damage += (P_Random() & 7) + 1;
+			damage += (P_Random(pr_bfg) & 7) + 1;
 		}
 
 		P_DamageMobj(linetarget, mo->target, mo->target, damage);
@@ -1120,7 +1120,7 @@ void A_FireLaser(player_t* player, pspdef_t* psp) {
 
 		player->ammo[weaponinfo[player->readyweapon].ammo]--;
 
-		hitdice = (P_Random() & 7);
+		hitdice = (P_Random(pr_laser) & 7);
 		damage = (((hitdice << 2) + hitdice) << 1) + 10;
 
 		P_LineAttack(mobj, angleoffs, LASERRANGE, slope, damage);
