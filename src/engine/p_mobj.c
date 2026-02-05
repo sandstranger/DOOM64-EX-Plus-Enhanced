@@ -323,18 +323,18 @@ void P_XYMovement(mobj_t* mo) {
 
 			if (mo->flags & MF_MISSILE) {
 				// explode a missile
+				// Killough fix or Projectiles disappear when hitting walls and adapted for the Doom 64 engine to prevent a crash on the titlemap
 				if (tmhitline) {
 					if ((tmhitline->backsector &&
-						tmhitline->backsector->ceilingpic == skyflatnum) ||
+						tmhitline->backsector->ceilingpic == skyflatnum &&
+						mo->z > tmhitline->backsector->ceilingheight) ||
 						sides[tmhitline->sidenum[0]].midtexture == 1) {
-						if (mo->z > tmhitline->backsector->ceilingheight) //killough
-					    {
+						
 						// Hack to prevent missiles exploding
 						// against the sky.
 						// Does not handle sky floors.
 						mo->mobjfunc = P_RemoveMobj;
 						return;
-						}
 					}
 				}
 
