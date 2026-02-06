@@ -93,7 +93,15 @@ void IN_Start(void) {
 
 	gameaction = ga_nothing;
 
-	S_StartMusic(fcluster->music);
+	// styd: Fixes a bug where if the cluster does not contain music in the mapinfo the engine automatically played the music MUSAMB01 instead of playing no music
+	if (fcluster->music > 0)
+	{
+		S_StartMusic(fcluster->music);
+	}
+	else
+	{
+		S_StopMusic(); 
+	}
 }
 
 //
