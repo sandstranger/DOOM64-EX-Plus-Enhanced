@@ -574,6 +574,48 @@ int Center_Text(const char* string) {
 	return (160 - (width / 2));
 }
 
+//
+// Center_SmallText
+//
+
+int Center_SmallText(const char* string, float scale) {
+	int width = 0;
+	char t;
+	int id;
+	int len = dstrlen(string);
+
+	for (int i = 0; i < len; i++) {
+		t = string[i];
+
+		switch (t) {
+		case 0x20:
+			width += (int)(6 * scale);
+			break;
+		case '-': width += (int)(symboldata[SM_MISCFONT].w * scale); break;
+		case '%': width += (int)(symboldata[SM_MISCFONT + 1].w * scale); break;
+		case '!': width += (int)(symboldata[SM_MISCFONT + 2].w * scale); break;
+		case '.': width += (int)(symboldata[SM_MISCFONT + 3].w * scale); break;
+		case '?': width += (int)(symboldata[SM_MISCFONT + 4].w * scale); break;
+		case ':': width += (int)(symboldata[SM_MISCFONT + 5].w * scale); break;
+		default:
+			if (t >= 'A' && t <= 'Z') {
+				id = t - 'A';
+				width += (int)(symboldata[SM_FONT1 + id].w * scale);
+			}
+			if (t >= 'a' && t <= 'z') {
+				id = t - 'a';
+				width += (int)(symboldata[SM_FONT2 + id].w * scale);
+			}
+			if (t >= '0' && t <= '9') {
+				id = t - '0';
+				width += (int)(symboldata[SM_NUMBERS + id].w * scale);
+			}
+			break;
+		}
+	}
+
+	return (160 - (width / 2));
+}
 
 //
 // Draw_BigText
@@ -715,7 +757,7 @@ int Draw_SmallText(int x, int y, rcolor color, const char* string) {
 	const float scale_factor = 0.7f;
 
 	if (x <= -1) {
-		x = Center_Text(string);
+		x = Center_SmallText(string, scale_factor);
 	}
 
 	y += 14;
@@ -739,7 +781,7 @@ int Draw_SmallText(int x, int y, rcolor color, const char* string) {
 	GL_SetOrtho(0);
 
 	for (i = 0, vi = 0; i < dstrlen(string); i++, vi += 4) {
-		vx1 = (float)x + 30;
+		vx1 = (float)x;
 		vy1 = (float)y;
 
 		c = string[i];
