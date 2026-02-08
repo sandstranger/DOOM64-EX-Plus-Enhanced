@@ -40,5 +40,6 @@ void R_DrawThingBBox(void);
 
 extern spritedef_t* spriteinfo;
 extern intptr_t            numsprites;
+extern boolean r_rendering_psprites;
 
 #endif

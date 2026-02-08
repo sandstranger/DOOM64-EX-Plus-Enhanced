@@ -77,6 +77,8 @@ CVAR(m_reworkedHellKnight, 1);
 
 static void AddSpriteDrawlist(drawlist_t* dl, visspritelist_t* vis, int texid);
 
+boolean r_rendering_psprites = false;
+
 //
 // R_InstallSpriteLump
 // Local function for R_InitSprites.
@@ -521,7 +523,7 @@ static boolean R_GenerateSpritePlane(visspritelist_t* vissprite, vtx_t* vertex) 
 
 	int draw_alpha = thing->alpha;
 
-	if (thing->type == MT_DEMON2) {
+	if (thing->type == MT_DEMON2 || thing->type == MT_NIGHTMAREDEMON) {
 		if (draw_alpha < 0x60)
 			draw_alpha = 0x60;
 	}
@@ -928,7 +930,7 @@ void R_DrawPSprite(pspdef_t* psp, sector_t* sector, player_t* player) {
 			dglTexCombModulate(GL_PREVIOUS, GL_PRIMARY_COLOR);
 		}
 
-		if (st_flashoverlay.value <= 0) {
+		if (!r_rendering_psprites && st_flashoverlay.value <= 0) {
 			GL_SetTextureUnit(2, true);
 			dglTexCombColor(GL_PREVIOUS, flashcolor, GL_ADD);
 		}
@@ -987,12 +989,16 @@ void R_DrawPSprite(pspdef_t* psp, sector_t* sector, player_t* player) {
 void R_RenderPlayerSprites(player_t* player) {
 	pspdef_t* psp;
 
+	r_rendering_psprites = true;
+
 	psp = &player->psprites[ps_weapon];
 	for (psp = player->psprites; psp < &player->psprites[NUMPSPRITES]; psp++) {
 		if (psp->state) {
 			R_DrawPSprite(psp, player->mo->subsector->sector, player);
 		}
 	}
+
+	r_rendering_psprites = false;
 }
 
 //
