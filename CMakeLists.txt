@@ -74,6 +74,7 @@ SET(SOURCES ${SOURCE_DIR}/i_system.c
         ${SOURCE_DIR}/md5.c
         ${SOURCE_DIR}/tables.c
         ${SOURCE_DIR}/con_console.c
+        ${SOURCE_DIR}/complexdoom64.c
         ${SOURCE_DIR}/con_cvar.c
         ${SOURCE_DIR}/d_devstat.c
         ${SOURCE_DIR}/d_main.c

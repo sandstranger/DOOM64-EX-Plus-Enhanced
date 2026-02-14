@@ -13,6 +13,6 @@
 #include "doomdef.h"
 #include "p_mobj.h"
 
-mobjtype_t ComplexD64_RandomizeMonster(int type);
+int ComplexD64_RandomizeMonster(int type);
 
 #endif
