@@ -86,6 +86,7 @@
     <ClCompile Include="..\src\engine\p_mapinfo.c" />
     <ClCompile Include="..\src\engine\i_shaders.c" />
     <ClCompile Include="..\src\engine\i_sectorcombiner.c" />
+	<ClCompile Include="..\src\engine\complexdoom64.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\engine\dgl.h" />
@@ -174,6 +175,7 @@
     <ClInclude Include="..\src\engine\stb_image_write.h" />
     <ClInclude Include="..\src\engine\i_shaders.h" />
     <ClInclude Include="..\src\engine\i_sectorcombiner.h" />
+	<ClInclude Include="..\src\engine\complexdoom64.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\engine\doom64ex-plus.rc" />

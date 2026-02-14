@@ -85,6 +85,8 @@ typedef enum {
     pr_spawnbloodpurple,        // #61
     pr_spawnbloodnightmareColor, // #62
     pr_spawnmissile,            // #63
+    pr_complexdoom64randomizer, // #64
+    pr_complexdoom64nightmare,  // #65
 
     // End of new entries
     NUMPRCLASS               // MUST be last item in list

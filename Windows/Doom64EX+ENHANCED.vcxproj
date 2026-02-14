@@ -150,7 +150,7 @@ copy ..\doom64ex-plus-enhanced.wad $(OutputPath)</Command>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)\SDL3-3.2.24\lib\x64;C:\vcpkg\packages\libpng_x64-windows\lib;C:\vcpkg\packages\zlib_x64-windows\lib;D:\DOOM64-EX-Plus-Enhanced\FMOD_API\FMOD Studio API Windows\api\core\lib\x64;$(ProjectDir)..\thirdparty\Libs\x64;D:\DOOM64-EX-Plus-Enhanced\Windows\vcpkg_installed\x64-windows\lib</AdditionalLibraryDirectories>
@@ -254,6 +254,7 @@ copy ..\doom64ex-plus-enhanced.wad $(OutputPath)</Command>
     <ClCompile Include="..\src\engine\w_merge.c" />
     <ClCompile Include="..\src\engine\w_wad.c" />
     <ClCompile Include="..\src\engine\z_zone.c" />
+	<ClCompile Include="..\src\engine\complexdoom64.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\engine\am_draw.h" />
@@ -342,6 +343,7 @@ copy ..\doom64ex-plus-enhanced.wad $(OutputPath)</Command>
     <ClInclude Include="..\src\engine\w_merge.h" />
     <ClInclude Include="..\src\engine\w_wad.h" />
     <ClInclude Include="..\src\engine\z_zone.h" />
+	<ClInclude Include="..\src\engine\complexdoom64.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\engine\doom64ex-plus-enhanced.ico" />

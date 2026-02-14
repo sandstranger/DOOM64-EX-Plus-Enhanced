@@ -37,6 +37,7 @@
 #include "r_main.h"
 #include "r_sky.h"
 #include "m_password.h"
+#include "complexdoom64.h"
 
 mapthing_t* spawnlist;
 int         numspawnlist;
@@ -47,6 +48,8 @@ void P_CreateFadeThinker(mobj_t* mobj, line_t* line);
 void P_CreateFadeOutThinker(mobj_t* mobj, line_t* line);
 
 CVAR_EXTERNAL(m_reworkedvanillasounds);
+CVAR_EXTERNAL(m_complexdoom64);
+CVAR_EXTERNAL(m_complexdoom64_nightmare);
 
 CVAR(m_nospawnsound, 0);
 CVAR(m_brutal, 0);
@@ -1149,10 +1152,53 @@ mobj_t* P_SpawnMapThing(mapthing_t* mthing) {
 		z = ONFLOORZ;
 	}
 
+	// styd: complex doom 64 game mode
+	if (m_complexdoom64.value)
+	{
+		i = ComplexD64_RandomizeMonster(i);
+
+		if (mobjinfo[i].flags & MF_COUNTKILL)
+		{
+			int nightmare_mode = m_complexdoom64_nightmare.value;
+			int nightmare_chance = 0;
+
+			switch (nightmare_mode)
+			{
+			default:
+			case 0: nightmare_chance = 0; break;      // OFF
+			case 1: nightmare_chance = 8; break;      // 1/8  = 12.5%
+			case 2: nightmare_chance = 4; break;      // 1/4  = 25%
+			case 3: nightmare_chance = 2; break;      // 1/2  = 50%
+			}
+
+			if (nightmare_chance > 0)
+			{
+				if (!(mthing->options & MTF_NIGHTMARE))
+				{
+					if ((P_Random(pr_complexdoom64nightmare) % nightmare_chance) == 0)
+					{
+						mthing->options |= MTF_NIGHTMARE;
+					}
+				}
+			}
+		}
+	}
+
 	mobj = P_SpawnMobj(x, y, z, i);
 	mobj->z += (mthing->z << FRACBITS);
 	mobj->angle = ANG45 * (mthing->angle / 45);
 	mobj->tid = mthing->tid;
+
+	// styd: for complex doom 64 game mode
+	if (m_complexdoom64.value)
+	{
+		// Hitbox HELL KNIGHTS and BARONS OF HELL
+		if (mobj->type == MT_UNDEAD || mobj->type == MT_VILE)
+		{
+			mobj->radius = 24 * FRACUNIT;
+			mobj->height = 100 * FRACUNIT;
+		}
+	}
 
 	// styd: added a new Ultra Nightmare difficulty
 	if (gameskill == sk_ultranightmare) {
@@ -1174,6 +1220,12 @@ mobj_t* P_SpawnMapThing(mapthing_t* mthing) {
 	//
 	if (mobj->flags & MF_SOLID && !mobj->player) {
 		if (!P_CheckPosition(mobj, mobj->x, mobj->y)) {
+
+			// Styd: Fixes the kill counter when a monster is blocked by something during its spawn, even if it doesn't spawn, it was still counted in the kill counter.
+			if (mobj->flags & MF_COUNTKILL) {
+				totalkills--;
+			}
+
 			P_RemoveMobj(mobj);
 			return NULL;
 		}

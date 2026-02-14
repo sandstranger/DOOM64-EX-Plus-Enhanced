@@ -99,6 +99,10 @@ CVAR(p_sdoubleclick, 0);
 CVAR(p_usecontext, 0);
 CVAR(p_damageindicator, 0);
 
+CVAR_EXTERNAL(m_complexdoom64);
+CVAR_EXTERNAL(m_complexdoom64_difficulty);
+CVAR_EXTERNAL(m_complexdoom64_nightmare);
+
 //
 // [kex] sky definition stuff
 //
@@ -1201,4 +1205,7 @@ void P_RegisterCvars(void) {
 	CON_CvarRegister(&p_sdoubleclick);
 	CON_CvarRegister(&p_usecontext);
 	CON_CvarRegister(&p_damageindicator);
+	CON_CvarRegister(&m_complexdoom64);
+	CON_CvarRegister(&m_complexdoom64_difficulty);
+	CON_CvarRegister(&m_complexdoom64_nightmare);
 }
