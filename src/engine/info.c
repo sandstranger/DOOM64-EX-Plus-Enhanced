@@ -155,6 +155,7 @@ void A_CheckVanillaAnimationsOrReworked();
 void A_TriteChase();
 void A_TriteAttack();
 void A_TriteJump();
+void A_SpiderFireLaser();
 
 #ifdef _MSC_VER
 // disable "identifier1' differs in parameter lists from 'identifier2'":
@@ -1385,9 +1386,9 @@ state_t states[NUMSTATES] = {      //0x4DFF4
 	/*S_SPID_RUN11*/        { SPR_SPID, 5, 3, {A_Chase}, S_SPID_RUN12 },
 	/*S_SPID_RUN12*/        { SPR_SPID, 5, 3, {A_Chase}, S_SPID_RUN1 },
 	/*S_SPID_ATK1*/			{ SPR_SPID, 32774, 20, {A_BspiFaceTarget}, S_SPID_ATK2 },
-	/*S_SPID_ATK2*/			{ SPR_SPID, 32775, 2, {A_SpidAttack}, S_SPID_ATK3 },
+	/*S_SPID_ATK2*/			{ SPR_SPID, 32775, 2, {A_SpiderFireLaser}, S_SPID_ATK3 },
 	/*S_SPID_ATK3*/			{ SPR_SPID, 32774, 2, {NULL}, S_SPID_ATK4 },
-	/*S_SPID_ATK4*/			{ SPR_SPID, 32775, 2, {A_SpidAttack}, S_SPID_ATK5 },
+	/*S_SPID_ATK4*/			{ SPR_SPID, 32775, 2, {A_SpiderFireLaser}, S_SPID_ATK5 },
 	/*S_SPID_ATK5*/			{ SPR_SPID, 32774, 2, {NULL}, S_SPID_ATK6 },
 	/*S_SPID_ATK6*/			{ SPR_SPID, 32774, 1, {A_SpidRefire}, S_SPID_ATK2 },
 	/*S_SPID_PAIN*/			{ SPR_SPID, 6, 3, {NULL}, S_SPID_PAIN2 },

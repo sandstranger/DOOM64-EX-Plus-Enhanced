@@ -1286,3 +1286,84 @@ void A_CheckVanillaAnimationsOrReworked(player_t* player, pspdef_t* psp) {
 	}
 
 }
+
+void A_FaceTarget();
+
+// Code for the laser projectile for spider mastermind it can always be improved in the future.
+void A_SpiderFireLaser(mobj_t* actor)
+{
+	int             i;
+	angle_t         fireangle;
+	fixed_t         slope;
+	fixed_t         x;
+	fixed_t         y;
+	fixed_t         z;
+	laser_t* laser[3];
+	laserthinker_t* laserthinker[3];
+
+	if (!actor->target)
+		return;
+
+	A_FaceTarget(actor);
+
+	for (i = 0; i < 3; i++)
+	{
+		int damage;
+
+		// ---- RANDOM ANGLE (style Unseen Evil) ----
+		fireangle = actor->angle;
+		fireangle += (((int32_t)P_SubRandom(pr_spiderfirelaser)) << 19);
+
+		// ---- AIM ----
+		slope = P_AimLineAttack(actor, fireangle, 0, LASERRANGE);
+
+		// ---- DISPERSION VERTICALE style UE ----
+		slope += (((int32_t)P_SubRandom(pr_spiderfirelaser)) << 5);
+
+		damage = ((P_Random(pr_spiderfirelaser) % 5) + 1) * 3;
+
+		P_LineAttack(actor, fireangle, LASERRANGE, slope, damage);
+
+		// ---- LASER VISUEL ----
+		laser[i] = Z_Malloc(sizeof(*laser[i]), PU_LEVSPEC, 0);
+
+		// head point cohérent avec angle
+		laser[i]->x1 = actor->x + FixedMul(LASERDISTANCE, dcos(fireangle));
+		laser[i]->y1 = actor->y + FixedMul(LASERDISTANCE, dsin(fireangle));
+		laser[i]->z1 = actor->z + LASERAIMHEIGHT;
+
+		laser[i]->x2 = laserhit_x;
+		laser[i]->y2 = laserhit_y;
+		laser[i]->z2 = laserhit_z;
+
+		laser[i]->slopex = (dcos(fireangle) << 5);
+		laser[i]->slopey = (dsin(fireangle) << 5);
+		laser[i]->slopez = slope ? (slope << 5) : 0;
+
+		x = (laser[i]->x1 - laser[i]->x2) >> FRACBITS;
+		y = (laser[i]->y1 - laser[i]->y2) >> FRACBITS;
+		z = (laser[i]->z1 - laser[i]->z2) >> FRACBITS;
+
+		laser[i]->dist = 0;
+		laser[i]->distmax = (int)sqrt((x * x) + (y * y) + (z * z));
+
+		laser[i]->next = NULL;
+		laser[i]->marker = NULL;
+		laser[i]->angle = fireangle;
+
+		x = laser[i]->x2;
+		y = laser[i]->y2;
+		z = laser[i]->z2;
+
+		P_LaserCrossBSP(numnodes - 1, laser[i]);
+
+		laserthinker[i] = Z_Malloc(sizeof(*laserthinker[i]), PU_LEVSPEC, 0);
+		P_AddThinker(&laserthinker[i]->thinker);
+
+		laserthinker[i]->thinker.function.acp1 = (actionf_p1)T_LaserThinker;
+		laserthinker[i]->dest = P_SpawnMobj(x, y, z, MT_PROJ_LASER);
+		laserthinker[i]->laser = laser[i];
+	}
+
+	S_StartSound(actor, sfx_laser);
+}
