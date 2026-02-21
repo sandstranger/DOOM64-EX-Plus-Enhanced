@@ -1287,7 +1287,7 @@ void A_CheckVanillaAnimationsOrReworked(player_t* player, pspdef_t* psp) {
 
 }
 
-void A_FaceTarget();
+void A_FaceTarget(mobj_t* actor);
 
 // Code for the laser projectile for spider mastermind it can always be improved in the future.
 void A_SpiderFireLaser(mobj_t* actor)
@@ -1327,7 +1327,7 @@ void A_SpiderFireLaser(mobj_t* actor)
 		// ---- LASER VISUEL ----
 		laser[i] = Z_Malloc(sizeof(*laser[i]), PU_LEVSPEC, 0);
 
-		// head point cohérent avec angle
+		// head point cohï¿½rent avec angle
 		laser[i]->x1 = actor->x + FixedMul(LASERDISTANCE, dcos(fireangle));
 		laser[i]->y1 = actor->y + FixedMul(LASERDISTANCE, dsin(fireangle));
 		laser[i]->z1 = actor->z + LASERAIMHEIGHT;
