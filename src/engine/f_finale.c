@@ -105,6 +105,96 @@ CVAR_EXTERNAL(m_reworkedpinkyandspectre);
 CVAR_EXTERNAL(m_reworkedBaronofHell);
 CVAR_EXTERNAL(m_reworkedHellKnight);
 
+// 
+// F_GetCastVisual
+// Styd: option to change some vanilla monster sprites to reworked vanilla monster sprites now supports final cast
+
+static void F_GetCastVisual(
+	mobjtype_t type,
+	spritenum_t* sprite,
+	int* palette)
+{
+	switch (type)
+	{
+	case MT_POSSESSED1:
+		if (m_reworkedzombieman.value)
+		{
+			*sprite = SPR_POS1;
+			*palette = mobjinfo[type].palette;
+		}
+		break;
+
+	case MT_POSSESSED2:
+		if (m_reworkedzombieshotgun.value)
+		{
+			*sprite = SPR_POS2;
+			*palette = 0;
+		}
+		break;
+
+	case MT_IMP1:
+		if (m_reworkedimp.value == 2)
+		{
+			*sprite = SPR_TROM;
+			*palette = mobjinfo[type].palette;
+		}
+		else if (m_reworkedimp.value == 1)
+		{
+			*sprite = SPR_TRO1;
+			*palette = mobjinfo[type].palette;
+		}
+		break;
+
+	case MT_IMP2:
+		if (m_reworkedimp.value == 2)
+		{
+			*sprite = SPR_TROM;
+			*palette = 1;
+		}
+		else if (m_reworkedimp.value == 1)
+		{
+			*sprite = SPR_TRO2;
+			*palette = 0;
+		}
+		break;
+
+	case MT_DEMON1:
+		if (m_reworkedpinkyandspectre.value)
+		{
+			*sprite = SPR_SAR1;
+			*palette = mobjinfo[type].palette;
+		}
+		break;
+
+	case MT_DEMON2:
+		if (m_reworkedpinkyandspectre.value)
+		{
+			*sprite = SPR_SAR2;
+		    *palette = 0;
+		}
+		break;
+
+	case MT_BRUISER1:
+		if (m_reworkedBaronofHell.value)
+		{
+			*sprite = SPR_BOS1;
+			*palette = 0;
+		}
+		break;
+
+	case MT_BRUISER2:
+		if (m_reworkedHellKnight.value)
+		{
+			*sprite = SPR_BOS2;
+			*palette = mobjinfo[type].palette;
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
 //
 // F_Start
 //
@@ -230,6 +320,7 @@ int F_Ticker(void) {
 				sound = sfx_sht2fire;
 				break;
 			case S_SARG_ATK2:                           // demon
+			case S_SARG2_ATK2:                          // spectre
 				sound = sfx_sargatk;
 				break;
 			case S_FATT_ATK2:                           // mancubus
@@ -348,122 +439,22 @@ void F_Drawer(void) {
 	GL_ClearView(0xFF000000);
 	Draw_GfxImageInter(64, 30, "EVIL", D_RGBA(255, 255, 255, 0xff), false);
 	Draw_BigText(-1, 240 - 32, D_RGBA(255, 0, 0, 0xff), castorder[castnum].name);
+
+	mobjtype_t type = castorder[castnum].type;
+
+	spritenum_t drawsprite = caststate->sprite;
+	int drawpalette = mobjinfo[type].palette;
+
+	F_GetCastVisual(type, &drawsprite, &drawpalette);
+
 	Draw_Sprite2D(
-		caststate->sprite,
+		drawsprite,
 		castrotation,
 		(caststate->info_frame & FF_FRAMEMASK),
 		160,
 		180,
 		1.0f,
-		mobjinfo[castorder[castnum].type].palette,
+		drawpalette,
 		D_RGBA(finalePal.r, finalePal.g, finalePal.b, finalePal.a)
 	);
-
-	// Styd: option to change some vanilla monster sprites to reworked vanilla monster sprites now supports final cast
-	if (caststate == &states[S_POSS1_RUN1] || caststate == &states[S_POSS1_RUN2] || caststate == &states[S_POSS1_RUN3] || caststate == &states[S_POSS1_RUN4] || caststate == &states[S_POSS1_RUN5] || caststate == &states[S_POSS1_RUN6] || caststate == &states[S_POSS1_RUN7] || caststate == &states[S_POSS1_RUN8] || caststate == &states[S_POSS1_ATK1] || caststate == &states[S_POSS1_ATK2] || caststate == &states[S_POSS1_ATK3] || caststate == &states[S_POSS1_DIE1] || caststate == &states[S_POSS1_DIE2] || caststate == &states[S_POSS1_DIE3] || caststate == &states[S_POSS1_DIE4] || caststate == &states[S_POSS1_DIE5]) {
-		if (m_reworkedzombieman.value == 1) {
-			// reworked vanilla monsters sprites
-			caststate->sprite = SPR_POS1;
-		}
-		else if (m_reworkedzombieman.value == 0) {
-			// vanilla monsters sprites
-			caststate->sprite = SPR_POSS;
-		}
-	}
-
-	if (caststate == &states[S_POSS2_RUN1] || caststate == &states[S_POSS2_RUN2] || caststate == &states[S_POSS2_RUN3] || caststate == &states[S_POSS2_RUN4] || caststate == &states[S_POSS2_RUN5] || caststate == &states[S_POSS2_RUN6] || caststate == &states[S_POSS2_RUN7] || caststate == &states[S_POSS2_RUN8] || caststate == &states[S_POSS2_ATK1] || caststate == &states[S_POSS2_ATK2] || caststate == &states[S_POSS2_ATK3] || caststate == &states[S_POSS2_DIE1] || caststate == &states[S_POSS2_DIE2] || caststate == &states[S_POSS2_DIE3] || caststate == &states[S_POSS2_DIE4] || caststate == &states[S_POSS2_DIE5]) {
-		if (m_reworkedzombieshotgun.value == 1) {
-			// reworked vanilla monsters sprites
-			caststate->sprite = SPR_POS2;
-			mobjinfo[castorder[castnum].type].palette = 0;
-		}
-		else if (m_reworkedzombieshotgun.value == 0) {
-			// vanilla monsters sprites
-			caststate->sprite = SPR_POSS;
-			mobjinfo[castorder[castnum].type].palette = 1;
-		}
-	}
-
-	if (caststate == &states[S_TROO_RUN1] || caststate == &states[S_TROO_RUN2] || caststate == &states[S_TROO_RUN3] || caststate == &states[S_TROO_RUN4] || caststate == &states[S_TROO_RUN5] || caststate == &states[S_TROO_RUN6] || caststate == &states[S_TROO_RUN7] || caststate == &states[S_TROO_RUN8] || caststate == &states[S_TROO_MELEE1] || caststate == &states[S_TROO_MELEE2] || caststate == &states[S_TROO_MELEE3] || caststate == &states[S_TROO_ATK1] || caststate == &states[S_TROO_ATK2] || caststate == &states[S_TROO_ATK3] || caststate == &states[S_TROO_DIE1] || caststate == &states[S_TROO_DIE2] || caststate == &states[S_TROO_DIE3] || caststate == &states[S_TROO_DIE4] || caststate == &states[S_TROO_DIE5]) {
-		if (m_reworkedimp.value == 2) {
-			// reworked vanilla monsters sprites
-			// imp with a mouth
-			caststate->sprite = SPR_TROM;
-		}
-		else if (m_reworkedimp.value == 1) {
-			// reworked vanilla monsters sprites
-			caststate->sprite = SPR_TRO1;
-		}
-		else if (m_reworkedimp.value == 0) {
-			// vanilla monsters sprites
-			caststate->sprite = SPR_TROO;
-		}
-	}
-
-	if (caststate == &states[S_TROO2_RUN1] || caststate == &states[S_TROO2_RUN2] || caststate == &states[S_TROO2_RUN3] || caststate == &states[S_TROO2_RUN4] || caststate == &states[S_TROO2_RUN5] || caststate == &states[S_TROO2_RUN6] || caststate == &states[S_TROO2_RUN7] || caststate == &states[S_TROO2_RUN8] || caststate == &states[S_TROO2_MELEE1] || caststate == &states[S_TROO2_MELEE2] || caststate == &states[S_TROO2_MELEE3] || caststate == &states[S_TROO2_ATK1] || caststate == &states[S_TROO2_ATK2] || caststate == &states[S_TROO2_ATK3] || caststate == &states[S_TROO2_DIE1] || caststate == &states[S_TROO2_DIE2] || caststate == &states[S_TROO2_DIE3] || caststate == &states[S_TROO2_DIE4] || caststate == &states[S_TROO2_DIE5]) {
-		if (m_reworkedimp.value == 2) {
-			// reworked vanilla monsters sprites
-			// imp with a mouth
-			caststate->sprite = SPR_TROM;
-			mobjinfo[castorder[castnum].type].palette = 1;
-		}
-		else if (m_reworkedimp.value == 1) {
-			// reworked vanilla monsters sprites
-			caststate->sprite = SPR_TRO2;
-			mobjinfo[castorder[castnum].type].palette = 0;
-		}
-		else if (m_reworkedimp.value == 0) {
-			// vanilla monsters sprites
-			caststate->sprite = SPR_TROO;
-			mobjinfo[castorder[castnum].type].palette = 1;
-		}
-	}
-
-	if (caststate == &states[S_SARG_RUN1] || caststate == &states[S_SARG_RUN2] || caststate == &states[S_SARG_RUN3] || caststate == &states[S_SARG_RUN4] || caststate == &states[S_SARG_RUN5] || caststate == &states[S_SARG_RUN6] || caststate == &states[S_SARG_RUN7] || caststate == &states[S_SARG_RUN8] || caststate == &states[S_SARG_ATK1] || caststate == &states[S_SARG_ATK2] || caststate == &states[S_SARG_ATK3] || caststate == &states[S_SARG_DIE1] || caststate == &states[S_SARG_DIE2] || caststate == &states[S_SARG_DIE3] || caststate == &states[S_SARG_DIE4] || caststate == &states[S_SARG_DIE5] || caststate == &states[S_SARG_DIE6]) {
-		if (m_reworkedpinkyandspectre.value == 1) {
-			// reworked vanilla monsters sprites
-			caststate->sprite = SPR_SAR1;
-		}
-		else if (m_reworkedpinkyandspectre.value == 0) {
-			// vanilla monsters sprites
-			caststate->sprite = SPR_SARG;
-		}
-	}
-
-	if (caststate == &states[S_SARG2_RUN0] || caststate == &states[S_SARG2_RUN1] || caststate == &states[S_SARG2_RUN2] || caststate == &states[S_SARG2_RUN3] || caststate == &states[S_SARG2_RUN4] || caststate == &states[S_SARG2_RUN5] || caststate == &states[S_SARG2_RUN6] || caststate == &states[S_SARG2_RUN7] || caststate == &states[S_SARG2_RUN8] || caststate == &states[S_SARG2_ATK0] || caststate == &states[S_SARG2_ATK1] || caststate == &states[S_SARG2_ATK2] || caststate == &states[S_SARG2_ATK3] || caststate == &states[S_SARG2_DIE0] || caststate == &states[S_SARG2_DIE1] || caststate == &states[S_SARG2_DIE2] || caststate == &states[S_SARG2_DIE3] || caststate == &states[S_SARG2_DIE4] || caststate == &states[S_SARG2_DIE5] || caststate == &states[S_SARG2_DIE6]) {
-		if (m_reworkedpinkyandspectre.value == 1) {
-			// reworked vanilla monsters sprites
-			caststate->sprite = SPR_SAR2;
-			mobjinfo[castorder[castnum].type].palette = 0;
-		}
-		else if (m_reworkedpinkyandspectre.value == 0) {
-			// vanilla monsters sprites
-			caststate->sprite = SPR_SARG;
-			mobjinfo[castorder[castnum].type].palette = 1;
-		}
-	}
-
-	if (caststate == &states[S_BOSS1_RUN1] || caststate == &states[S_BOSS1_RUN2] || caststate == &states[S_BOSS1_RUN3] || caststate == &states[S_BOSS1_RUN4] || caststate == &states[S_BOSS1_RUN5] || caststate == &states[S_BOSS1_RUN6] || caststate == &states[S_BOSS1_RUN7] || caststate == &states[S_BOSS1_RUN8] || caststate == &states[S_BOSS1_ATK1] || caststate == &states[S_BOSS1_ATK2] || caststate == &states[S_BOSS1_ATK3] || caststate == &states[S_BOSS1_DIE1] || caststate == &states[S_BOSS1_DIE2] || caststate == &states[S_BOSS1_DIE3] || caststate == &states[S_BOSS1_DIE4] || caststate == &states[S_BOSS1_DIE5] || caststate == &states[S_BOSS1_DIE6]) {
-		if (m_reworkedBaronofHell.value == 1) {
-			// reworked vanilla monsters sprites
-			caststate->sprite = SPR_BOS1;
-			mobjinfo[castorder[castnum].type].palette = 0;
-		}
-		else if (m_reworkedBaronofHell.value == 0) {
-			// vanilla monsters sprites
-			caststate->sprite = SPR_BOSS;
-			mobjinfo[castorder[castnum].type].palette = 1;
-		}
-	}
-
-	if (caststate == &states[S_BOSS2_RUN1] || caststate == &states[S_BOSS2_RUN2] || caststate == &states[S_BOSS2_RUN3] || caststate == &states[S_BOSS2_RUN4] || caststate == &states[S_BOSS2_RUN5] || caststate == &states[S_BOSS2_RUN6] || caststate == &states[S_BOSS2_RUN7] || caststate == &states[S_BOSS2_RUN8] || caststate == &states[S_BOSS2_ATK1] || caststate == &states[S_BOSS2_ATK2] || caststate == &states[S_BOSS2_ATK3] || caststate == &states[S_BOSS2_DIE1] || caststate == &states[S_BOSS2_DIE2] || caststate == &states[S_BOSS2_DIE3] || caststate == &states[S_BOSS2_DIE4] || caststate == &states[S_BOSS2_DIE5] || caststate == &states[S_BOSS2_DIE6]) {
-		if (m_reworkedHellKnight.value == 1) {
-			// reworked vanilla monsters sprites
-			caststate->sprite = SPR_BOS2;
-		}
-		else if (m_reworkedHellKnight.value == 0) {
-			// vanilla monsters sprites
-			caststate->sprite = SPR_BOSS;
-		}
-	}
 }

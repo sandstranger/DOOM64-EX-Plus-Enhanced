@@ -809,6 +809,7 @@ CVAR_EXTERNAL(m_reworkedHellKnight);
 CVAR_EXTERNAL(m_painelementalalpha);
 CVAR_EXTERNAL(m_limitpain);
 CVAR_EXTERNAL(m_fixspectrehitbox);
+CVAR_EXTERNAL(m_blockmapfix);
 
 enum {
 	enhanced_header1,
@@ -830,6 +831,7 @@ enum {
 	enhanced_header4,
 	enhanced_limitpain,
 	enhanced_fixspectrehitbox,
+	enhanced_blockmapfix,
 	enhanced_header5,
 	enhanced_complexdoom64,
 	enhanced_complexdoom64difficulty,
@@ -859,6 +861,7 @@ menuitem_t EnhancedMenu[] = {
 	{-1,"Vanilla Fix",0 },
 	{2,"Limit Lost Souls:",M_EnhancedChoice,'l'},
 	{2,"Spectre Hitbox:",M_EnhancedChoice },
+	{2,"Blockmap Fix:",M_EnhancedChoice },
 	{-1,"Complex DOOM64",0 },
 	{2,"Complex D64:",M_EnhancedChoice},
 	{2,"Difficulty:",M_EnhancedChoice},
@@ -886,7 +889,8 @@ char* EnhancedHints[enhanced_end] = {
 	"change the transparency of nightmare",
 	NULL,
 	"limit max amount of lost souls spit by pain elemental to 17",
-	"Fix the specter hitbox having a bigger hitbox than the pinky",
+	"fix the specter hitbox having a bigger hitbox than the pinky",
+	"fix the blockmap bug in the original doom engine",
 	NULL,
 	"enable complex doom 64 game mode",
 	"changes the difficulty of the randomizer of complex doom 64",
@@ -911,6 +915,7 @@ menudefault_t EnhancedDefault[] = {
 	{ &m_painelementalalpha, 0 },
 	{ &m_limitpain, 1 },
 	{ &m_fixspectrehitbox, 0 },
+	{ &m_blockmapfix, 0 },
 	{ &m_complexdoom64, 0 },
 	{ &m_complexdoom64_difficulty, 0 },
 	{ &m_complexdoom64_nightmare, 1 },
@@ -998,6 +1003,10 @@ void M_EnhancedChoice(int choice) {
 		M_SetOptionValue(choice, 0, 1, 1, &m_fixspectrehitbox);
 		break;
 
+	case enhanced_blockmapfix:
+		M_SetOptionValue(choice, 0, 1, 1, &m_blockmapfix);
+		break;
+
 	case enhanced_complexdoom64:
 		if (gamestate == GS_LEVEL)
 			return;
@@ -1057,6 +1066,7 @@ void M_DrawEnhanced(void) {
 	DRAWMISCITEM(enhanced_painelementalalpha, m_painelementalalpha.value, alphavanillatype);
 	DRAWMISCITEM(enhanced_limitpain, m_limitpain.value, msgNames);
 	DRAWMISCITEM(enhanced_fixspectrehitbox, m_fixspectrehitbox.value, autoruntype);
+	DRAWMISCITEM(enhanced_blockmapfix, m_blockmapfix.value, autoruntype);
 	DRAWMISCITEM(enhanced_complexdoom64, m_complexdoom64.value, msgNames);
 	DRAWMISCITEM(enhanced_complexdoom64difficulty, m_complexdoom64_difficulty.value, complexdoom64difficultytype);
 	DRAWMISCITEM(enhanced_complexdoom64nightmare, m_complexdoom64_nightmare.value, complexdoom64nightmaretype);
@@ -2197,6 +2207,7 @@ void M_Video(int choice) {
 }
 
 void M_DrawVideo(void) {
+	static const char* filterType1[3] = { "N64" };
 	static const char* filterType2[2] = { "Linear", "Nearest" };
 	static const char* onofftype[2] = { "Off", "On" };
 	static const char* fullscreenType[2] = { "Resizable Window", "Exclusive" };

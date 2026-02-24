@@ -180,6 +180,7 @@ CVAR_EXTERNAL(m_reworkedHellKnight);
 CVAR_EXTERNAL(m_painelementalalpha);
 CVAR_EXTERNAL(m_limitpain);
 CVAR_EXTERNAL(m_fixspectrehitbox);
+CVAR_EXTERNAL(m_blockmapfix);
 
 //
 // G_RegisterCvars
@@ -217,6 +218,7 @@ void G_RegisterCvars(void) {
 	CON_CvarRegister(&m_painelementalalpha);
 	CON_CvarRegister(&m_limitpain);
 	CON_CvarRegister(&m_fixspectrehitbox);
+	CON_CvarRegister(&m_blockmapfix);
 }
 
 //

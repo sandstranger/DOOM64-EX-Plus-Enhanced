@@ -33,6 +33,8 @@
 #include "i_swap.h"
 #include "r_main.h"
 
+CVAR(m_blockmapfix, 0);
+
 // atsb: Reverse Engineered
 
 intercept_t intercepts[MAXINTERCEPTS];
@@ -318,6 +320,8 @@ boolean P_BlockThingsIterator(int x, int y, boolean(*func)(mobj_t*))
     }
 
     // styd: include blockmap fix from inter-doom
+    if (m_blockmapfix.value)
+    {
 
     // [JN] Do not apply following BLOCKMAP fix for explosion radius damage.
     // Otherwise, explosion damage will be multiplied on ammount of BLOCKMAP 
@@ -425,6 +429,8 @@ boolean P_BlockThingsIterator(int x, int y, boolean(*func)(mobj_t*))
                         return false;
             }
         }
+
+    }
 
     return true;
 }
