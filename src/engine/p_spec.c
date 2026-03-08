@@ -774,8 +774,8 @@ void T_Quake(quake_t* quake) { // 0x8000EDE8
 		return;
 	}
 
-	quakeviewy = (((P_Random(pr_quake) & 1) << 18) - (2 * FRACUNIT));
-	quakeviewx = (((P_Random(pr_quake) & 1) << 24) - (128 * FRACUNIT));
+	quakeviewx = (((P_Random(pr_quake) & 1) << 24)-128);
+    quakeviewy = (((P_Random(pr_quake) & 1) << 18)-2);
 }
 
 //
