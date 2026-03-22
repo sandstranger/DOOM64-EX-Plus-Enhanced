@@ -277,7 +277,7 @@ void I_InitScreen(void) {
             "OpenGL ES 3.1 is using for rendering");
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, g_useGLES2_0 ? 2 : 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, g_useGLES2_0 ? 0 : 1);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,  0 );
 #endif
 
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 0);
