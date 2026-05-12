@@ -21,7 +21,11 @@
 //-----------------------------------------------------------------------------
 
 #include <stdio.h>
+#ifndef ANDROID
 #include <SDL3/SDL_opengl.h>
+#else
+#include "glad.h"
+#endif
 
 #ifdef SDL_PLATFORM_WIN32
 #include <nvapi/nvapi.h>
@@ -385,6 +389,15 @@ void I_InitScreen(void) {
         return;
     }
     SDL_GL_MakeCurrent(window, glContext);
+
+#if ANDROID
+    if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
+        SDL_GL_DestroyContext(glContext);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return;
+    }
+#endif
 
     SDL_GetWindowSizeInPixels(window, &win_px_w, &win_px_h);
     GL_OnResize(win_px_w, win_px_h);

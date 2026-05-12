@@ -20,7 +20,11 @@
 //-----------------------------------------------------------------------------
 
 #include <SDL3/SDL.h>
+#ifndef ANDROID
 #include <SDL3/SDL_opengl.h>
+#else
+#include "glad.h"
+#endif
 #include <string.h>
 #include <math.h>
 

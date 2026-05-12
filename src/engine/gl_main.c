@@ -19,7 +19,11 @@
 //
 //-----------------------------------------------------------------------------
 
+#ifndef ANDROID
 #include <SDL3/SDL_opengl.h>
+#else
+#include "glad.h"
+#endif
 
 #ifdef SDL_PLATFORM_MACOS
 #include <OpenGL/OpenGL.h>

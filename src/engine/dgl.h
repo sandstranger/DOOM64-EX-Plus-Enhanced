@@ -19,8 +19,12 @@
 #define __DGL_H__
 
 #include <math.h>
+#if !defined(ANDROID)
 #include <SDL3/SDL_opengl.h>
-
+#else
+#include "glad.h"
+#include "SDL3/SDL.h"
+#endif
 #include "gl_main.h"
 
 //#define LOG_GLFUNC_CALLS

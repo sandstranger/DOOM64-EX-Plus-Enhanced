@@ -50,10 +50,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I${FMOD_INC_DIR} -Wunknown-pragmas -fwrapv -MD")
 set(CMAKE_EXE_LINKER_FLAGS "-L${FMOD_LIB_DIR}")
 
+if (NOT ANDROID)
 set(CMAKE_C_FLAGS_DEBUG "-g -Wall")
 set(CMAKE_C_FLAGS_RELEASE "-s -O2")
-
-if (NOT ANDROID)
 find_package(SDL3 REQUIRED)
 find_package(PNG REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -62,6 +61,10 @@ include_directories(
 	${libpng_INCLUDE_DIRS}
 	${OpenGL_INCLUDE_DIRS}
 )
+endif ()
+
+if (ANDROID)
+	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src/glad")
 endif ()
 
 set(SOURCE_DIR "src/engine")
@@ -156,7 +159,7 @@ SET(SOURCES ${SOURCE_DIR}/i_system.c
 if (NOT ANDROID)
     add_executable(${PROJECT_NAME} ${SOURCES})
 else ()
-    add_library(${PROJECT_NAME} SHARED ${SOURCES})
+    add_library(${PROJECT_NAME} SHARED ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/src/glad/glad.c)
 endif ()
 
 if (NOT ANDROID)

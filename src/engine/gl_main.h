@@ -18,7 +18,12 @@
 #ifndef __GL_MAIN_H__
 #define __GL_MAIN_H__
 
+#if !defined(ANDROID)
 #include <SDL3/SDL_opengl.h>
+#else
+#include "glad.h"
+#include "SDL3/SDL.h"
+#endif
 #include "doomtype.h"
 
 typedef GLuint        dtexture;

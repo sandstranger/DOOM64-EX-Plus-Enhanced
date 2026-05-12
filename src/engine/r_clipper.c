@@ -20,7 +20,11 @@
 //-----------------------------------------------------------------------------
 
 #include <stdlib.h>
+#ifndef ANDROID
 #include <SDL3/SDL_opengl.h>
+#else
+#include "glad.h"
+#endif
 
 #include "r_clipper.h"
 #include "doomtype.h"

@@ -36,7 +36,6 @@
 #include "doomstat.h"
 #include "sounds.h"
 
-
 #define LOWERSPEED                FRACUNIT*7
 #define RAISESPEED                FRACUNIT*7
 
