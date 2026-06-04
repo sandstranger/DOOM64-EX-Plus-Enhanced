@@ -25,6 +25,7 @@
 #include <SDL3/SDL_opengl.h>
 #else
 #include "glad.h"
+#include "AngleShaderCache.h"
 #endif
 
 #ifdef SDL_PLATFORM_WIN32
@@ -391,6 +392,7 @@ void I_InitScreen(void) {
     SDL_GL_MakeCurrent(window, glContext);
 
 #if ANDROID
+    angle_blobcache_install("doom64_ex_plus_enhanced");
     if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
         SDL_GL_DestroyContext(glContext);
         SDL_DestroyWindow(window);
