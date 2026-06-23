@@ -60,7 +60,11 @@ const char *gl_version;
 static float glScaleFactor = 1.0f;
 
 boolean    usingGL = false;
+#ifndef ANDROID
 float       max_anisotropic = 16.0;
+#else
+float       max_anisotropic = 2.0f;
+#endif
 boolean    widescreen = false;
 
 CVAR_EXTERNAL(r_filter);
