@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <SDL3/SDL_main.h>
+#include "SwappyController.h"
 #endif
 
 const char version_date[] = __DATE__;
@@ -480,6 +481,7 @@ int main(int argc, char *argv[]) {
     freeChars(&g_pathToDoom64UserFolder);
     freeChars(&g_pathToDoom64MainWadsFolder);
     freeChars(&g_pathToSDLControllerDB);
+	DestroySwappy();
 #endif
 	return 0;
 }

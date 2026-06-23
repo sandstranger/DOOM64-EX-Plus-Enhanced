@@ -33,6 +33,7 @@
 #include "g_settings.h"
 #ifdef ANDROID
 #include <stdlib.h>
+#include "SwappyController.h"
 #endif
 
 CVAR(v_msensitivityx, 32);
@@ -852,7 +853,13 @@ static float GetDisplayRefreshRate(void) {
 
 void I_FinishUpdate(void) {
 	I_UpdateGrab();
+#ifdef ANDROID
+	if (!SwappySwapBuffers()){
+		SDL_GL_SwapWindow(window);
+	}
+#else
 	SDL_GL_SwapWindow(window);
+#endif
 	dglFinish();
 	BusyDisk = false;
 }
