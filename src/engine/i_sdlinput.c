@@ -859,8 +859,8 @@ void I_FinishUpdate(void) {
 	}
 #else
 	SDL_GL_SwapWindow(window);
-#endif
 	dglFinish();
+#endif
 	BusyDisk = false;
 }
 
