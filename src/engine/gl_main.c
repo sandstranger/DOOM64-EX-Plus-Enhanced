@@ -74,6 +74,16 @@ CVAR_EXTERNAL(r_multisample);
 CVAR_EXTERNAL(st_flashoverlay);
 CVAR_EXTERNAL(r_colorscale);
 
+#ifdef ANDROID
+static float maxAllowedAnisotropyValue = 2.0f;
+
+__attribute__((used)) __attribute__((visibility("default")))
+void updateMaxAnisotropyValue (int targetAnisotropyValue) {
+    maxAllowedAnisotropyValue = targetAnisotropyValue;
+}
+
+#endif
+
 void GL_OnResize(int w, int h);
 
 //
@@ -588,9 +598,8 @@ void GL_Init(void) {
     if(has_GL_EXT_texture_filter_anisotropic) {
         dglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropic);
 #ifdef ANDROID
-        static const float maxAnisotropyValue = 2.0f;
-        if (max_anisotropic > maxAnisotropyValue){
-            max_anisotropic = maxAnisotropyValue;
+        if (max_anisotropic > maxAllowedAnisotropyValue){
+            max_anisotropic = maxAllowedAnisotropyValue;
         }
 #endif
     }
