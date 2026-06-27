@@ -253,7 +253,9 @@ byte* GL_GetScreenBuffer(int x, int y, int width, int height) {
     //
     dglGetIntegerv(GL_PACK_ALIGNMENT, &pack);
     dglPixelStorei(GL_PACK_ALIGNMENT, 1);
+#ifndef ANDROID    
     dglFlush();
+#endif    
     dglReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, data);
     dglPixelStorei(GL_PACK_ALIGNMENT, pack);
 
