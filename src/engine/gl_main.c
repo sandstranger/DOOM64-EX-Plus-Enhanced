@@ -80,6 +80,7 @@ static float maxAllowedAnisotropyValue = 2.0f;
 __attribute__((used)) __attribute__((visibility("default")))
 void updateMaxAnisotropyValue (int targetAnisotropyValue) {
     maxAllowedAnisotropyValue = targetAnisotropyValue;
+    max_anisotropic = targetAnisotropyValue;
 }
 
 #endif
