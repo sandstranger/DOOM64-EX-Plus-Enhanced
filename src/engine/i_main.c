@@ -487,19 +487,13 @@ int main(int argc, char *argv[]) {
 }
 
 #ifdef ANDROID
-extern void FMOD_PauseAll();
-extern void FMOD_ResumeAll();
 
 __attribute__((used)) __attribute__((visibility("default")))
 void onNativeResume() {
-    FMOD_ResumeAll();
-    window_focused = true;
 }
 
 __attribute__((used)) __attribute__((visibility("default")))
 void onNativePause() {
-    FMOD_PauseAll();
-    window_focused = false;
 }
 __attribute__((used)) __attribute__((visibility("default")))
 bool needToShowScreenControls() {
