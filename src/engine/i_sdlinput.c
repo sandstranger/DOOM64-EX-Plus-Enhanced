@@ -688,13 +688,20 @@ boolean I_UpdateGrab(void) {
 // I_GetEvent
 //
 
+#ifdef ANDROID
+extern void RecalculateScreenResolution (int native_w, int native_h);
+#endif
+
 void I_GetEvent(SDL_Event* Event) {
 	event_t event;
 	unsigned int mwheeluptic = 0, mwheeldowntic = 0;
 	unsigned int tic = gametic;
 #if ANDROID
-    if (Event->type == SDL_EVENT_DID_ENTER_FOREGROUND && activityOrientationChangerInstance!= nullptr){
-        activityOrientationChangerInstance();
+    if (Event->window.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED){
+		const int width = Event->window.data1;
+		const int height = Event->window.data2;
+		RecalculateScreenResolution(width, height);
+		return;
     }
 #endif
 	I_GamepadHandleSDLEvent(Event);
