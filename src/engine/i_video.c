@@ -52,6 +52,14 @@ static bool gladWasLoaded = false;
 
 CVAR(r_trishader, 1);
 CVAR(v_checkratio, 0);
+//
+// styd: on-screen framerate counter.
+// The engine already computes one in ST_DrawFPS, but until now it was only
+// reachable through -devparm, which floods the screen with developer stats.
+// This exposes just the counter.
+//
+CVAR(v_showfps, 0);
+
 CVAR_CMD(v_maxfps, 500) {
 
     /*
@@ -658,6 +666,7 @@ void V_RegisterCvars(void) {
     CON_CvarRegister(&v_checkratio);
     CON_CvarRegister(&v_vsync);
     CON_CvarRegister(&v_maxfps);
+    CON_CvarRegister(&v_showfps);
     CON_CvarRegister(&v_fullscreen);
 }
 

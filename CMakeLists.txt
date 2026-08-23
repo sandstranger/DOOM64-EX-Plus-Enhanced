@@ -134,6 +134,7 @@ SET(SOURCES ${SOURCE_DIR}/i_system.c
         ${SOURCE_DIR}/r_drawlist.c
         ${SOURCE_DIR}/r_lights.c
         ${SOURCE_DIR}/r_main.c
+        ${SOURCE_DIR}/r_dynlights.c
         ${SOURCE_DIR}/r_scene.c
         ${SOURCE_DIR}/r_bsp.c
         ${SOURCE_DIR}/r_sky.c
