@@ -550,6 +550,15 @@ static void I_GamepadInitOnce(void) {
 	gamepad64.init = true;
 }
 
+#ifdef ANDROID
+static bool g_onScreenControlsEnabled = false;
+
+__attribute__((used)) __attribute__((visibility("default")))
+void updateOnScreenControlsState(const bool enabled) {
+    g_onScreenControlsEnabled = enabled;
+}
+#endif
+
 //
 // I_GamepadHandleSDLEvent
 //
@@ -559,16 +568,37 @@ static void I_GamepadHandleSDLEvent(const SDL_Event* e) {
 	}
 
 	switch (e->type) {
-	case SDL_EVENT_GAMEPAD_ADDED:
-		I_GamepadOpen(e->gdevice.which);
-		break;
+		case SDL_EVENT_GAMEPAD_ADDED:
+		{
+#ifdef ANDROID
+			SDL_JoystickID id = e->gdevice.which;
+			bool isVirtual = SDL_IsJoystickVirtual(id);
+			if (!g_onScreenControlsEnabled || (g_onScreenControlsEnabled && isVirtual))
+			{
+				I_GamepadOpen(id);
+			}
+#else
+			I_GamepadOpen(e->gdevice.which);
+#endif
+			break;
+		}
 
 	case SDL_EVENT_JOYSTICK_ADDED:
-		// a device with a mapping also raises SDL_EVENT_GAMEPAD_ADDED, so
+#ifdef ANDROID
+			SDL_JoystickID id = e->jdevice.which;
+			bool isVirtual = SDL_IsJoystickVirtual(id);
+			if (!SDL_IsGamepad(e->jdevice.which) && (!g_onScreenControlsEnabled ||
+			(g_onScreenControlsEnabled && isVirtual)))
+			{
+				I_GamepadOpen(id);
+			}
+#else
+    	// a device with a mapping also raises SDL_EVENT_GAMEPAD_ADDED, so
 		// only take it here if it has none
 		if (!SDL_IsGamepad(e->jdevice.which)) {
 			I_GamepadOpen(e->jdevice.which);
 		}
+#endif
 		break;
 
 	case SDL_EVENT_GAMEPAD_REMOVED:

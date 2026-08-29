@@ -5064,6 +5064,9 @@ static void M_DrawMenuSkull(int x, int y) {
 
 static void M_DrawCursor()
 {
+#ifdef ANDROID
+	return;
+#endif
 	int gfxIdx = -1;
 	float factor;
 	float scale;
