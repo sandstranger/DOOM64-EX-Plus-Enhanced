@@ -39,11 +39,7 @@
 #include "info.h"
 #include "z_zone.h"
 
-#ifdef ANDROID
-    CVAR(m_reworkedvanillasounds, 0);
-#else
-    CVAR(m_reworkedvanillasounds, 1);
-#endif
+CVAR(m_reworkedvanillasounds, 1);
 CVAR(m_limitpain, 1);
 CVAR(m_revenantprojectilespeed, 0);
 
