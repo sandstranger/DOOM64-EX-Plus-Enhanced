@@ -1502,7 +1502,11 @@ static void NET_SV_RunClient(net_client_t* client)
 
 void NET_SV_AddModule(net_module_t* module)
 {
-	module->InitServer();
+	if (!module->InitServer())
+	{
+		I_Error("NET_SV_AddModule: Failed to initialise server module");
+	}
+
 	NET_AddModule(server_context, module);
 }
 

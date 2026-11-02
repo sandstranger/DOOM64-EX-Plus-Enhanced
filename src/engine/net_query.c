@@ -25,6 +25,7 @@
 #include "net_io.h"
 #include "net_packet.h"
 #include "net_structure.h"
+#include "net_udp.h"
 
 typedef struct
 {
@@ -230,6 +231,13 @@ static net_addr_t* NET_Query_QueryLoop(net_addr_t* addr,
 void NET_Query_Init(void)
 {
 	query_context = NET_NewContext();
+
+	if (!net_udp_module.InitClient())
+	{
+		I_Error("NET_Query_Init: Failed to initialise UDP module");
+	}
+
+	NET_AddModule(query_context, &net_udp_module);
 
 	responders = NULL;
 	num_responses = 0;

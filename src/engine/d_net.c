@@ -38,6 +38,7 @@
 #include "net_loop.h"
 #include "net_query.h"
 #include "net_io.h"
+#include "net_udp.h"
 #include "r_main.h"
 
 
@@ -240,9 +241,30 @@ static void CheckMD5Sums(void) {
 static void D_NetWait(void) {
 	SDL_Event Event;
 	unsigned int id = 0;
+	int autostart_nodes = 0;
+	int i;
 
 	if (M_CheckParm("-server") > 0) {
-		I_Printf("D_NetWait: Waiting for players..\n\nWhen ready press any key to begin game..\n\n");
+		//!
+		// @arg <n>
+		// @category net
+		//
+		// Start the game automatically once n players have joined.
+		// Key presses no longer start the game early.
+		//
+
+		i = M_CheckParm("-nodes");
+
+		if (i > 0 && i < myargc - 1) {
+			autostart_nodes = SDL_clamp(SDL_atoi(myargv[i + 1]), 1, MAXPLAYERS);
+		}
+
+		if (autostart_nodes > 0) {
+			I_Printf("D_NetWait: Waiting for %i players..\n\n", autostart_nodes);
+		}
+		else {
+			I_Printf("D_NetWait: Waiting for players..\n\nWhen ready press any key to begin game..\n\n");
+		}
 	}
 
 	I_Printf("---------------------------------------------\n\n");
@@ -263,10 +285,15 @@ static void D_NetWait(void) {
 			I_Error("D_NetWait: Disconnected from server");
 		}
 
+		if (autostart_nodes > 0 && net_clients_in_game >= (unsigned int)autostart_nodes) {
+			NET_CL_StartGame();
+			autostart_nodes = 0;
+		}
+
 		I_Sleep(100);
 
 		while (SDL_PollEvent(&Event))
-			if (Event.type == SDL_EVENT_KEY_DOWN) {
+			if (Event.type == SDL_EVENT_KEY_DOWN && autostart_nodes == 0) {
 				NET_CL_StartGame();
 			}
 	}
@@ -307,6 +334,7 @@ void D_CheckNetGame(void) {
 		if (M_CheckParm("-server") > 0) {
 			NET_SV_Init();
 			NET_SV_AddModule(&net_loop_server_module);
+			NET_SV_AddModule(&net_udp_module);
 
 			net_loop_client_module.InitClient();
 			addr = net_loop_client_module.ResolveAddress(NULL);
@@ -340,6 +368,14 @@ void D_CheckNetGame(void) {
 			i = M_CheckParm("-connect");
 
 			if (i > 0) {
+				if (i >= myargc - 1) {
+					I_Error("-connect requires an address");
+				}
+
+				if (net_udp_module.InitClient()) {
+					addr = net_udp_module.ResolveAddress(myargv[i + 1]);
+				}
+
 				if (addr == NULL) {
 					I_Error("Unable to resolve '%s'\n", myargv[i + 1]);
 				}
