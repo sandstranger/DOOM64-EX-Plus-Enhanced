@@ -32,6 +32,12 @@ Doom 64 EX+ Enhanced should be compatible with both the Doom 64 EX+ engine and D
 
 # Doom 64 EX+
 
+> **Co-op fork – just for fun.** This fork of [atsb/Doom64EX-Plus](https://github.com/atsb/Doom64EX-Plus)
+> 5.2.0.0 adds online/LAN co-op via a UDP network module (branch `coop-udp`).
+> It is a personal hobby project: it is **not maintained**, will **not receive
+> updates** and is not kept in sync with upstream. See [COOP.md](COOP.md) for
+> how to host and join games.
+
 Doom 64 EX+ is a community-driven continuation of Samuel "Kaiser" Villarreal's original Doom 64 EX project. The primary goal of Doom 64 EX+ is to faithfully recreate the classic Nintendo 64 experience while incorporating modern features, extensive modding capabilities, and performance enhancements.
 
 ## Key Features and Differences from Legacy Doom 64 EX
