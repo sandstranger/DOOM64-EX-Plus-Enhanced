@@ -100,7 +100,7 @@ static sector_combiner_state_t* I_SectorCombinerCurrentState(void) {
     return I_GetGLESVersion() != 0 ? &s_native[s_active_unit] : &s;
 }
 
-static void reset_state(sector_combiner_state_t* state, boolean nativeGLES) {
+static void reset_state(sector_combiner_state_t* state, int nativeGLES) {
     memset(state, 0, sizeof(*state));
     state->combine_rgb = GL_MODULATE;
     state->combine_alpha = GL_MODULATE;
