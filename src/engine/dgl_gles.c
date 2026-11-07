@@ -737,7 +737,7 @@ void I_GLES_Enable(GLenum cap) {
         I_GLES_CommitFog();
         return;
     }
-    if (cap == GL_MULTISAMPLE)
+    if (cap == GL_MULTISAMPLE || cap == GL_COLOR_LOGIC_OP)
         return;
     glEnable(cap);
 }
@@ -759,7 +759,7 @@ void I_GLES_Disable(GLenum cap) {
         I_GLES_CommitFog();
         return;
     }
-    if (cap == GL_MULTISAMPLE)
+    if (cap == GL_MULTISAMPLE || cap == GL_COLOR_LOGIC_OP)
         return;
     glDisable(cap);
 }
@@ -770,6 +770,7 @@ GLboolean I_GLES_IsEnabled(GLenum cap) {
             ? g_texture_enabled[g_active_texture_unit] : GL_FALSE;
     if (cap == GL_ALPHA_TEST) return g_alpha_test_enabled;
     if (cap == GL_FOG) return g_fog_enabled;
+    if (cap == GL_COLOR_LOGIC_OP) return GL_FALSE;
     return glIsEnabled(cap);
 }
 void I_GLES_AlphaFunc(GLenum func, GLclampf reference) {
