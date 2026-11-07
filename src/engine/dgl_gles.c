@@ -761,21 +761,40 @@ void I_GLES_TexEnvi(GLenum target, GLenum pname, GLint param) {
         return;
     switch (pname) {
     case GL_TEXTURE_ENV_MODE:
-        if (param != GL_COMBINE) {
-            /* Legacy GL_TEXTURE_ENV_MODE controls both RGB and alpha
-               equations and resets their default argument ordering. */
+        if (param == GL_COMBINE)
+            break;
+
+        /* Reset every source/operand before applying the selected legacy
+           texture environment equation. */
+        I_SectorCombiner_SetSourceRGB(0, GL_TEXTURE);
+        I_SectorCombiner_SetOperandRGB(0, GL_SRC_COLOR);
+        I_SectorCombiner_SetSourceRGB(1, 0x8578); /* GL_PREVIOUS */
+        I_SectorCombiner_SetOperandRGB(1, GL_SRC_COLOR);
+        I_SectorCombiner_SetSourceRGB(2, 0x8578); /* GL_PREVIOUS */
+        I_SectorCombiner_SetOperandRGB(2, GL_SRC_COLOR);
+        I_SectorCombiner_SetSourceAlpha(0, GL_TEXTURE);
+        I_SectorCombiner_SetOperandAlpha(0, 0x0302); /* GL_SRC_ALPHA */
+        I_SectorCombiner_SetSourceAlpha(1, 0x8578); /* GL_PREVIOUS */
+        I_SectorCombiner_SetOperandAlpha(1, 0x0302); /* GL_SRC_ALPHA */
+        I_SectorCombiner_SetSourceAlpha(2, 0x8578); /* GL_PREVIOUS */
+        I_SectorCombiner_SetOperandAlpha(2, 0x0302); /* GL_SRC_ALPHA */
+
+        if (param == GL_DECAL) {
+            /* RGB = mix(previous, texture, texture alpha); alpha = previous. */
+            I_SectorCombiner_SetCombineRGB(GL_INTERPOLATE);
+            I_SectorCombiner_SetSourceRGB(2, GL_TEXTURE);
+            I_SectorCombiner_SetOperandRGB(2, GL_SRC_ALPHA);
+            I_SectorCombiner_SetCombineAlpha(GL_REPLACE);
+            I_SectorCombiner_SetSourceAlpha(0, 0x8578); /* GL_PREVIOUS */
+        } else if (param == GL_BLEND) {
+            /* RGB = mix(previous, environment, texture); alpha = modulate. */
+            I_SectorCombiner_SetCombineRGB(GL_INTERPOLATE);
+            I_SectorCombiner_SetSourceRGB(0, GL_CONSTANT);
+            I_SectorCombiner_SetSourceRGB(2, GL_TEXTURE);
+        } else {
             I_SectorCombiner_SetCombineRGB(param);
-            /* Fixed-function GL_ADD affects RGB only; alpha remains MODULATE.
-               GL_REPLACE is the only legacy mode here that replaces alpha. */
+            /* GL_ADD changes RGB only; alpha remains MODULATE. */
             I_SectorCombiner_SetCombineAlpha(param == GL_REPLACE ? GL_REPLACE : GL_MODULATE);
-            I_SectorCombiner_SetSourceRGB(0, GL_TEXTURE);
-            I_SectorCombiner_SetOperandRGB(0, GL_SRC_COLOR);
-            I_SectorCombiner_SetSourceRGB(1, 0x8578); /* GL_PREVIOUS */
-            I_SectorCombiner_SetOperandRGB(1, GL_SRC_COLOR);
-            I_SectorCombiner_SetSourceAlpha(0, GL_TEXTURE);
-            I_SectorCombiner_SetOperandAlpha(0, 0x0302); /* GL_SRC_ALPHA */
-            I_SectorCombiner_SetSourceAlpha(1, 0x8578); /* GL_PREVIOUS */
-            I_SectorCombiner_SetOperandAlpha(1, 0x0302); /* GL_SRC_ALPHA */
         }
         break;
     case GL_COMBINE_RGB:
