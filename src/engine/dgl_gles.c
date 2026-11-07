@@ -891,6 +891,7 @@ void I_GLES_TexEnvi(GLenum target, GLenum pname, GLint param) {
         } else if (param == GL_BLEND) {
             /* RGB = mix(previous, environment, texture); alpha = modulate. */
             I_SectorCombiner_SetCombineRGB(GL_INTERPOLATE);
+            I_SectorCombiner_SetCombineAlpha(GL_MODULATE);
             I_SectorCombiner_SetSourceRGB(0, GL_CONSTANT);
             I_SectorCombiner_SetSourceRGB(2, GL_TEXTURE);
         } else {
