@@ -4325,7 +4325,7 @@ has_GL_EXT_texture_filter_anisotropic = GL_CheckExtension("GL_EXT_texture_filter
 #undef dglActiveTextureARB
 #define dglActiveTextureARB(texture) I_GLES_ActiveTexture(texture)
 #undef dglClientActiveTextureARB
-#define dglClientActiveTextureARB(texture) ((void)(texture))
+#define dglClientActiveTextureARB(texture) I_GLES_ClientActiveTexture(texture)
 #endif
 
 #endif // __DGL_H__

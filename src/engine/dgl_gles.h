@@ -69,6 +69,7 @@ void I_GLES_TexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffs
                           GLsizei width, GLsizei height, GLenum format,
                           GLenum type, const GLvoid* pixels);
 void I_GLES_ActiveTexture(GLenum texture);
+void I_GLES_ClientActiveTexture(GLenum texture);
 void I_GLES_BindTexture(GLenum target, GLuint texture);
 void I_GLES_GenTextures(GLsizei count, GLuint* textures);
 void I_GLES_DeleteTextures(GLsizei count, const GLuint* textures);

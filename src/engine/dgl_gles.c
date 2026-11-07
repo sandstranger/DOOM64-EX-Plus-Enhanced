@@ -925,6 +925,14 @@ void I_GLES_ActiveTexture(GLenum texture) {
     I_ShaderSetTextureUnit(g_active_texture_unit);
     I_ShaderSetUseTexture(g_texture_enabled[g_active_texture_unit] ? 1 : 0);
 }
+void I_GLES_ClientActiveTexture(GLenum texture) {
+    if (!g_active) {
+        glClientActiveTexture(texture);
+        return;
+    }
+    /* Native GLES has no client texture-coordinate unit selection. */
+}
+
 void I_GLES_BindTexture(GLenum target, GLuint texture) {
     glBindTexture(target, texture);
     if (g_active && target == GL_TEXTURE_2D)
