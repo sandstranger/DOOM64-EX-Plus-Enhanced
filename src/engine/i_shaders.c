@@ -467,6 +467,49 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 
 	*output = '\0';
 
+	/* The previous pass-array approximation uses dynamically indexed uniform
+	   arrays. Native GLES evaluates the actual combine equation directly, so
+	   remove the obsolete approximation from ESSL to keep ES 2.0 compilers
+	   away from non-constant uniform-array indexing. */
+	if (!isVertex) {
+		const char* functionName = "vec3 apply_combiner(vec3 rgb)";
+		char* functionStart = SDL_strstr(result + headerLength, functionName);
+		if (functionStart) {
+			char* openBrace = SDL_strchr(functionStart, '{');
+			if (!openBrace) {
+				SDL_free(result);
+				return NULL;
+			}
+			int depth = 0;
+			char* closeBrace = NULL;
+			for (char* p = openBrace; *p; ++p) {
+				if (*p == '{') ++depth;
+				else if (*p == '}' && --depth == 0) {
+					closeBrace = p;
+					break;
+				}
+			}
+			if (!closeBrace) {
+				SDL_free(result);
+				return NULL;
+			}
+			static const char replacement[] = "vec3 apply_combiner(vec3 rgb) { return rgb; }";
+			size_t prefixLength = (size_t)(functionStart - result);
+			size_t suffixLength = SDL_strlen(closeBrace + 1);
+			size_t replacementLength = sizeof(replacement) - 1;
+			char* simplified = (char*)SDL_malloc(prefixLength + replacementLength + suffixLength + 1);
+			if (!simplified) {
+				SDL_free(result);
+				return NULL;
+			}
+			SDL_memcpy(simplified, result, prefixLength);
+			SDL_memcpy(simplified + prefixLength, replacement, replacementLength);
+			SDL_memcpy(simplified + prefixLength + replacementLength, closeBrace + 1, suffixLength + 1);
+			SDL_free(result);
+			result = simplified;
+		}
+	}
+
 	/* Native ESSL gets shader-based alpha testing. Desktop/GL4ES source stays intact. */
 	if (!isVertex && SDL_strstr(result + headerLength, "vec4 col =")) {
 		/* Only the main world fragment programs use the combiner/alpha-test
