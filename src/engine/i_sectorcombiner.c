@@ -207,72 +207,139 @@ static void I_SectorCombinerLegacyUniforms(void) {
     if (locFogDensity != -1) pglUniform1f(locFogDensity, s.fog_density);
 }
 
-static void I_SectorCombinerNativeUniforms(void) {
+typedef struct {
+    GLint combine_rgb;
+    GLint combine_alpha;
+    GLint env_color;
+    GLint rgb_scale;
+    GLint alpha_scale;
+    GLint rgb_source[3];
+    GLint rgb_operand[3];
+    GLint alpha_source[3];
+    GLint alpha_operand[3];
+} sector_uniform_locations_t;
+
+static GLuint s_uniform_program = 0;
+static GLint s_loc_fog_enabled = -1;
+static GLint s_loc_fog_color = -1;
+static GLint s_loc_fog_factor = -1;
+static GLint s_loc_fog_mode = -1;
+static GLint s_loc_fog_start = -1;
+static GLint s_loc_fog_end = -1;
+static GLint s_loc_fog_density = -1;
+static sector_uniform_locations_t s_stage_locations[4];
+
+static GLuint I_SectorCombinerGetNativeProgram(void) {
     if (!g_procs_loaded)
-        return;
-    GLint curProg = 0;
-    glGetIntegerv(GL_CURRENT_PROGRAM, &curProg);
-    if (curProg == 0)
-        return;
+        return 0;
+    GLint currentProgram = 0;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+    if (currentProgram <= 0)
+        return 0;
 
-    GLint loc = pglGetUniformLocation(curProg, "uFogEnabled");
-    if (loc != -1) pglUniform1i(loc, s_native[0].fog_enabled ? 1 : 0);
-    loc = pglGetUniformLocation(curProg, "uFogColor");
-    if (loc != -1) pglUniform3f(loc, s_native[0].fog_color[0], s_native[0].fog_color[1], s_native[0].fog_color[2]);
-    loc = pglGetUniformLocation(curProg, "uFogFactor");
-    if (loc != -1) pglUniform1f(loc, s_native[0].fog_factor);
-    loc = pglGetUniformLocation(curProg, "uFogMode");
-    if (loc != -1) pglUniform1i(loc, s_native[0].fog_mode);
-    loc = pglGetUniformLocation(curProg, "uFogStart");
-    if (loc != -1) pglUniform1f(loc, s_native[0].fog_start);
-    loc = pglGetUniformLocation(curProg, "uFogEnd");
-    if (loc != -1) pglUniform1f(loc, s_native[0].fog_end);
-    loc = pglGetUniformLocation(curProg, "uFogDensity");
-    if (loc != -1) pglUniform1f(loc, s_native[0].fog_density);
+    GLuint program = (GLuint)currentProgram;
+    if (s_uniform_program == program)
+        return program;
 
+    s_uniform_program = program;
+    s_loc_fog_enabled = pglGetUniformLocation(program, "uFogEnabled");
+    s_loc_fog_color = pglGetUniformLocation(program, "uFogColor");
+    s_loc_fog_factor = pglGetUniformLocation(program, "uFogFactor");
+    s_loc_fog_mode = pglGetUniformLocation(program, "uFogMode");
+    s_loc_fog_start = pglGetUniformLocation(program, "uFogStart");
+    s_loc_fog_end = pglGetUniformLocation(program, "uFogEnd");
+    s_loc_fog_density = pglGetUniformLocation(program, "uFogDensity");
+
+    SDL_memset(s_stage_locations, 0xFF, sizeof(s_stage_locations));
     for (int unit = 0; unit < 4; ++unit) {
-        sector_combiner_state_t* state = &s_native[unit];
+        sector_uniform_locations_t* loc = &s_stage_locations[unit];
         char name[48];
         SDL_snprintf(name, sizeof(name), "uCombineRGB%d", unit);
-        loc = pglGetUniformLocation(curProg, name);
-        if (loc != -1) pglUniform1i(loc, state->combine_rgb);
+        loc->combine_rgb = pglGetUniformLocation(program, name);
         SDL_snprintf(name, sizeof(name), "uCombineAlpha%d", unit);
-        loc = pglGetUniformLocation(curProg, name);
-        if (loc != -1) pglUniform1i(loc, state->combine_alpha);
+        loc->combine_alpha = pglGetUniformLocation(program, name);
         SDL_snprintf(name, sizeof(name), "uEnvColor%d", unit);
-        loc = pglGetUniformLocation(curProg, name);
-        if (loc != -1) pglUniform4f(loc, state->env_color[0], state->env_color[1], state->env_color[2], state->env_color[3]);
+        loc->env_color = pglGetUniformLocation(program, name);
         SDL_snprintf(name, sizeof(name), "uRGBScale%d", unit);
-        loc = pglGetUniformLocation(curProg, name);
-        if (loc != -1) pglUniform1f(loc, state->rgb_scale);
+        loc->rgb_scale = pglGetUniformLocation(program, name);
         SDL_snprintf(name, sizeof(name), "uAlphaScale%d", unit);
-        loc = pglGetUniformLocation(curProg, name);
-        if (loc != -1) pglUniform1f(loc, state->alpha_scale);
+        loc->alpha_scale = pglGetUniformLocation(program, name);
 
         for (int slot = 0; slot < 3; ++slot) {
             SDL_snprintf(name, sizeof(name), "uRGBSource%d_%d", unit, slot);
-            loc = pglGetUniformLocation(curProg, name);
-            if (loc != -1) pglUniform1i(loc, state->source_rgb[slot]);
+            loc->rgb_source[slot] = pglGetUniformLocation(program, name);
             SDL_snprintf(name, sizeof(name), "uRGBOperand%d_%d", unit, slot);
-            loc = pglGetUniformLocation(curProg, name);
-            if (loc != -1) pglUniform1i(loc, state->operand_rgb[slot]);
+            loc->rgb_operand[slot] = pglGetUniformLocation(program, name);
             SDL_snprintf(name, sizeof(name), "uAlphaSource%d_%d", unit, slot);
-            loc = pglGetUniformLocation(curProg, name);
-            if (loc != -1) pglUniform1i(loc, state->source_alpha[slot]);
+            loc->alpha_source[slot] = pglGetUniformLocation(program, name);
             SDL_snprintf(name, sizeof(name), "uAlphaOperand%d_%d", unit, slot);
-            loc = pglGetUniformLocation(curProg, name);
-            if (loc != -1) pglUniform1i(loc, state->operand_alpha[slot]);
+            loc->alpha_operand[slot] = pglGetUniformLocation(program, name);
         }
+    }
+    return program;
+}
+
+static void I_SectorCombinerUploadFog(GLuint program) {
+    if (!program)
+        return;
+    if (s_loc_fog_enabled != -1) pglUniform1i(s_loc_fog_enabled, s_native[0].fog_enabled ? 1 : 0);
+    if (s_loc_fog_color != -1) pglUniform3f(s_loc_fog_color, s_native[0].fog_color[0], s_native[0].fog_color[1], s_native[0].fog_color[2]);
+    if (s_loc_fog_factor != -1) pglUniform1f(s_loc_fog_factor, s_native[0].fog_factor);
+    if (s_loc_fog_mode != -1) pglUniform1i(s_loc_fog_mode, s_native[0].fog_mode);
+    if (s_loc_fog_start != -1) pglUniform1f(s_loc_fog_start, s_native[0].fog_start);
+    if (s_loc_fog_end != -1) pglUniform1f(s_loc_fog_end, s_native[0].fog_end);
+    if (s_loc_fog_density != -1) pglUniform1f(s_loc_fog_density, s_native[0].fog_density);
+}
+
+static void I_SectorCombinerUploadStage(int unit) {
+    if (unit < 0 || unit >= 4)
+        return;
+    GLuint program = I_SectorCombinerGetNativeProgram();
+    if (!program)
+        return;
+
+    sector_combiner_state_t* state = &s_native[unit];
+    sector_uniform_locations_t* loc = &s_stage_locations[unit];
+    if (loc->combine_rgb != -1) pglUniform1i(loc->combine_rgb, state->combine_rgb);
+    if (loc->combine_alpha != -1) pglUniform1i(loc->combine_alpha, state->combine_alpha);
+    if (loc->env_color != -1) pglUniform4f(loc->env_color, state->env_color[0], state->env_color[1], state->env_color[2], state->env_color[3]);
+    if (loc->rgb_scale != -1) pglUniform1f(loc->rgb_scale, state->rgb_scale);
+    if (loc->alpha_scale != -1) pglUniform1f(loc->alpha_scale, state->alpha_scale);
+    for (int slot = 0; slot < 3; ++slot) {
+        if (loc->rgb_source[slot] != -1) pglUniform1i(loc->rgb_source[slot], state->source_rgb[slot]);
+        if (loc->rgb_operand[slot] != -1) pglUniform1i(loc->rgb_operand[slot], state->operand_rgb[slot]);
+        if (loc->alpha_source[slot] != -1) pglUniform1i(loc->alpha_source[slot], state->source_alpha[slot]);
+        if (loc->alpha_operand[slot] != -1) pglUniform1i(loc->alpha_operand[slot], state->operand_alpha[slot]);
     }
 }
 
-static void I_SectorCombinerUniforms(void) {
-    if (I_GetGLESVersion() != 0)
-        I_SectorCombinerNativeUniforms();
-    else
-        I_SectorCombinerLegacyUniforms();
+static void I_SectorCombinerUploadFogAndStages(void) {
+    GLuint program = I_SectorCombinerGetNativeProgram();
+    if (!program)
+        return;
+    I_SectorCombinerUploadFog(program);
+    for (int unit = 0; unit < 4; ++unit)
+        I_SectorCombinerUploadStage(unit);
 }
 
+static void I_SectorCombinerUpdateStage(int rebuildLegacyPasses) {
+    if (I_GetGLESVersion() != 0) {
+        I_SectorCombinerUploadStage(s_active_unit);
+    } else {
+        if (rebuildLegacyPasses)
+            I_SectorCombinerTexturePasses(&s);
+        I_SectorCombinerLegacyUniforms();
+    }
+}
+
+static void I_SectorCombinerUpdateFog(void) {
+    if (I_GetGLESVersion() != 0) {
+        GLuint program = I_SectorCombinerGetNativeProgram();
+        I_SectorCombinerUploadFog(program);
+    } else {
+        I_SectorCombinerLegacyUniforms();
+    }
+}
 void I_SectorCombiner_Init(void) {
     load_glsl_procs();
     s_active_unit = 0;
@@ -290,8 +357,9 @@ void I_SectorCombiner_Bind(int useTex, int w, int h) {
     state->tex_w = w;
     state->tex_h = h;
     if (I_GetGLESVersion() == 0)
-        I_SectorCombinerTexturePasses(&s);
-    I_SectorCombinerUniforms();
+        I_SectorCombinerLegacyUniforms();
+    else
+        I_SectorCombinerUploadStage(s_active_unit);
 }
 
 void I_SectorCombiner_Unbind(void) { /* no-op */ }
@@ -310,7 +378,7 @@ void I_SectorCombiner_SetFogParams(int mode, float start, float end, float densi
         s.fog_end = end;
         s.fog_density = density;
     }
-    I_SectorCombinerUniforms();
+    I_SectorCombinerUpdateFog();
 }
 
 void I_SectorCombiner_SetEnvColor(float r, float g, float b, float a) {
@@ -319,71 +387,62 @@ void I_SectorCombiner_SetEnvColor(float r, float g, float b, float a) {
     state->env_color[1] = g;
     state->env_color[2] = b;
     state->env_color[3] = a;
-    if (I_GetGLESVersion() == 0)
-        I_SectorCombinerTexturePasses(&s);
-    I_SectorCombinerUniforms();
+    I_SectorCombinerUpdateStage(1);
 }
 
 void I_SectorCombiner_SetScale(float rgbScale, float alphaScale) {
     sector_combiner_state_t* state = I_SectorCombinerCurrentState();
     state->rgb_scale = rgbScale;
     state->alpha_scale = alphaScale;
-    I_SectorCombinerUniforms();
+    I_SectorCombinerUpdateStage(0);
 }
 
 void I_SectorCombiner_SetRGBScale(float scale) {
     I_SectorCombinerCurrentState()->rgb_scale = scale;
-    I_SectorCombinerUniforms();
+    I_SectorCombinerUpdateStage(0);
 }
 
 void I_SectorCombiner_SetAlphaScale(float scale) {
     I_SectorCombinerCurrentState()->alpha_scale = scale;
-    I_SectorCombinerUniforms();
+    I_SectorCombinerUpdateStage(0);
 }
 
 void I_SectorCombiner_SetCombineRGB(int mode) {
-    sector_combiner_state_t* state = I_SectorCombinerCurrentState();
-    state->combine_rgb = mode;
-    if (I_GetGLESVersion() == 0)
-        I_SectorCombinerTexturePasses(&s);
-    I_SectorCombinerUniforms();
+    I_SectorCombinerCurrentState()->combine_rgb = mode;
+    I_SectorCombinerUpdateStage(1);
 }
 
 void I_SectorCombiner_SetCombineAlpha(int mode) {
     I_SectorCombinerCurrentState()->combine_alpha = mode;
-    I_SectorCombinerUniforms();
+    I_SectorCombinerUpdateStage(0);
 }
 
 void I_SectorCombiner_SetSourceAlpha(int slot, int src) {
     sector_combiner_state_t* state = I_SectorCombinerCurrentState();
     if (slot >= 0 && slot < 3)
         state->source_alpha[slot] = src;
-    I_SectorCombinerUniforms();
+    I_SectorCombinerUpdateStage(0);
 }
 
 void I_SectorCombiner_SetOperandAlpha(int slot, int op) {
     sector_combiner_state_t* state = I_SectorCombinerCurrentState();
     if (slot >= 0 && slot < 3)
         state->operand_alpha[slot] = op;
-    I_SectorCombinerUniforms();
+    I_SectorCombinerUpdateStage(0);
 }
 
 void I_SectorCombiner_SetSourceRGB(int slot, int src) {
     sector_combiner_state_t* state = I_SectorCombinerCurrentState();
     if (slot >= 0 && slot < 3)
         state->source_rgb[slot] = src;
-    if (I_GetGLESVersion() == 0)
-        I_SectorCombinerTexturePasses(&s);
-    I_SectorCombinerUniforms();
+    I_SectorCombinerUpdateStage(1);
 }
 
 void I_SectorCombiner_SetOperandRGB(int slot, int op) {
     sector_combiner_state_t* state = I_SectorCombinerCurrentState();
     if (slot >= 0 && slot < 3)
         state->operand_rgb[slot] = op;
-    if (I_GetGLESVersion() == 0)
-        I_SectorCombinerTexturePasses(&s);
-    I_SectorCombinerUniforms();
+    I_SectorCombinerUpdateStage(1);
 }
 
 void I_SectorCombiner_SetFog(int en, float r, float g, float b, float fac) {
@@ -402,20 +461,27 @@ void I_SectorCombiner_SetFog(int en, float r, float g, float b, float fac) {
         s.fog_color[2] = b;
         s.fog_factor = fac;
     }
-    I_SectorCombinerUniforms();
+    I_SectorCombinerUpdateFog();
 }
 
 void I_SectorCombiner_Commit(void) {
-    if (I_GetGLESVersion() == 0)
+    if (I_GetGLESVersion() == 0) {
         I_SectorCombinerTexturePasses(&s);
-    I_SectorCombinerUniforms();
+        I_SectorCombinerLegacyUniforms();
+    } else {
+        I_SectorCombinerUploadFogAndStages();
+    }
 }
 
 void I_SectorCombiner_SetActiveUnit(int unit) {
     if (unit < 0) unit = 0;
     if (unit > 3) unit = 3;
     s_active_unit = unit;
-    if (I_GetGLESVersion() != 0)
-        I_SectorCombinerUniforms();
+}
+
+
+    if (unit < 0) unit = 0;
+    if (unit > 3) unit = 3;
+    s_active_unit = unit;
 }
 
