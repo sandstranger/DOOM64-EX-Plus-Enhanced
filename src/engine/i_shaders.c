@@ -40,6 +40,8 @@ CVAR_EXTERNAL(r_filter);
 static GLint sLocTexel = -1;
 static GLint sLocUseTex = -1;
 static int g_shader_texture_unit = 0;
+static GLfloat g_texel_x = 0.0f;
+static GLfloat g_texel_y = 0.0f;
 static GLint sLocAlphaTestEnabled = -1;
 static GLint sLocAlphaFunc = -1;
 static GLint sLocAlphaRef = -1;
@@ -953,7 +955,7 @@ void I_ShaderBind(void) {
 	if (sLocUseTex >= 0)
 		pglUniform1i(sLocUseTex, g_use_texture);
 	if (sLocTexel >= 0)
-		pglUniform2f(sLocTexel, 0.0f, 0.0f);
+		pglUniform2f(sLocTexel, g_texel_x, g_texel_y);
 	if (sLocAlphaTestEnabled >= 0)
 		pglUniform1i(sLocAlphaTestEnabled, g_alpha_test_enabled);
 	if (sLocAlphaFunc >= 0)
@@ -975,12 +977,12 @@ void I_ShaderUnBind(void) {
 }
 
 void I_ShaderSetTextureSize(int w, int h) {
-	if (!shader_struct.initialised || sLocTexel < 0)
+	g_texel_x = (w > 0 && h > 0) ? 1.0f / (float)w : 0.0f;
+	g_texel_y = (w > 0 && h > 0) ? 1.0f / (float)h : 0.0f;
+	if (!shader_struct.initialised || sLocTexel < 0 ||
+		is_current_prog != shader_struct.prog)
 		return;
-	if (w > 0 && h > 0)
-		pglUniform2f(sLocTexel, 1.0f / (float)w, 1.0f / (float)h);
-	else
-		pglUniform2f(sLocTexel, 0.0f, 0.0f);
+	pglUniform2f(sLocTexel, g_texel_x, g_texel_y);
 }
 
 void I_ShaderSetUseTexture(int on) {
