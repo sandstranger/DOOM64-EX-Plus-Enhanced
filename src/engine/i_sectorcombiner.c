@@ -111,7 +111,9 @@ static void reset_state(sector_combiner_state_t* state, int nativeGLES) {
             ? (i == 0 ? GL_TEXTURE : (i == 1 ? 0x8578 : GL_CONSTANT))
             : GL_TEXTURE;
         state->operand_rgb[i] = GL_SRC_COLOR;
-        state->source_alpha[i] = (i == 0) ? GL_TEXTURE : 0x8578;
+        state->source_alpha[i] = nativeGLES
+            ? (i == 0 ? GL_TEXTURE : (i == 1 ? 0x8578 : GL_CONSTANT))
+            : (i == 0 ? GL_TEXTURE : 0x8578);
         state->operand_alpha[i] = 0x0302;
     }
     state->env_color[3] = 1.0f;

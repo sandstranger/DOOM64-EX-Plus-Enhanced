@@ -872,13 +872,13 @@ void I_GLES_TexEnvi(GLenum target, GLenum pname, GLint param) {
         I_SectorCombiner_SetOperandRGB(0, GL_SRC_COLOR);
         I_SectorCombiner_SetSourceRGB(1, 0x8578); /* GL_PREVIOUS */
         I_SectorCombiner_SetOperandRGB(1, GL_SRC_COLOR);
-        I_SectorCombiner_SetSourceRGB(2, 0x8578); /* GL_PREVIOUS */
+        I_SectorCombiner_SetSourceRGB(2, GL_CONSTANT);
         I_SectorCombiner_SetOperandRGB(2, GL_SRC_COLOR);
         I_SectorCombiner_SetSourceAlpha(0, GL_TEXTURE);
         I_SectorCombiner_SetOperandAlpha(0, 0x0302); /* GL_SRC_ALPHA */
         I_SectorCombiner_SetSourceAlpha(1, 0x8578); /* GL_PREVIOUS */
         I_SectorCombiner_SetOperandAlpha(1, 0x0302); /* GL_SRC_ALPHA */
-        I_SectorCombiner_SetSourceAlpha(2, 0x8578); /* GL_PREVIOUS */
+        I_SectorCombiner_SetSourceAlpha(2, GL_CONSTANT);
         I_SectorCombiner_SetOperandAlpha(2, 0x0302); /* GL_SRC_ALPHA */
 
         if (param == GL_DECAL) {
