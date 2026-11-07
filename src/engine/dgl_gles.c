@@ -758,7 +758,9 @@ void I_GLES_TexEnvi(GLenum target, GLenum pname, GLint param) {
             /* Legacy GL_TEXTURE_ENV_MODE controls both RGB and alpha
                equations and resets their default argument ordering. */
             I_SectorCombiner_SetCombineRGB(param);
-            I_SectorCombiner_SetCombineAlpha(param);
+            /* Fixed-function GL_ADD affects RGB only; alpha remains MODULATE.
+               GL_REPLACE is the only legacy mode here that replaces alpha. */
+            I_SectorCombiner_SetCombineAlpha(param == GL_REPLACE ? GL_REPLACE : GL_MODULATE);
             I_SectorCombiner_SetSourceRGB(0, GL_TEXTURE);
             I_SectorCombiner_SetOperandRGB(0, GL_SRC_COLOR);
             I_SectorCombiner_SetSourceRGB(1, 0x8578); /* GL_PREVIOUS */
