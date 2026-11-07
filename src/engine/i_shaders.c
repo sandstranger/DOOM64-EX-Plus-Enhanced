@@ -24,6 +24,9 @@
 #include "con_cvar.h"
 #include "i_shaders.h"
 #include "dgl.h"
+#ifdef ANDROID
+#include "dgl_gles.h"
+#endif
 
 extern void I_SectorCombiner_Commit(void);
 
@@ -112,7 +115,7 @@ static void I_ShaderLoad(void) {
 */
 
 static const char* vertex_shader_bilateral =
-"#version 120\n"
+"#version 120\n\n"
 "varying vec2 vUV;\n"
 "varying vec4 vColor;\nvarying float vEyeDist;\n"
 "uniform int   uPassCount;\n"
@@ -130,7 +133,7 @@ static const char* vertex_shader_bilateral =
 
 /* N64 3-point filter (atsb) */
 static const char* fragment_shader_bilateral_3point =
-"#version 120\n"
+"#version 120\n\n"
 "#define ADD_SCALE 0.60\n"
 "uniform sampler2D uTex;\n"
 "uniform vec2  uTexel;\n"
@@ -238,7 +241,7 @@ static const char* fragment_shader_bilateral_3point =
 
 /* atsb: bilinear */
 static const char* fragment_shader_bilateral =
-"#version 120\n"
+"#version 120\n\n"
 "#define ADD_SCALE 0.60\n"
 "uniform sampler2D uTex;\n"
 "varying vec2 vUV;\n"
@@ -308,8 +311,13 @@ static GLuint I_3PointShaderCompile(GLenum type, const char* src) {
 	if (!ok) {
 		char log[1024]; GLsizei n = 0;
 		pglGetShaderInfoLog(shader, sizeof(log), &n, log);
-		fprintf(stderr, "I_3PointShaderCompile: %s compilation error:\\n%.*s\\n",
+#ifdef ANDROID
+		SDL_Log("I_3PointShaderCompile: %s compilation error:\\n%.*s\\n",
 			type == GL_VERTEX_SHADER ? "vertex" : "fragment", (int)n, log);
+#else
+        fprintf(stderr, "I_3PointShaderCompile: %s compilation error:\\n%.*s\\n",
+			type == GL_VERTEX_SHADER ? "vertex" : "fragment", (int)n, log);
+#endif
 	}
 	return shader;
 }
@@ -333,7 +341,11 @@ static void I_3PointShaderInit(void) {
 	GLint ok = 0; pglGetProgramiv(shader_struct.prog, GL_LINK_STATUS, &ok);
 	if (!ok) {
 		char log[1024]; GLsizei n = 0; pglGetProgramInfoLog(shader_struct.prog, sizeof(log), &n, log);
-		fprintf(stderr, "I_3PointShaderInit: Linkage error:\n%.*s\n", (int)n, log);
+#ifdef ANDROID
+		SDL_Log("I_3PointShaderInit: Linkage error:\n%.*s\n", (int)n, log);
+#else
+        fprintf(stderr, "I_3PointShaderInit: Linkage error:\n%.*s\n", (int)n, log);
+#endif
 	}
 	shader_struct.locTex = pglGetUniformLocation(shader_struct.prog, "uTex");
 	sLocTexel = pglGetUniformLocation(shader_struct.prog, "uTexel");
@@ -387,13 +399,17 @@ static GLuint I_OverlayTintShaderCompile(GLenum tp, const char* src) {
 }
 
 void I_OverlayTintShaderInit(void) {
+#ifdef ANDROID
+	if (I_GLES_IsActive())
+		return; /* the native OpenGL ES backend has its own tint program */
+#endif
 	if (generic_tint_overlay_prog) 
 		return;
 	GLuint vs = I_OverlayTintShaderCompile(GL_VERTEX_SHADER,
-		"#version 120\n"
+		"#version 120\n\n\n"
 		"void main(){ gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex; }\n");
 	GLuint fs = I_OverlayTintShaderCompile(GL_FRAGMENT_SHADER,
-		"#version 120\n"
+		"#version 120\n\n"
 		"uniform vec4 uColor;\n" 
 		"void main(){ gl_FragColor = uColor; }\n");
 	generic_tint_overlay_prog = pglCreateProgram();
@@ -403,9 +419,73 @@ void I_OverlayTintShaderInit(void) {
 	generic_tint_overlay_colour = pglGetUniformLocation(generic_tint_overlay_prog, "uColor");
 }
 
+#ifdef ANDROID
+/*
+ * Native OpenGL ES: the same state changes as below, the backend tracks them
+ * without asking the driver and draws the rectangle with its tint program.
+ */
+static void I_ShaderFullscreenTintGLES(float r, float g, float b, float a) {
+	GLboolean wasBlend = glIsEnabled(GL_BLEND);
+	GLboolean wasTex2D = glIsEnabled(GL_TEXTURE_2D);
+	GLboolean wasDepthTest = glIsEnabled(GL_DEPTH_TEST);
+	GLboolean wasAlphaTest = glIsEnabled(GL_ALPHA_TEST);
+
+	GLint oldSrc = 0, oldDst = 0; glGetIntegerv(GL_BLEND_SRC, &oldSrc);
+	glGetIntegerv(GL_BLEND_DST, &oldDst);
+	GLboolean oldDepthMask; glGetBooleanv(GL_DEPTH_WRITEMASK, &oldDepthMask);
+
+	I_GLES_SetTint(true, r, g, b, a);
+
+	GL_SetOrtho(1);
+	if (!wasBlend) glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	if (wasTex2D)
+		glDisable(GL_TEXTURE_2D);
+
+	if (wasAlphaTest)
+		glDisable(GL_ALPHA_TEST);
+
+	if (wasDepthTest)
+		glDisable(GL_DEPTH_TEST);
+
+	glDepthMask(GL_FALSE);
+
+	glColor4ub(255, 255, 255, 255);
+	dglRecti(SCREENWIDTH, SCREENHEIGHT, 0, 0);
+
+	glDepthMask(oldDepthMask);
+
+	if (wasDepthTest)
+		glEnable(GL_DEPTH_TEST);
+	else
+		glDisable(GL_DEPTH_TEST);
+
+	if (wasAlphaTest)
+		glEnable(GL_ALPHA_TEST);
+
+	if (wasTex2D)
+		glEnable(GL_TEXTURE_2D);
+	glBlendFunc(oldSrc, oldDst);
+
+	if (!wasBlend)
+		glDisable(GL_BLEND);
+	GL_ResetViewport();
+
+	I_GLES_SetTint(false, 0.0f, 0.0f, 0.0f, 0.0f);
+}
+#endif
+
 void I_ShaderFullscreenTint(float r, float g, float b, float a) {
 	if (a <= 0.0f)
 		return;
+
+#ifdef ANDROID
+	if (I_GLES_IsActive()) {
+		I_ShaderFullscreenTintGLES(r, g, b, a);
+		return;
+	}
+#endif
 
 	I_OverlayTintShaderInit();
 
@@ -470,6 +550,15 @@ void I_ShaderFullscreenTint(float r, float g, float b, float a) {
 */
 
 void I_ShaderBind(void) {
+#ifdef ANDROID
+	if (I_GLES_IsActive()) {
+		/* Same uniforms as below: the filter is picked on the first bind, then the
+		   texture state is reset and the combiner state committed. */
+		I_GLES_BindWorldShader(r_filter.value == 0);
+		I_SectorCombiner_Commit();
+		return;
+	}
+#endif
 	I_3PointShaderInit();
 	I_OverlayTintShaderInit();
 	if (is_current_prog != shader_struct.prog) {
@@ -486,6 +575,12 @@ void I_ShaderBind(void) {
 }
 
 void I_ShaderUnBind(void) {
+#ifdef ANDROID
+	if (I_GLES_IsActive()) {
+		I_GLES_UnbindWorldShader();
+		return;
+	}
+#endif
 	if (!shader_struct.initialised)
 		return;
 	if (is_current_prog != 0) {
@@ -495,6 +590,12 @@ void I_ShaderUnBind(void) {
 }
 
 void I_ShaderSetTextureSize(int w, int h) {
+#ifdef ANDROID
+	if (I_GLES_IsActive()) {
+		I_GLES_SetWorldTextureSize(w, h);
+		return;
+	}
+#endif
 	if (!shader_struct.initialised || sLocTexel < 0)
 		return;
 	if (w > 0 && h > 0)
@@ -504,6 +605,12 @@ void I_ShaderSetTextureSize(int w, int h) {
 }
 
 void I_ShaderSetUseTexture(int on) {
+#ifdef ANDROID
+	if (I_GLES_IsActive()) {
+		I_GLES_SetWorldUseTexture(on != 0);
+		return;
+	}
+#endif
 	if (!shader_struct.initialised || sLocUseTex < 0)
 		return;
 	pglUniform1i(sLocUseTex, on ? 1 : 0);

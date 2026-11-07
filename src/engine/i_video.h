@@ -30,7 +30,11 @@ void I_InitVideo(void);
 void I_InitScreen(void);
 void I_ShutdownVideo(void);
 void I_SetMenuCursorMouseRect();
+void I_ToggleFullscreen(void);
 void V_RegisterCvars();
+
+/* Returns 2/3 for native Android GLES, or 0 for desktop / GL4ES compatibility. */
+int I_GetGLESVersion(void);
 
 extern float display_scale;
 extern int win_px_w, win_px_h;

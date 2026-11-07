@@ -59,7 +59,9 @@
 // definitions
 //
 
-//#define HAS_MENU_MOUSE_LOOK
+// Mouse look (vertical free look) in the mouse menu. It was hidden because the
+// skies did not follow the view pitch; r_sky.c and r_clipper.c handle it now.
+#define HAS_MENU_MOUSE_LOOK
 
 #define MENUSTRINGSIZE      32
 #define SKULLXOFF           -40    //villsa: changed from -32 to -40
@@ -95,8 +97,8 @@ static boolean     inputEnter = false;
 static int          inputCharIndex;
 static int          inputMax = 0;
 
-static float cursor_x;
-static float cursor_y;
+float cursor_x;
+float cursor_y;
 
 //
 // fade-in/out stuff
@@ -1505,7 +1507,7 @@ menudefault_t MiscDefault[] = {
 	{ &m_menufadetime, 0 },
 	{ &m_menumouse, 1 },
 	{ &m_cursorscale, 8 },
-	{ &p_autorun, 1 },
+	{ &p_autorun, 0 },
 	{ &p_usecontext, 0 },
 	{ &r_wipe, 1 },
 	{ &r_weaponswitch, 1 },
@@ -1767,11 +1769,11 @@ menuitem_t MouseMenu[] = {
 };
 
 menudefault_t MouseDefault[] = {
-	{ &v_msensitivityx, 5 },
-	{ &v_msensitivityy, 5 },
+	{ &v_msensitivityx, 32 },
+	{ &v_msensitivityy, 32 },
 	{ &v_macceleration, 0 },
 #ifdef HAS_MENU_MOUSE_LOOK
-	{ &v_mlook, 0 },
+	{ &v_mlook, 1 },
 	{ &v_mlookinvert, 0 },
 #endif
 	{ &v_yaxismove, 0 },
@@ -2492,7 +2494,6 @@ void M_ChangeGammaLevel(int choice);
 void M_ChangeFullscreen(int choice);
 void M_ChangeFilter(int choice);
 void M_ChangeWeaponFilter(int choice);
-void M_ChangeObjectFilter(int choice);
 void M_ChangeHUDFilter(int choice);
 void M_ChangeSkyFilter(int choice);
 void M_ChangeAnisotropic(int choice);
@@ -2510,7 +2511,6 @@ CVAR_EXTERNAL(v_fullscreen);
 CVAR_EXTERNAL(r_filter);
 CVAR_EXTERNAL(r_weaponFilter);
 CVAR_EXTERNAL(r_hudFilter);
-CVAR_EXTERNAL(r_objectFilter);
 CVAR_EXTERNAL(r_skyFilter);
 CVAR_EXTERNAL(r_anisotropic);
 CVAR_EXTERNAL(i_interpolateframes);
@@ -2526,7 +2526,6 @@ enum {
 	video_fullscreen,
 	filter,
 	weapon_filter,
-	object_filter,
 	hud_filter,
 	sky_filter,
 	anisotropic,
@@ -2547,7 +2546,6 @@ menuitem_t VideoMenu[] = {
 	{2,"Fullscreen:",M_ChangeFullscreen, 'f'},
 	{2,"Filter:",M_ChangeFilter, 'f'},
 	{2,"Weapon Filter:",M_ChangeWeaponFilter, 't'},
-	{2,"Object Filter:",M_ChangeObjectFilter, 't'},
 	{2,"HUD Filter:",M_ChangeHUDFilter, 't'},
 	{2,"Sky Filter:",M_ChangeSkyFilter, 's'},
 	{2,"Anisotropy:",M_ChangeAnisotropic, 'a'},
@@ -2567,7 +2565,6 @@ char* VideoHints[video_end] = {
 	"toggle fullscreen mode - requires restart",
 	"toggle texture filtering - requires restart",
 	"toggle texture filtering on the weapon",
-	"toggle texture filtering on world objects",
 	"toggle texture filtering on hud and text",
 	"toggle texture filtering on skies",
 	"toggle blur reduction on textures",
@@ -2583,7 +2580,6 @@ menudefault_t VideoDefault[] = {
 	{ &v_fullscreen, 0 },
 	{ &r_filter, 0 },
 	{ &r_weaponFilter, 0 },
-	{ &r_objectFilter, 0 },
 	{ &r_hudFilter, 0 },
 	{ &r_skyFilter, 0 },
 	{ &r_anisotropic, 1 },
@@ -2595,8 +2591,8 @@ menudefault_t VideoDefault[] = {
 };
 
 menuthermobar_t VideoBars[] = {
-	{ video_empty1, 300, &i_brightness },
-	{ video_empty2, 20,  &i_gamma },
+	{ video_empty1, 600, &i_brightness },
+	{ video_empty2, 40,  &i_gamma },
 	{ -1, 0 }
 };
 
@@ -2658,12 +2654,12 @@ void M_DrawVideo(void) {
 		(video_dbrightness + 1) - currentMenu->menupageoffset < currentMenu->numpageitems)
 	{
 		y = video_dbrightness - currentMenu->menupageoffset;
-		M_DrawThermo(VideoDef.x, VideoDef.y + LINEHEIGHT * (y + 1), 300, i_brightness.value);
+		M_DrawThermo(VideoDef.x, VideoDef.y + LINEHEIGHT * (y + 1), 600, i_brightness.value);
 	}
 	if (currentMenu->menupageoffset <= video_dgamma + 1 &&
 		(video_dgamma + 1) - currentMenu->menupageoffset < currentMenu->numpageitems) {
 		y = video_dgamma - currentMenu->menupageoffset;
-		M_DrawThermo(VideoDef.x, VideoDef.y + LINEHEIGHT * (y + 1), 20, i_gamma.value);
+		M_DrawThermo(VideoDef.x, VideoDef.y + LINEHEIGHT * (y + 1), 40, i_gamma.value);
 	}
 
 #define DRAWVIDEOITEM(a, b) \
@@ -2677,8 +2673,6 @@ void M_DrawVideo(void) {
 #define DRAWVIDEOITEM2(a, b, c) DRAWVIDEOITEM(a, c[(int)b])
 
 	DRAWVIDEOITEM2(video_fullscreen, v_fullscreen.value, fullscreenType);
-	DRAWVIDEOITEM2(filter, r_filter.value, filterType1);
-	DRAWVIDEOITEM2(object_filter, r_objectFilter.value, filterType2);
 	DRAWVIDEOITEM2(weapon_filter, r_weaponFilter.value, filterType2);
 	DRAWVIDEOITEM2(hud_filter, r_hudFilter.value, filterType2);
 	DRAWVIDEOITEM2(sky_filter, r_skyFilter.value, filterType2);
@@ -2713,13 +2707,13 @@ void M_ChangeBrightness(int choice)
 		}
 		break;
 	case 1:
-		if (i_brightness.value < 300.0f)
+		if (i_brightness.value < 600.0f)
 		{
 			M_SetCvar(&i_brightness, i_brightness.value + 1);
 		}
 		else
 		{
-			CON_CvarSetValue(i_brightness.name, 300);
+			CON_CvarSetValue(i_brightness.name, 600);
 		}
 		break;
 	}
@@ -2739,15 +2733,15 @@ void M_ChangeGammaLevel(int choice)
 		}
 		break;
 	case 1:
-		if (i_gamma.value < 20.0f) {
+		if (i_gamma.value < 40.0f) {
 			M_SetCvar(&i_gamma, i_gamma.value + 1);
 		}
 		else {
-			CON_CvarSetValue(i_gamma.name, 20);
+			CON_CvarSetValue(i_gamma.name, 40);
 		}
 		break;
 	case 2:
-		if (i_gamma.value >= 20) {
+		if (i_gamma.value >= 40) {
 			CON_CvarSetValue(i_gamma.name, 0);
 		}
 		else {
@@ -2762,17 +2756,12 @@ void M_ChangeGammaLevel(int choice)
 void M_ChangeFullscreen(int choice) {
 	M_SetOptionValue(choice, 0, 1, 1, &v_fullscreen);
 }
-
 void M_ChangeFilter(int choice) {
 	M_SetOptionValue(choice, 0, 2, 1, &r_filter);
 }
 
 void M_ChangeWeaponFilter(int choice) {
 	M_SetOptionValue(choice, 0, 1, 1, &r_weaponFilter);
-}
-
-void M_ChangeObjectFilter(int choice) {
-	M_SetOptionValue(choice, 0, 1, 1, &r_objectFilter);
 }
 
 void M_ChangeHUDFilter(int choice) {
@@ -4191,9 +4180,14 @@ static void M_CheckDragThermoBar(event_t* ev, menu_t* menu) {
 	bar = menu->thermobars;
 	x = menu->x;
 	y = menu->y;
-	mx = cursor_x;
+#if ANDROID
+	mx = mouse_x;
+	my = mouse_y;
+#else
+    mx = cursor_x;
 	my = cursor_y;
-	scalex = ((float)video_width /
+#endif
+    scalex = ((float)video_width /
 		((float)SCREENHEIGHT * video_ratio)) * menu->scale;
 	scaley = ((float)video_height /
 		(float)SCREENHEIGHT) * menu->scale;
@@ -4262,8 +4256,13 @@ static boolean M_CursorHighlightItem(menu_t* menu) {
 	max = (menu->numpageitems == -1) ? menu->numitems : menu->numpageitems;
 	x = menu->x;
 	y = menu->y;
-	mx = cursor_x;
+#if ANDROID
+	mx = mouse_x;
+	my = mouse_y;
+#else
+    mx = cursor_x;
 	my = cursor_y;
+#endif
 	scalex = ((float)video_width /
 		((float)SCREENHEIGHT * video_ratio)) * menu->scale;
 	scaley = ((float)video_height /
@@ -4544,7 +4543,11 @@ boolean M_Responder(event_t* ev) {
 			ch = ev->data1;
 		}
 	}
+#ifdef ANDROID
+	else if (ev->type == ev_mouse) {
+#else
 	else if (ev->type == ev_mouse && (ev->data2 != 0.0 || ev->data3 != 0.0)) {
+#endif
 		// [styd] the mouse moved, so it takes the pointer back
 		MenuPadNavigating = false;
 
@@ -5063,6 +5066,9 @@ static void M_DrawMenuSkull(int x, int y) {
 
 static void M_DrawCursor()
 {
+#ifdef ANDROID
+	return;
+#endif
 	int gfxIdx = -1;
 	float factor;
 	float scale;
@@ -5116,7 +5122,8 @@ static void M_DrawCursor()
 		GL_SetupAndDraw2DQuad((float)cursor_x * factor, (float)cursor_y * factor,
 			gfxwidth[gfxIdx], gfxheight[gfxIdx], 0, 1.0f, 0, 1.0f, WHITE, 0);
 	}
-
+    GL_SetupAndDraw2DQuad((float)cursor_x * factor, (float)cursor_y * factor,
+		gfxwidth[gfxIdx], gfxheight[gfxIdx], 0, 1.0f, 0, 1.0f, WHITE, 0);
 	GL_SetState(GLSTATE_BLEND, 0);
 	dglDepthMask(GL_TRUE);
 	GL_SetOrthoScale(1.0f);

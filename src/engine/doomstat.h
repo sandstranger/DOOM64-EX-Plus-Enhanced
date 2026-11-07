@@ -229,7 +229,7 @@ extern  FILE* debugfile;
 // if true, load all graphics at level load
 extern  boolean    precache;
 
-#define MAXSENSITIVITY    32
+#define MAXSENSITIVITY    64
 
 extern  int         bodyqueslot;
 

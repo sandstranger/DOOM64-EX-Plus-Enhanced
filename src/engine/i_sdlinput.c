@@ -30,26 +30,30 @@
 #include "d_main.h"
 #include "con_cvar.h"
 #include "dgl.h"
+#ifdef ANDROID
+#include "dgl_gles.h"
+#endif
 #include "g_settings.h"
+#ifdef ANDROID
+#include <stdlib.h>
+#include "SwappyController.h"
+#endif
 #include "g_actions.h"
 
-CVAR(v_msensitivityx, 5);
-CVAR(v_msensitivityy, 5);
+CVAR(v_msensitivityx, 32);
+CVAR(v_msensitivityy, 32);
 CVAR(v_macceleration, 0);
 CVAR(v_mlookinvert, 0);
+// 1 once mouse look has been switched on for a config written before it was on
+// by default, see I_ApplyMouseLookDefault
+CVAR(v_mlookdefault, 0);
 CVAR(v_yaxismove, 0);
 CVAR(v_xaxismove, 0);
-CVAR_EXTERNAL(i_interpolateframes);
 CVAR_EXTERNAL(m_menumouse);
 CVAR_EXTERNAL(p_autoaim);
-CVAR_EXTERNAL(v_maxfps);
-CVAR_EXTERNAL(v_vsync);
 
-CVAR_CMD(v_mlook, 0) {
+CVAR_CMD(v_mlook, 1) {
 	if (cvar->value > 0) {
-		if(!g_in_load_settings) {
-			I_Printf("WARNING: mouse look: skies will not render properly with high pitch. Do not report.\n");
-		}
 		return;
 	}
 
@@ -71,7 +75,7 @@ int	DualMouse;
 
 boolean	DigiJoy;
 boolean	MouseMode;
-boolean	window_mouse;
+boolean	window_mouse = true;
 
 gamepad64_t gamepad64;
 
@@ -112,7 +116,6 @@ CVAR(v_gamepadrumble, 5);
 
 // how far the left stick must lean before it counts as a menu direction
 #define GAMEPAD_MENU_STICK_THRESH        0.50f
-
 //
 // Stick response.
 //
@@ -162,6 +165,20 @@ CVAR(v_gamepadrumble, 5);
 extern void D_PostEvent(event_t*);
 extern boolean menuactive;
 extern gamestate_t gamestate;
+
+#if ANDROID
+extern float cursor_x;
+extern float cursor_y;
+typedef void (*forceLandScapeActivityOrientationDelegate)();
+static forceLandScapeActivityOrientationDelegate activityOrientationChangerInstance = nullptr;
+#endif
+
+#if ANDROID
+__attribute__((used)) __attribute__((visibility("default")))
+void registerForceLandscapeActivityOrientationCallback (forceLandScapeActivityOrientationDelegate instance) {
+    activityOrientationChangerInstance = instance;
+}
+#endif
 
 //
 // The button indices in g_controls.h are declared without including SDL, so
@@ -499,22 +516,50 @@ static void I_GamepadInitOnce(void) {
 	// wrong before SDL ever sees it, and only an entry in
 	// gamecontrollerdb.txt can straighten that out.
 	//
-	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI, "1");
+    SDL_SetHint(SDL_HINT_TV_REMOTE_AS_JOYSTICK, "0");
+	SDL_SetHint(SDL_HINT_JOYSTICK_GAMEINPUT, "1");
 	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS3, "1");
-	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4, "1");
-	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS5, "1");
-	SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_SWITCH, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_STEAMDECK, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_WII, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_COMBINE_JOY_CONS, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS4, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_SWITCH, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_JOY_CONS, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_STEAM, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_GAMECUBE, "1");
+    SDL_SetHint(SDL_HINT_JOYSTICK_HIDAPI_PS5, "1");
 
 	if (!SDL_WasInit(SDL_INIT_GAMEPAD)) {
 		SDL_InitSubSystem(SDL_INIT_GAMEPAD);
 	}
 
+
+#ifdef ANDROID
+    extern char *g_pathToSDLControllerDB;
+
+    if (SDL_AddGamepadMappingsFromFile(g_pathToSDLControllerDB) < 0) {
+        SDL_Log("Couldn't load mappings: %s\n", SDL_GetError());
+    } else{
+        SDL_Log("Custom controller db was loaded from: %s", g_pathToSDLControllerDB);
+    }
+#else
 	I_GamepadLoadMappings();
+#endif    
 
 	I_GamepadPickAny();
 
 	gamepad64.init = true;
 }
+
+#ifdef ANDROID
+static bool g_onScreenControlsEnabled = false;
+
+__attribute__((used)) __attribute__((visibility("default")))
+void updateOnScreenControlsState(const bool enabled) {
+    g_onScreenControlsEnabled = enabled;
+}
+#endif
 
 //
 // I_GamepadHandleSDLEvent
@@ -525,16 +570,37 @@ static void I_GamepadHandleSDLEvent(const SDL_Event* e) {
 	}
 
 	switch (e->type) {
-	case SDL_EVENT_GAMEPAD_ADDED:
-		I_GamepadOpen(e->gdevice.which);
-		break;
+		case SDL_EVENT_GAMEPAD_ADDED:
+		{
+#ifdef ANDROID
+			SDL_JoystickID id = e->gdevice.which;
+			bool isVirtual = SDL_IsJoystickVirtual(id);
+			if (!g_onScreenControlsEnabled || (g_onScreenControlsEnabled && isVirtual))
+			{
+				I_GamepadOpen(id);
+			}
+#else
+			I_GamepadOpen(e->gdevice.which);
+#endif
+			break;
+		}
 
 	case SDL_EVENT_JOYSTICK_ADDED:
-		// a device with a mapping also raises SDL_EVENT_GAMEPAD_ADDED, so
+#ifdef ANDROID
+			SDL_JoystickID id = e->jdevice.which;
+			bool isVirtual = SDL_IsJoystickVirtual(id);
+			if (!SDL_IsGamepad(e->jdevice.which) && (!g_onScreenControlsEnabled ||
+			(g_onScreenControlsEnabled && isVirtual)))
+			{
+				I_GamepadOpen(id);
+			}
+#else
+    	// a device with a mapping also raises SDL_EVENT_GAMEPAD_ADDED, so
 		// only take it here if it has none
 		if (!SDL_IsGamepad(e->jdevice.which)) {
 			I_GamepadOpen(e->jdevice.which);
 		}
+#endif
 		break;
 
 	case SDL_EVENT_GAMEPAD_REMOVED:
@@ -1028,6 +1094,11 @@ void I_ReadMouse(void) {
 	SDL_GetRelativeMouseState(&x, &y);
 	btn = SDL_GetMouseState(&mouse_x, &mouse_y);
 
+#if ANDROID
+    cursor_x = mouse_x;
+    cursor_y = mouse_y;
+#endif
+
 	if (x != 0 || y != 0 || btn || (lastmbtn != btn)) {
 		ev.type = ev_mouse;
 		ev.data1 = I_SDLtoDoomMouseState(btn);
@@ -1157,18 +1228,35 @@ void I_StopTextInput(void) {
 // I_GetEvent
 //
 
+#ifdef ANDROID
+extern void RecalculateScreenResolution (int native_w, int native_h);
+#endif
+
 void I_GetEvent(SDL_Event* Event) {
 	event_t event;
 	unsigned int mwheeluptic = 0, mwheeldowntic = 0;
 	unsigned int tic = gametic;
-
+#if ANDROID
+    if (Event->window.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED){
+		const int width = Event->window.data1;
+		const int height = Event->window.data2;
+		RecalculateScreenResolution(width, height);
+		return;
+    }
+#endif
 	I_GamepadHandleSDLEvent(Event);
-	
+
 	switch (Event->type) {
 	case SDL_EVENT_KEY_DOWN:
 		if (Event->key.repeat) {
 			break;
 		}
+
+		if ((Event->key.key == SDLK_RETURN && (Event->key.mod & SDL_KMOD_ALT))) {
+			I_ToggleFullscreen();
+			break;
+		}
+
 		event.type = ev_keydown;
 		event.data1 = I_TranslateKey(&Event->key);
 		if(event.data1) {
@@ -1229,12 +1317,18 @@ void I_GetEvent(SDL_Event* Event) {
 		if (!window_focused)
 			break;
 
+#if ANDROID
+        if (Event->type == SDL_EVENT_MOUSE_BUTTON_DOWN){
+            I_ReadMouse();
+        }
+#endif
 		event.type = (Event->type == SDL_EVENT_MOUSE_BUTTON_UP) ? ev_mouseup : ev_mousedown;
 		event.data1 =
 			I_SDLtoDoomMouseState(SDL_GetMouseState(NULL, NULL));
 		event.data2 = event.data3 = 0;
 
 		D_PostEvent(&event);
+
 		break;
 
 	case SDL_EVENT_MOUSE_WHEEL:
@@ -1255,6 +1349,7 @@ void I_GetEvent(SDL_Event* Event) {
 		D_PostEvent(&event);
 		break;
 
+#ifndef ANDROID
 	case SDL_EVENT_WINDOW_FOCUS_GAINED:
 		window_focused = true;
 		break;
@@ -1262,7 +1357,7 @@ void I_GetEvent(SDL_Event* Event) {
 	case SDL_EVENT_WINDOW_FOCUS_LOST:
 		window_focused = false;
 		break;
-
+#endif
 	case SDL_EVENT_WINDOW_MOUSE_ENTER:
 		window_mouse = true;
 		break;
@@ -1339,58 +1434,21 @@ static float GetDisplayRefreshRate(void) {
 	return 60.0f; // not happy, return to 60
 }
 
-void I_FPSLimit(void) {
-	static Uint64 lastFrameTime = 0;
-	static float displayRefreshRate = 0.0f;
-
-	static int refreshCheckCounter = 0;
-	if (refreshCheckCounter++ % 60 == 0) {
-		displayRefreshRate = GetDisplayRefreshRate();
-	}
-
-	float targetFPS = (v_maxfps.value > 0) ? v_maxfps.value : displayRefreshRate;
-	const Uint64 targetFrameTimeNS = (Uint64)(1000000000.0f / targetFPS);
-
-	Uint64 currentTime = SDL_GetTicksNS();
-	if (lastFrameTime > 0) {
-		Uint64 elapsed = currentTime - lastFrameTime;
-		if (elapsed < targetFrameTimeNS) {
-			Uint64 sleepTime = targetFrameTimeNS - elapsed;
-			if (sleepTime > 500000) {
-				SDL_DelayNS(sleepTime - 100000);
-			}
-			while (SDL_GetTicksNS() - lastFrameTime < targetFrameTimeNS) {
-			}
-		}
-	}
-	lastFrameTime = SDL_GetTicksNS();
-}
-
 //
 // I_FinishUpdate
 //
 
 void I_FinishUpdate(void) {
-
-	static int prev_swap_interval = -1;
-	int swap_interval = (int)v_vsync.value;
-
 	I_UpdateGrab();
-
-	if (prev_swap_interval != swap_interval) {
-		SDL_GL_SetSwapInterval(swap_interval);
-		prev_swap_interval = swap_interval;
+#ifdef ANDROID
+	I_GLES_EndFrame();
+	if (!SwappySwapBuffers()){
+		SDL_GL_SwapWindow(window);
 	}
-
+#else
 	SDL_GL_SwapWindow(window);
-
-	if (swap_interval > 0) {
-		glFinish();
-	}
-	else if (i_interpolateframes.value > 0) {
-		I_FPSLimit();
-	}
-
+	dglFinish();
+#endif
 	BusyDisk = false;
 }
 
@@ -1405,6 +1463,23 @@ void I_InitInputs(void) {
 }
 
 //
+// I_ApplyMouseLookDefault
+//
+// Mouse look is on by default. Configs written before still hold the old
+// default (every cvar is saved, and the option was not even in the menu), so it
+// is switched on once for them; whatever the player picks after that is kept.
+//
+
+void I_ApplyMouseLookDefault(void) {
+	if (v_mlookdefault.value > 0) {
+		return;
+	}
+
+	CON_CvarSetValue(v_mlook.name, 1);
+	CON_CvarSetValue(v_mlookdefault.name, 1);
+}
+
+//
 // ISDL_RegisterCvars
 //
 
@@ -1414,6 +1489,7 @@ void ISDL_RegisterKeyCvars(void) {
 	CON_CvarRegister(&v_macceleration);
 	CON_CvarRegister(&v_mlook);
 	CON_CvarRegister(&v_mlookinvert);
+	CON_CvarRegister(&v_mlookdefault);
 	CON_CvarRegister(&v_yaxismove);
 	CON_CvarRegister(&v_xaxismove);
 

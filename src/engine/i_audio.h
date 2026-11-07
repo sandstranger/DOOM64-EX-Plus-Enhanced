@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*-
+// Emacs style mode select -*- C -*-
 //-----------------------------------------------------------------------------
 //
 // Copyright(C) 1993-1997 Id Software, Inc.
@@ -11,8 +11,8 @@
 //
 // The source is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// FITNESS FOR A PARTICULAR PURPOSE. See the DOOM Source Code License
-// for more details.
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// DOOM Source Code License for more details.
 //
 //-----------------------------------------------------------------------------
 
@@ -30,9 +30,7 @@ typedef struct {
     fixed_t z;
 } sndsrc_t;
 
-
-// FMOD Studio
-
+/* FMOD Core */
 #define MAX_GAME_SFX 256
 
 struct Sound {
@@ -55,12 +53,8 @@ struct Sound {
     FMOD_VECTOR vec_front;
     FMOD_VECTOR vec_up;
 
-    FMOD_CREATESOUNDEXINFO  extinfo;
+    FMOD_CREATESOUNDEXINFO extinfo;
 };
-
-/*struct Reverb {
-    FMOD_REVERB3D* fmod_reverb;
-};*/
 
 int I_GetMaxChannels(void);
 int I_GetVoiceCount(void);

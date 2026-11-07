@@ -29,8 +29,29 @@
 #include "d_main.h"
 #include "m_misc.h"
 #include "i_system.h"
+#ifdef ANDROID
+#include <stdlib.h>
+#include <unistd.h>
+#include <SDL3/SDL_main.h>
+#include "SwappyController.h"
+#endif
 
 const char version_date[] = __DATE__;
+
+#if ANDROID
+char* g_pathToDoom64MainWadsFolder = nullptr;
+char* g_pathToDoom64UserFolder = nullptr;
+char *g_pathToSDLControllerDB = nullptr;
+
+static void freeChars(char **targetChars)
+{
+    if (targetChars && *targetChars)
+    {
+        free(*targetChars);
+        *targetChars = nullptr;
+    }
+}
+#endif
 
 //
 // dmemcpy
@@ -443,11 +464,65 @@ float D_fabs(float x) {
 // main
 //
 
+#ifdef ANDROID
+int SDL_main(int argc, char **argv){
+#else
 int main(int argc, char *argv[]) {
+#endif
 	myargc = argc;
 	myargv = argv;
 
-	D_DoomMain();
+#ifdef ANDROID
+    chdir(g_pathToDoom64UserFolder);
+#endif
 
+	D_DoomMain();
+#if ANDROID
+    freeChars(&g_pathToDoom64UserFolder);
+    freeChars(&g_pathToDoom64MainWadsFolder);
+    freeChars(&g_pathToSDLControllerDB);
+	DestroySwappy();
+#endif
 	return 0;
 }
+
+#ifdef ANDROID
+
+__attribute__((used)) __attribute__((visibility("default")))
+void onNativeResume() {
+}
+
+__attribute__((used)) __attribute__((visibility("default")))
+void onNativePause() {
+}
+__attribute__((used)) __attribute__((visibility("default")))
+bool needToShowScreenControls() {
+    return !menuactive && gamestate == GS_LEVEL && !demoplayback;
+}
+__attribute__((used)) __attribute__((visibility("default")))
+bool needToInvokeMouseButtonsEvents(){
+    return menuactive || gamestate == GS_NONE || gamestate == GS_SKIPPABLE || demoplayback;
+}
+__attribute__((used)) __attribute__((visibility("default")))
+bool MouseCursorCanBeDrawn() {
+    return menuactive;
+}
+
+__attribute__((used)) __attribute__((visibility("default")))
+bool needToReInitGameControllers (){
+    return false;
+}
+__attribute__((used)) __attribute__((visibility("default")))
+void setPathsToResources (const char *pathToWadsFolder, const char *pathToUserFolder) {
+    freeChars(&g_pathToDoom64UserFolder);
+    freeChars(&g_pathToDoom64MainWadsFolder);
+    g_pathToDoom64UserFolder = strdup(pathToUserFolder);
+    g_pathToDoom64MainWadsFolder = strdup(pathToWadsFolder);
+}
+
+__attribute__((used)) __attribute__((visibility("default")))
+void setPathToSDLControllerDB (const char *pathToSDLControllerDB){
+    freeChars(&g_pathToSDLControllerDB);
+    g_pathToSDLControllerDB = strdup(pathToSDLControllerDB);
+}
+#endif

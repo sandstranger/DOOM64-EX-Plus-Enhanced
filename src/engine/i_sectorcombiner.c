@@ -20,11 +20,18 @@
 //-----------------------------------------------------------------------------
 
 #include <SDL3/SDL.h>
+#ifndef ANDROID
 #include <SDL3/SDL_opengl.h>
+#else
+#include "glad.h"
+#endif
 #include <string.h>
 #include <math.h>
 
 #include "i_sectorcombiner.h"
+#ifdef ANDROID
+#include "dgl_gles.h"
+#endif
 
 #ifndef COUNTOF
 #define COUNTOF(a) ((int)(sizeof(a)/sizeof((a)[0])))
@@ -159,6 +166,17 @@ static void I_SectorCombinerTexturePasses(void) {
 }
 
 static void I_SectorCombinerUniforms(void) {
+#ifdef ANDROID
+    if (I_GLES_IsActive()) {
+        /* The native OpenGL ES backend applies what is uploaded below to the
+           bound world shader, when its next draw needs it. */
+        I_GLES_SetWorldCombiner(s.use_texture, s.tex_w, s.tex_h, s.pass_count,
+                                s.pass_mode[0], s.pass_color[0], s.pass_factor[0],
+                                s.fog_enabled, s.fog_color, s.fog_factor, s.fog_mode,
+                                s.fog_start, s.fog_end, s.fog_density);
+        return;
+    }
+#endif
     if (!g_procs_loaded) 
         return;
 

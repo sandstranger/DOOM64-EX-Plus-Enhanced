@@ -19,7 +19,11 @@
 //
 //-----------------------------------------------------------------------------
 
+#ifndef ANDROID
 #include <SDL3/SDL_opengl.h>
+#else
+#include "glad.h"
+#endif
 
 #ifdef SDL_PLATFORM_MACOS
 #include <OpenGL/OpenGL.h>
@@ -56,7 +60,11 @@ const char *gl_version;
 static float glScaleFactor = 1.0f;
 
 boolean    usingGL = false;
+#ifndef ANDROID
 float       max_anisotropic = 16.0;
+#else
+float       max_anisotropic = 2.0f;
+#endif
 boolean    widescreen = false;
 
 CVAR_EXTERNAL(r_filter);
@@ -65,6 +73,17 @@ CVAR_EXTERNAL(r_anisotropic);
 CVAR_EXTERNAL(r_multisample);
 CVAR_EXTERNAL(st_flashoverlay);
 CVAR_EXTERNAL(r_colorscale);
+
+#ifdef ANDROID
+static float maxAllowedAnisotropyValue = 2.0f;
+
+__attribute__((used)) __attribute__((visibility("default")))
+void updateMaxAnisotropyValue (int targetAnisotropyValue) {
+    maxAllowedAnisotropyValue = targetAnisotropyValue;
+    max_anisotropic = targetAnisotropyValue;
+}
+
+#endif
 
 void GL_OnResize(int w, int h);
 
@@ -120,6 +139,12 @@ boolean GL_CheckExtension(const char *ext) {
 
 void* GL_RegisterProc(const char *address) {
     void *proc = SDL_GL_GetProcAddress(address);
+#ifdef ANDROID
+    if (I_GLES_IsActive()) {
+        if (dstreq(address, "glActiveTextureARB"))
+            proc = SDL_GL_GetProcAddress("glActiveTexture");
+    }
+#endif
 
     if(!proc) {
         CON_Warnf("GL_RegisterProc: Failed to get proc address: %s", address);
@@ -234,7 +259,9 @@ byte* GL_GetScreenBuffer(int x, int y, int width, int height) {
     //
     dglGetIntegerv(GL_PACK_ALIGNMENT, &pack);
     dglPixelStorei(GL_PACK_ALIGNMENT, 1);
+#ifndef ANDROID    
     dglFlush();
+#endif    
     dglReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, data);
     dglPixelStorei(GL_PACK_ALIGNMENT, pack);
 
@@ -553,10 +580,22 @@ void GL_Init(void) {
 
     r_fillmode.value = 1.0f;
 
-    GL_ARB_multitexture_Init();
-    GL_ARB_texture_env_combine_Init();
-    GL_EXT_texture_env_combine_Init();
-    GL_EXT_texture_filter_anisotropic_Init();
+#ifdef ANDROID
+    if (I_GLES_IsActive()) {
+        /* The native OpenGL ES backend emulates multitexturing and the texture
+           combiners, the way GL4ES reports them. */
+        has_GL_ARB_multitexture = true;
+        has_GL_ARB_texture_env_combine = true;
+        has_GL_EXT_texture_env_combine = true;
+        GL_EXT_texture_filter_anisotropic_Init();
+    } else
+#endif
+    {
+        GL_ARB_multitexture_Init();
+        GL_ARB_texture_env_combine_Init();
+        GL_EXT_texture_env_combine_Init();
+        GL_EXT_texture_filter_anisotropic_Init();
+    }
 
     if(!has_GL_ARB_multitexture) {
         CON_Warnf("GL_ARB_multitexture not supported...\n");
@@ -579,6 +618,11 @@ void GL_Init(void) {
 
     if(has_GL_EXT_texture_filter_anisotropic) {
         dglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropic);
+#ifdef ANDROID
+        if (max_anisotropic > maxAllowedAnisotropyValue){
+            max_anisotropic = maxAllowedAnisotropyValue;
+        }
+#endif
     }
 
     usingGL = true;

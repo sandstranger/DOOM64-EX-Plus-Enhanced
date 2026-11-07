@@ -42,7 +42,9 @@
 #include "gl_draw.h"
 #include "steam.h"
 #include "w_file.h"
-
+#ifdef ANDROID
+#include "SDL3/SDL_log.h"
+#endif
 extern void I_ShutdownSound(void);
 
 CVAR(i_interpolateframes, 1);
@@ -50,6 +52,12 @@ CVAR(v_accessibility, 0);
 CVAR(v_fadein, 1);
 
 ticcmd_t        emptycmd;
+
+#ifdef ANDROID
+extern char* g_pathToDoom64MainWadsFolder;
+extern char* g_pathToRootUserFolder;
+extern char* g_pathToDoom64UserFolder;
+#endif
 
 //
 // I_Sleep
@@ -63,8 +71,19 @@ static Uint64 basetime = 0;
 //
 // I_GetTimeNormal: returns time elapsed in number of ticks: 1s -> TICRATE, 2s -> 2*TICRATE, ...
 //
-SDL_INLINE static int I_GetTimeNormal(void) {
-	return (I_GetTimeMS() * TICRATE) / 1000;
+static int I_GetTimeNormal(void) {
+	Uint64 ticks;
+	Uint64 tic_division = 1000;
+
+	ticks = SDL_GetTicks();
+
+	if (basetime == 0) {
+		basetime = ticks;
+	}
+
+	ticks -= basetime;
+
+	return (ticks * TICRATE) / tic_division;
 }
 
 //
@@ -98,7 +117,7 @@ fixed_t         rendertic_frac = 0;
 Uint64			rendertic_start;
 Uint64			rendertic_step;
 Uint64			rendertic_next;
-const float     rendertic_msec = TICRATE / 1000.0f;
+const float     rendertic_msec = 100 * TICRATE / 100000.0f;
 
 //
 // I_StartDisplay
@@ -196,7 +215,11 @@ char* I_GetUserDir(void)
 	static char* g_user_dir = NULL;
 
 	if (!g_user_dir) {
+#ifndef ANDROID
 		g_user_dir = SDL_GetPrefPath("", "doom64ex-plus"); // string allocated by SDL
+#else
+        g_user_dir = g_pathToDoom64UserFolder;
+#endif
 		if (g_user_dir) {
 			I_Printf("User data dir: %s\n", g_user_dir);
 		} else {
@@ -228,8 +251,12 @@ static char* FindDataFile(char* file) {
 	static filepath_t steam_install_dir;
 
 	char* dirs[] = {
-		(char *)SDL_GetBasePath(), // install dir (where executable is located)
+#ifdef ANDROID
+        g_pathToDoom64MainWadsFolder,
+#else
+        (char *)SDL_GetBasePath(), // install dir (where executable is located)
 		".", // cur dir from where executable is launched
+#endif
 		I_GetUserDir(), 
 #ifdef DOOM_UNIX_SYSTEM_DATADIR
 		DOOM_UNIX_SYSTEM_DATADIR
@@ -403,6 +430,9 @@ void I_Printf(const char* string, ...) {
 	SDL_vsnprintf(buff, sizeof(buff), string, va);
 	va_end(va);
 	printf("%s", buff);
+#ifdef ANDROID
+    SDL_Log("Doom64EX+ log line = %s", buff);
+#endif
 	fflush(stdout);
 	if (console_initialized) {
 		CON_AddText(buff);
