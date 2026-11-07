@@ -313,7 +313,6 @@ static void R_UpdateSkyInfo(int lump) {
             const int edgeRows = h < 4 ? h : 4;
             const int starRows = R_SkyStarRows(png, w, h);
             // a power of two, so the tile repeats and mipmaps on OpenGL ES 2.0 too
-            const boolean widthRepeats = (w & (w - 1)) == 0 || I_GetGLESVersion() != 2;
             int tileRows = 8;
 
             skyEdgeTop = R_AverageRows(png, w, 0, edgeRows);
@@ -322,7 +321,7 @@ static void R_UpdateSkyInfo(int lump) {
             while (tileRows * 2 <= starRows) {
                 tileRows *= 2;
             }
-            if (starRows >= 8 && widthRepeats) {
+            if (starRows >= 8) {
                 R_BuildSkyStars(png, w, tileRows);
                 skyStarRows = tileRows;
                 skyStarWidth = w;
