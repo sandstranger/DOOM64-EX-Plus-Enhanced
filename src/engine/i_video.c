@@ -124,7 +124,11 @@ int I_GetGLESVersion(void) {
      * should receive the ESSL 1.00 / 3.00 shader variants.
      */
     const char* version = (const char*)glGetString(GL_VERSION);
-    const char* esVersion = version ? SDL_strstr(version, "OpenGL ES ") : NULL;
+    /* GL4ES can be configured with an arbitrary exposed GL_VERSION string.
+       Its own wrapper marker must win over any such override. */
+    if (!version || SDL_strstr(version, "gl4es wrapper"))
+        return 0;
+    const char* esVersion = SDL_strstr(version, "OpenGL ES ");
     if (!esVersion)
         return 0;
 
