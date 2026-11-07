@@ -48,9 +48,6 @@ CVAR_EXTERNAL(p_autoaim);
 
 CVAR_CMD(v_mlook, 0) {
 	if (cvar->value > 0) {
-		if(!g_in_load_settings) {
-			I_Printf("WARNING: mouse look: skies will not render properly with high pitch. Do not report.\n");
-		}
 		return;
 	}
 

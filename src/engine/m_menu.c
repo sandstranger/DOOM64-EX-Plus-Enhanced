@@ -59,7 +59,9 @@
 // definitions
 //
 
-//#define HAS_MENU_MOUSE_LOOK
+// Mouse look (vertical free look) in the mouse menu. It was hidden because the
+// skies did not follow the view pitch; r_sky.c and r_clipper.c handle it now.
+#define HAS_MENU_MOUSE_LOOK
 
 #define MENUSTRINGSIZE      32
 #define SKULLXOFF           -40    //villsa: changed from -32 to -40
