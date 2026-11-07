@@ -101,6 +101,18 @@ typedef GLboolean (APIENTRYP PFNGLUNMAPBUFFERARBPROC) (GLenum target);
 #ifndef GL_COMBINE_RGB
 #define GL_COMBINE_RGB 0x8571
 #endif
+#ifndef GL_ADD
+#define GL_ADD 0x0104
+#endif
+#ifndef GL_CONSTANT
+#define GL_CONSTANT 0x8576
+#endif
+#ifndef GL_INTERPOLATE
+#define GL_INTERPOLATE 0x8575
+#endif
+#ifndef GL_MODULATE
+#define GL_MODULATE 0x2100
+#endif
 #ifndef GL_DECAL
 #define GL_DECAL 0x2101
 #endif
