@@ -1129,8 +1129,11 @@ void I_GLES_GetIntegerv(GLenum pname, GLint* params) {
     if (!g_active) { glGetIntegerv(pname, params); return; }
     if (!params) return;
     if (pname == GL_MAX_TEXTURE_UNITS_ARB) {
+        /* Fixed-function texture stages become fragment samplers here.
+           Query the fragment-stage limit, not the combined vertex+fragment
+           sampler limit. */
         GLint maxUnits = 1;
-        glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &maxUnits);
+        glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &maxUnits);
         *params = maxUnits < 4 ? maxUnits : 4;
         return;
     }
