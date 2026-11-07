@@ -26,10 +26,12 @@
 #include "glad.h"
 #endif
 
+#include <math.h>
 #include "r_clipper.h"
 #include "doomtype.h"
 #include "tables.h"
 #include "r_main.h"
+#include "doomstat.h"
 #include "dgl.h"
 
 static GLdouble viewMatrix[16];
@@ -248,10 +250,30 @@ void R_Clipper_Clear(void) {
 // R_FrustumAngle
 //
 
+/*
+ * The clipper works in angles from the vertices to the viewer, so the range
+ * R_SetViewClipping clips is centred behind the viewer: for a result of
+ * ANG180 + h it leaves everything within h degrees of the view direction
+ * visible, ANG180 clips nothing.
+ *
+ * The estimate below was tuned for fields of view up to 90 degrees. With mouse
+ * look the corners of the screen reach further around the more the view
+ * pitches (behind the viewer once the top or bottom edge passes the vertical),
+ * so the range is widened to what the actual projection can see.
+ */
 angle_t R_FrustumAngle(void) {
 	angle_t tilt;
+	angle_t estimate;
+	angle_t exact;
 	float range;
 	float floatangle;
+	float denominator;
+	float pitch;
+	float tanv;
+	float aspect;
+	float forward;
+	float half;
+	const float deg = (float)(M_PI / 180.0);
 
 	tilt = ANG45 - D_abs((int)(viewpitch - ANG90));
 
@@ -259,7 +281,8 @@ angle_t R_FrustumAngle(void) {
 		return ANG270 - ANG90;
 	}
 
-	range = (24.0f / (r_fov.value - (widescreen ? -4.0f : 10.0f)));
+	denominator = r_fov.value - (widescreen ? -4.0f : 10.0f);
+	range = denominator > 0.0f ? (24.0f / denominator) : 1.0f;
 
 	if (range > 1.0f) {
 		range = 1.0f;
@@ -267,7 +290,27 @@ angle_t R_FrustumAngle(void) {
 
 	floatangle = (float)(tilt / ANG1) * range;
 
-	return ANG270 - ((int)floatangle * ANG1);
+	estimate = ANG270 - ((int)floatangle * ANG1);
+
+	if (r_fov.value <= 0.0f || r_fov.value >= 179.0f || video_height <= 0) {
+		return ANG270 - ANG90;
+	}
+
+	pitch = fabsf(TRUEANGLES(viewpitch) - 90.0f) * deg;
+	tanv = tanf(r_fov.value * 0.5f * deg);
+	aspect = (float)video_width / (float)video_height;
+	forward = cosf(pitch) - tanv * sinf(pitch);
+	if (forward <= 0.0f) {
+		return ANG270 - ANG90;
+	}
+
+	half = atanf(tanv * aspect / forward) / deg + 5.0f;
+	if (half >= 179.0f) {
+		return ANG270 - ANG90;
+	}
+
+	exact = ANG180 + (angle_t)half * ANG1;
+	return exact > estimate ? exact : estimate;
 }
 
 //

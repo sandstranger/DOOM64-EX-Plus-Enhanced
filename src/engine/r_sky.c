@@ -94,6 +94,48 @@ static rcolor PostProcessSkyColor(rcolor original_color, boolean is_cloud) {
     return r | (g << 8) | (b << 16) | (a << 24);
 }
 
+//
+// R_SkyPitchShift
+//
+// The flat skies are laid out for a level view. With mouse look the world view
+// pitches, so they move with the horizon: down when looking up, up when looking
+// down. Returns the vertical offset of the horizon in the 320x240 screen space,
+// from the projection the world is drawn with.
+//
+
+static float R_SkyPitchShift(void) {
+    float pitch = TRUEANGLES(viewpitch) - 90.0f;
+    float halfFov = r_fov.value * (float)(M_PI / 360.0);
+
+    if (pitch > 89.0f) {
+        pitch = 89.0f;
+    }
+    else if (pitch < -89.0f) {
+        pitch = -89.0f;
+    }
+
+    if ((pitch > -0.01f && pitch < 0.01f) || halfFov <= 0.0f || halfFov >= (float)(M_PI / 2.0)) {
+        return 0.0f;
+    }
+
+    return ((float)SCREENHEIGHT * 0.5f) * tanf(pitch * (float)(M_PI / 180.0)) / tanf(halfFov);
+}
+
+//
+// R_SkyFillHeight
+// Height of the band above a flat sky that looking up uncovers, 0 if none
+//
+
+static int R_SkyFillHeight(float top) {
+    if (top <= 0.0f) {
+        return 0;
+    }
+    if (top >= (float)SCREENHEIGHT) {
+        return SCREENHEIGHT;
+    }
+    return (int)ceilf(top);
+}
+
 // atsb: a small little function to not have to copy and paste so much
 static inline void R_NeutralizeShaders(void) {
     I_ShaderUnBind();
@@ -238,7 +280,7 @@ skies are also 'only' GL_LINEAR.  GL_NEAREST skies do NOT look good
 */
 static void R_DrawSkyDome(int tiles, float rows, int height,
     int radius, float offset, float topoffs,
-    rcolor c1, rcolor c2) {
+    rcolor c1, rcolor c2, boolean closed) {
     fixed_t x, y, z;
     fixed_t lx, ly;
     fixed_t rx, ry;
@@ -368,6 +410,71 @@ static void R_DrawSkyDome(int tiles, float rows, int height,
     }
 
     //
+    // Mouse look can face (almost) straight up or down, past the edges of the
+    // ring. Continue it with the top and bottom rows of the sky (T clamps to the
+    // edge) and close it with a cap at each end, so no void shows.
+    //
+    if (closed) {
+        const float capTop = (float)(height * 16);
+        float u0 = 0.0f;
+
+        for (i = 0; i < NUM_SKY_DOME_FACES; i++) {
+            angle_t a0 = an * i;
+            angle_t a1 = an * (i + 1);
+            float x0 = F2D3D(FixedMul(INT2F(r), dcos(a0)));
+            float y0 = F2D3D(FixedMul(INT2F(r), dsin(a0)));
+            float x1 = F2D3D(FixedMul(INT2F(r), dcos(a1)));
+            float y1 = F2D3D(FixedMul(INT2F(r), dsin(a1)));
+            float u1 = tu2 * (i + 1);
+            int side;
+
+            for (side = 0; side < 2; side++) {
+                const boolean top = (side == 0);
+                const float edge = top ? (float)height : -(float)height;
+                const float far = top ? capTop : -capTop;
+                const float tv = top ? 0.0f : 1.0f;
+                const rcolor color = top ? c1 : c2;
+                const float lowZ = top ? edge : far;
+                const float highZ = top ? far : edge;
+
+                // wall from the ring edge to the cap, same winding as the ring
+                vtx[0].x = x0; vtx[0].y = y0; vtx[0].z = lowZ;
+                vtx[1].x = x0; vtx[1].y = y0; vtx[1].z = highZ;
+                vtx[2].x = x1; vtx[2].y = y1; vtx[2].z = highZ;
+                vtx[3].x = x1; vtx[3].y = y1; vtx[3].z = lowZ;
+                vtx[0].tu = vtx[1].tu = -u0;
+                vtx[2].tu = vtx[3].tu = -u1;
+                vtx[0].tv = vtx[1].tv = vtx[2].tv = vtx[3].tv = tv;
+                dglSetVertexColor(vtx, color, 4);
+                dglTriangle(0 + count, 1 + count, 2 + count);
+                dglTriangle(3 + count, 0 + count, 2 + count);
+                count += 4;
+                vtx += 4;
+
+                // cap triangle, facing the viewer inside the dome
+                vtx[0].x = 0.0f; vtx[0].y = 0.0f; vtx[0].z = far;
+                vtx[1].x = x0; vtx[1].y = y0; vtx[1].z = far;
+                vtx[2].x = x1; vtx[2].y = y1; vtx[2].z = far;
+                vtx[0].tu = -(u0 + u1) * 0.5f;
+                vtx[1].tu = -u0;
+                vtx[2].tu = -u1;
+                vtx[0].tv = vtx[1].tv = vtx[2].tv = tv;
+                dglSetVertexColor(vtx, color, 3);
+                if (top) {
+                    dglTriangle(0 + count, 2 + count, 1 + count);
+                }
+                else {
+                    dglTriangle(0 + count, 1 + count, 2 + count);
+                }
+                count += 3;
+                vtx += 3;
+            }
+
+            u0 = u1;
+        }
+    }
+
+    //
     // draw sky dome
     //
     dglDrawGeometry(count, drawVertex);
@@ -404,13 +511,15 @@ static void R_DrawSkyDome(int tiles, float rows, int height,
 // R_DrawSimpleSky
 //
 
-static void R_DrawSimpleSky(int lump, int offset) {
+static void R_DrawSimpleSky(int lump, int offset, boolean fillTop) {
     float pos1;
     float width;
     int height;
     int lumpheight;
     int gfxLmp;
     float row;
+    float top;
+    int fill;
 
     float skyScaleX = 1.3f;
     float skyScaleY = 1.0f;
@@ -445,7 +554,16 @@ static void R_DrawSimpleSky(int lump, int offset) {
     GL_SetState(GLSTATE_BLEND, 1);
     dglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    GL_SetupAndDraw2DQuad(0, (float)offset - lumpheight, SCREENWIDTH, lumpheight,
+    top = (float)offset - lumpheight + R_SkyPitchShift();
+
+    // Looking up shows the space above the picture: continue its top row.
+    fill = fillTop ? R_SkyFillHeight(top) : 0;
+    if (fill > 0) {
+        GL_SetupAndDraw2DQuad(0, 0, SCREENWIDTH, fill,
+            pos1, width + pos1, 0.006f, 0.006f, WHITE, 1);
+    }
+
+    GL_SetupAndDraw2DQuad(0, top, SCREENWIDTH, lumpheight,
         pos1, width + pos1, 0.006f, row, WHITE, 1);
 
     GL_SetState(GLSTATE_BLEND, 0);
@@ -476,7 +594,7 @@ static void R_DrawVoidSky(void) {
 //
 
 static void R_DrawTitleSky(void) {
-    R_DrawSimpleSky(skypicnum, 240);
+    R_DrawSimpleSky(skypicnum, 240, false);
     Draw_GfxImage(63, 25, sky->backdrop, D_RGBA(255, 255, 255, logoAlpha), false);
 }
 
@@ -489,6 +607,8 @@ static void R_DrawClouds(void) {
     R_NeutralizeShaders();
     rfloat pos = 0.0f;
     vtx_t v[4];
+    const float shift = R_SkyPitchShift();
+    const int fill = R_SkyFillHeight(shift);
 
     I_ShaderUnBind();
     GL_SetTextureUnit(0, true);
@@ -525,10 +645,16 @@ static void R_DrawClouds(void) {
     dglSetVertex(v);
 
     I_ShaderUnBind();
-    GL_Set2DQuad(v, 0, 0, SCREENWIDTH, 120, 0, 0, 0, 0, 0);
+    dglDisable(GL_TEXTURE_2D);
+    if (fill > 0) {
+        // looking up: the top of the gradient continues above it
+        GL_Set2DQuad(v, 0, 0, SCREENWIDTH, fill, 0, 0, 0, 0, 0);
+        dglSetVertexColor(&v[0], PostProcessSkyColor(sky->skycolor[1], true), 4);
+        GL_Draw2DQuad(v, true);
+    }
+    GL_Set2DQuad(v, 0, shift, SCREENWIDTH, 120, 0, 0, 0, 0, 0);
     dglSetVertexColor(&v[0], PostProcessSkyColor(sky->skycolor[1], true), 4);
     dglSetVertexColor(&v[2], PostProcessSkyColor(sky->skycolor[0], false), 2); // bottom
-    dglDisable(GL_TEXTURE_2D);
     GL_Draw2DQuad(v, true);
     dglEnable(GL_TEXTURE_2D);
 
@@ -541,7 +667,7 @@ static void R_DrawClouds(void) {
     dglSetVertexColor(&v[0], sky->skycolor[2], 4);
 
     I_ShaderUnBind();
-    GL_Set2DQuad(v, 0, 0, SCREENWIDTH, 120, 0, 0, 0, 0, 0);
+    GL_Set2DQuad(v, 0, shift, SCREENWIDTH, 120, 0, 0, 0, 0, 0);
     dglSetVertexColor(&v[0], PostProcessSkyColor(sky->skycolor[1], true), 4);
     dglSetVertexColor(&v[2], PostProcessSkyColor(sky->skycolor[0], false), 2);
 
@@ -576,6 +702,10 @@ static void R_DrawClouds(void) {
 
     dglMatrixMode(GL_PROJECTION);
     dglLoadIdentity();
+    if (shift != 0.0f) {
+        // move the cloud layer with the horizon, like the gradient behind it
+        dglTranslatef(0.0f, -shift / ((float)SCREENHEIGHT * 0.5f), 0.0f);
+    }
     dglViewFrustum(SCREENWIDTH, SCREENHEIGHT, 45.0f, 0.1f);
     dglMatrixMode(GL_MODELVIEW);
     dglEnable(GL_BLEND);
@@ -613,6 +743,180 @@ static void R_DrawClouds(void) {
 
     GL_SetDefaultCombiner();
     I_ShaderBind();
+}
+
+//
+// R_DrawSkyboxCloud
+//
+// Cloud skies with r_skybox: a horizon and two cloud layers far above the
+// viewer, turned with the view pitch and angle (from the earlier EX+ engine,
+// dropped by the 5.0 update, after which cloud skies drew nothing at all with
+// the default r_skybox 1).
+//
+
+static void R_DrawSkyboxCloud(void) {
+    rcolor color;
+    vtx_t v[4];
+    GLboolean hadDepth;
+    GLboolean previousDepth = GL_TRUE;
+    GLboolean hadCull;
+
+#define SKYBOX_SETALPHA(c, x)           \
+    c ^= (((c >> 24) & 0xff) << 24);    \
+    c |= (x << 24)
+
+    R_NeutralizeShaders();
+    GL_SetDefaultCombiner();
+    GL_SetTextureUnit(0, true);
+
+    //
+    // hack to force ortho scale back to 1
+    //
+    GL_SetOrthoScale(1.0f);
+
+    hadDepth = glIsEnabled(GL_DEPTH_TEST);
+    glGetBooleanv(GL_DEPTH_WRITEMASK, &previousDepth);
+    hadCull = glIsEnabled(GL_CULL_FACE);
+    dglDisable(GL_DEPTH_TEST);
+    dglDepthMask(GL_FALSE);
+    dglDisable(GL_CULL_FACE);
+
+    //
+    // setup view projection
+    //
+    dglMatrixMode(GL_PROJECTION);
+    dglPushMatrix();
+    dglLoadIdentity();
+    dglViewFrustum(video_width, video_height, r_fov.value, 0.1f);
+    dglMatrixMode(GL_MODELVIEW);
+    dglPushMatrix();
+    dglLoadIdentity();
+    dglRotatef(-TRUEANGLES(viewpitch), 1.0f, 0.0f, 0.0f);
+
+    dglSetVertex(v);
+
+    //
+    // disable textures for horizon effect
+    //
+    dglDisable(GL_TEXTURE_2D);
+
+    //
+    // draw horizon ceiling
+    //
+    v[0].x = -MAX_COORD; v[0].y = -MAX_COORD; v[0].z = 512;
+    v[1].x = MAX_COORD;  v[1].y = -MAX_COORD; v[1].z = 512;
+    v[2].x = MAX_COORD;  v[2].y = MAX_COORD;  v[2].z = 512;
+    v[3].x = -MAX_COORD; v[3].y = MAX_COORD;  v[3].z = 512;
+
+    dglSetVertexColor(&v[0], sky->skycolor[0], 4);
+
+    dglTriangle(0, 1, 3);
+    dglTriangle(2, 3, 1);
+    dglDrawGeometry(4, v);
+
+    //
+    // draw horizon wall
+    //
+    v[0].x = -MAX_COORD; v[0].y = 512; v[0].z = 12;
+    v[1].x = -MAX_COORD; v[1].y = 512; v[1].z = 512;
+    v[2].x = MAX_COORD;  v[2].y = 512; v[2].z = 512;
+    v[3].x = MAX_COORD;  v[3].y = 512; v[3].z = 12;
+
+    dglSetVertexColor(&v[0], sky->skycolor[1], 1);
+    dglSetVertexColor(&v[1], sky->skycolor[0], 1);
+    dglSetVertexColor(&v[2], sky->skycolor[0], 1);
+    dglSetVertexColor(&v[3], sky->skycolor[1], 1);
+
+    dglTriangle(0, 1, 2);
+    dglTriangle(3, 0, 2);
+    dglDrawGeometry(4, v);
+    dglEnable(GL_TEXTURE_2D);
+
+    //
+    // turn the clouds with the view
+    //
+    dglRotatef(-TRUEANGLES(viewangle) + 90.0f, 0.0f, 0.0f, 1.0f);
+
+    //
+    // bind cloud texture and set blending
+    //
+    GL_BindGfxTexture(lumpinfo[skypicnum].name, false);
+    dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (int)r_skyFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
+    dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (int)r_skyFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+    GL_SetState(GLSTATE_BLEND, 1);
+    dglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    //
+    // draw first cloud layer
+    //
+    v[0].tu = sky_cloudpan1;      v[0].tv = sky_cloudpan1;
+    v[1].tu = 16 + sky_cloudpan1; v[1].tv = sky_cloudpan1;
+    v[2].tu = 16 + sky_cloudpan1; v[2].tv = 16 + sky_cloudpan1;
+    v[3].tu = sky_cloudpan1;      v[3].tv = 16 + sky_cloudpan1;
+    v[0].x = -MAX_COORD; v[0].y = -MAX_COORD; v[0].z = 768;
+    v[1].x = MAX_COORD;  v[1].y = -MAX_COORD; v[1].z = 768;
+    v[2].x = MAX_COORD;  v[2].y = MAX_COORD;  v[2].z = 768;
+    v[3].x = -MAX_COORD; v[3].y = MAX_COORD;  v[3].z = 768;
+
+    color = sky->skycolor[2];
+    SKYBOX_SETALPHA(color, 0x3f);
+    dglSetVertexColor(&v[0], color, 4);
+
+    dglTriangle(0, 1, 3);
+    dglTriangle(2, 3, 1);
+    dglDrawGeometry(4, v);
+
+    //
+    // draw second cloud layer: same color and corners, new uv and height
+    //
+    v[0].tu = sky_cloudpan2;      v[0].tv = sky_cloudpan2;
+    v[1].tu = 32 + sky_cloudpan2; v[1].tv = sky_cloudpan2;
+    v[2].tu = 32 + sky_cloudpan2; v[2].tv = 32 + sky_cloudpan2;
+    v[3].tu = sky_cloudpan2;      v[3].tv = 32 + sky_cloudpan2;
+    v[0].z = v[1].z = v[2].z = v[3].z = 1024;
+
+    dglTriangle(0, 1, 3);
+    dglTriangle(2, 3, 1);
+    dglDrawGeometry(4, v);
+
+    //
+    // add more contrast to the top cloud layer:
+    // a non-textured plane blended over it
+    //
+    dglDisable(GL_TEXTURE_2D);
+    SKYBOX_SETALPHA(color, 0x1f);
+    dglSetVertexColor(&v[0], color, 4);
+    dglTriangle(0, 1, 3);
+    dglTriangle(2, 3, 1);
+    dglDrawGeometry(4, v);
+    dglEnable(GL_TEXTURE_2D);
+
+    GL_SetState(GLSTATE_BLEND, 0);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
+
+    dglPopMatrix();
+    dglMatrixMode(GL_PROJECTION);
+    dglPopMatrix();
+    dglMatrixMode(GL_MODELVIEW);
+
+    if (hadCull) {
+        dglEnable(GL_CULL_FACE);
+    }
+    dglDepthMask(previousDepth);
+    if (hadDepth) {
+        dglEnable(GL_DEPTH_TEST);
+    }
+    else {
+        dglDisable(GL_DEPTH_TEST);
+    }
+
+    GL_SetDefaultCombiner();
+    I_ShaderBind();
+
+#undef SKYBOX_SETALPHA
 }
 
 //
@@ -804,13 +1108,24 @@ static void R_DrawFire(void) {
     }
 
     if (r_skybox.value <= 0) {
+        const float shift = R_SkyPitchShift();
+        const int fill = R_SkyFillHeight(shift);
+
         SKYVIEWPOS(viewangle, 4, pos1);
+
+        if (fill > 0) {
+            // looking up: continue the top row of the fire above it
+            GL_Set2DQuad(v, 0, 0, SCREENWIDTH, fill,
+                pos1, 5.0f + pos1, 0.0035f, 0.0035f, 0);
+            dglSetVertexColor(&v[0], PostProcessSkyColor(sky->skycolor[0], false), 4);
+            GL_Draw2DQuad(v, 1);
+        }
 
         //
         // adjust UV by 0.0035f units due to the fire sky showing a
         // strip of color going along the top portion of the texture
         //
-        GL_Set2DQuad(v, 0, 0, SCREENWIDTH, 120,
+        GL_Set2DQuad(v, 0, shift, SCREENWIDTH, 120,
             pos1, 5.0f + pos1, 0.0035f, 1.0f, 0);
 
         dglSetVertexColor(&v[0], PostProcessSkyColor(sky->skycolor[0], false), 2);
@@ -820,7 +1135,7 @@ static void R_DrawFire(void) {
     }
     else {
         R_DrawSkyDome(16, 1, 1024, 4096, -896, 0.0075f,
-            sky->skycolor[0], sky->skycolor[1]);
+            sky->skycolor[0], sky->skycolor[1], true);
     }
     GL_SetDefaultCombiner();
     I_ShaderBind();
@@ -842,13 +1157,16 @@ void R_DrawSky(void) {
     else if (skypicnum >= 0) {
         if (sky->flags & SKF_CLOUD) {
             if (r_skybox.value <= 0) {
-                R_DrawSimpleSky(skypicnum, 128);
+                R_DrawSimpleSky(skypicnum, 128, true);
                 R_DrawClouds();
+            }
+            else {
+                R_DrawSkyboxCloud();
             }
         }
         else {
             if (r_skybox.value <= 0) {
-                R_DrawSimpleSky(skypicnum, 128);
+                R_DrawSimpleSky(skypicnum, 128, true);
             }
             else {
                 GL_SetTextureUnit(0, true);
@@ -862,7 +1180,7 @@ void R_DrawSky(void) {
                 // dimensions is already in powers of 2
                 //
                 R_DrawSkyDome(4, 2, 512, 1024,
-                    0, 0, WHITE, WHITE);
+                    0, 0, WHITE, WHITE, true);
             }
         }
     }
@@ -877,7 +1195,7 @@ void R_DrawSky(void) {
         }
         else if (sky->flags & SKF_BACKGROUND) {
             if (r_skybox.value <= 0) {
-                R_DrawSimpleSky(skybackdropnum, 170);
+                R_DrawSimpleSky(skybackdropnum, 170, false);
             }
             else {
                 float h;
@@ -904,8 +1222,9 @@ void R_DrawSky(void) {
                 domeheight = (int)(base / (origh / h));
                 offset = (float)domeheight - base - 16.0f;
 
+                // the backdrop is drawn over the sky with transparency: no caps
                 R_DrawSkyDome(5, 1, domeheight, 768,
-                    offset, 0.005f, WHITE, WHITE);
+                    offset, 0.005f, WHITE, WHITE, false);
             }
         }
     }
