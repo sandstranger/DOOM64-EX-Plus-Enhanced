@@ -592,6 +592,8 @@ void GL_Init(void) {
         GL_EXT_texture_env_combine_Init();
         GL_EXT_texture_filter_anisotropic_Init();
     }
+    /* Initialize combiner storage before GL_SetDefaultCombiner mutates it. */
+    I_SectorCombiner_Init();
     GL_SetDefaultCombiner();
     GL_SetColorScale();
 
@@ -628,6 +630,4 @@ void GL_Init(void) {
 
     G_AddCommand("dumpglext", CMD_DumpGLExtensions, 0);
 
-    // atsb: initialise the glue!!!
-    I_SectorCombiner_Init();
 }
