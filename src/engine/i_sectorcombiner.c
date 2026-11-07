@@ -175,7 +175,8 @@ static void I_SectorCombinerUniforms(void) {
     if (curProg == 0) 
         return;
 
-    GLint locUseTex = pglGetUniformLocation(curProg, "uUseTex");
+    /* uUseTex/uTexel are owned by I_ShaderSetUseTexture and
+       I_ShaderSetTextureSize; don't overwrite them from stale combiner state. */
     GLint locTexel = pglGetUniformLocation(curProg, "uTexel");
     GLint locPassCount = pglGetUniformLocation(curProg, "uPassCount");
     GLint locFogEn = pglGetUniformLocation(curProg, "uFogEnabled");
@@ -208,8 +209,6 @@ static void I_SectorCombinerUniforms(void) {
         locAlphaSource[i] = pglGetUniformLocation(curProg, sourceName);
         locAlphaOperand[i] = pglGetUniformLocation(curProg, operandName);
     }
-if (locUseTex != -1) 
-        pglUniform1i(locUseTex, s.use_texture ? 1 : 0);
     if (locTexel != -1) {
         if (s.tex_w > 0 && s.tex_h > 0) 
             pglUniform2f(locTexel, 1.0f / (float)s.tex_w, 1.0f / (float)s.tex_h);
