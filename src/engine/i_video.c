@@ -420,7 +420,11 @@ void I_InitScreen(void) {
         I_Error("I_InitScreen: Failed to create OpenGL context");
         return;
     }
-    SDL_GL_MakeCurrent(window, glContext);
+    if (!SDL_GL_MakeCurrent(window, glContext)) {
+        I_Error("I_InitScreen: Failed to make OpenGL context current");
+        I_ShutdownVideo();
+        return;
+    }
 
 #if ANDROID
     angle_blobcache_install("doom64_ex_plus_enhanced");
@@ -577,6 +581,7 @@ static bool AndroidLifeCycleEventFilter(void*, SDL_Event* event){
 void I_ShutdownVideo(void) {
 #ifdef ANDROID
     I_GLES_Shutdown();
+    gladWasLoaded = false;
 #endif
     if (glContext) {
         SDL_GL_DestroyContext(glContext);

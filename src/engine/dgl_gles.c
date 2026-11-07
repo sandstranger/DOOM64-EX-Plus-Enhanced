@@ -276,10 +276,13 @@ boolean I_GLES_Initialize(void) {
     GLES_LOAD_PROC(pglCheckFramebufferStatus, gles_glCheckFramebufferStatus_t, "glCheckFramebufferStatus");
     GLES_LOAD_PROC(pglDeleteFramebuffers, gles_glDeleteFramebuffers_t, "glDeleteFramebuffers");
 
-    if (!pglGenBuffers || !pglBindBuffer || !pglBufferData || !pglDeleteBuffers ||
+    if ((version >= 3 && !pglGetStringi) ||
+        !pglGenBuffers || !pglBindBuffer || !pglBufferData || !pglDeleteBuffers ||
         !pglEnableVertexAttribArray || !pglVertexAttribPointer || !pglDrawElements ||
-        !pglActiveTexture || !pglClearDepthf || !pglDepthRangef) {
-        SDL_Log("DGL GLES: required GLES2 buffer/attribute/depth entry points are unavailable");
+        !pglActiveTexture || !pglClearDepthf || !pglDepthRangef ||
+        !pglGenFramebuffers || !pglBindFramebuffer || !pglFramebufferTexture2D ||
+        !pglCheckFramebufferStatus || !pglDeleteFramebuffers) {
+        SDL_Log("DGL GLES: required GLES 2.0/3.0 buffer, attribute, depth or framebuffer entry points are unavailable");
         return false;
     }
 
@@ -307,9 +310,15 @@ boolean I_GLES_Initialize(void) {
         return false;
     }
 
-    if (pglGenFramebuffers)
-        pglGenFramebuffers(1, &g_readback_framebuffer);
+    pglGenFramebuffers(1, &g_readback_framebuffer);
+    if (!g_readback_framebuffer) {
+        SDL_Log("DGL GLES: failed to create texture-readback framebuffer");
+        return false;
+    }
 
+    g_inside_begin = false;
+    g_immediate_vertex_count = 0;
+    g_immediate_index_count = 0;
     g_active = true;
     I_ShaderSetTextureUnit(0);
     I_ShaderSetUseTexture(g_texture_enabled[0] ? 1 : 0);
@@ -333,6 +342,21 @@ void I_GLES_Shutdown(void) {
     SDL_free(g_extension_string);
     g_extension_string = NULL;
     pglGetStringi = NULL;
+    pglGenBuffers = NULL;
+    pglBindBuffer = NULL;
+    pglBufferData = NULL;
+    pglDeleteBuffers = NULL;
+    pglEnableVertexAttribArray = NULL;
+    pglVertexAttribPointer = NULL;
+    pglDrawElements = NULL;
+    pglActiveTexture = NULL;
+    pglClearDepthf = NULL;
+    pglDepthRangef = NULL;
+    pglGenFramebuffers = NULL;
+    pglBindFramebuffer = NULL;
+    pglFramebufferTexture2D = NULL;
+    pglCheckFramebufferStatus = NULL;
+    pglDeleteFramebuffers = NULL;
 }
 
 void I_GLES_MatrixMode(GLenum mode) {
