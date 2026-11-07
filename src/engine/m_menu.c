@@ -1773,7 +1773,7 @@ menudefault_t MouseDefault[] = {
 	{ &v_msensitivityy, 32 },
 	{ &v_macceleration, 0 },
 #ifdef HAS_MENU_MOUSE_LOOK
-	{ &v_mlook, 0 },
+	{ &v_mlook, 1 },
 	{ &v_mlookinvert, 0 },
 #endif
 	{ &v_yaxismove, 0 },
