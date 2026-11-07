@@ -640,16 +640,23 @@ void I_GLES_Recti(GLint x1, GLint y1, GLint x2, GLint y2) {
 }
 
 void I_GLES_SetVertexPointer(GLint size, GLenum type, GLsizei stride, const GLvoid* pointer) {
+    if (!g_active) { glVertexPointer(size, type, stride, pointer); return; }
     (void)size; (void)type; (void)stride; (void)pointer;
 }
 void I_GLES_SetColorPointer(GLint size, GLenum type, GLsizei stride, const GLvoid* pointer) {
+    if (!g_active) { glColorPointer(size, type, stride, pointer); return; }
     (void)size; (void)type; (void)stride; (void)pointer;
 }
 void I_GLES_SetTexCoordPointer(GLint size, GLenum type, GLsizei stride, const GLvoid* pointer) {
+    if (!g_active) { glTexCoordPointer(size, type, stride, pointer); return; }
     (void)size; (void)type; (void)stride; (void)pointer;
 }
-void I_GLES_EnableClientState(GLenum array) { (void)array; }
-void I_GLES_DisableClientState(GLenum array) { (void)array; }
+void I_GLES_EnableClientState(GLenum array) {
+    if (!g_active) { glEnableClientState(array); return; }
+}
+void I_GLES_DisableClientState(GLenum array) {
+    if (!g_active) { glDisableClientState(array); return; }
+}
 
 void I_GLES_Enable(GLenum cap) {
     if (!g_active) { glEnable(cap); return; }
