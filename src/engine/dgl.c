@@ -131,13 +131,7 @@ void dglDrawGeometry(int count, vtx_t* vtx) {
 #endif
 
 #ifdef ANDROID
-	if (I_GLES_IsActive()) {
-		I_GLES_DrawIndexedGeometry(count, vtx, indicecnt, drawIndices);
-	} else {
-		/* GL4ES keeps its existing compatibility-array path. */
-		I_ShaderUpdateMatrices();
-		dglDrawElements(GL_TRIANGLES, indicecnt, GL_UNSIGNED_SHORT, drawIndices);
-	}
+	I_GLES_DrawIndexedGeometry(count, vtx, indicecnt, drawIndices);
 #else
 	dglDrawElements(GL_TRIANGLES, indicecnt, GL_UNSIGNED_SHORT, drawIndices);
 #endif

@@ -3,6 +3,200 @@
 
 #include "gl_main.h"
 
+/* Legacy fixed-function tokens retained as software state identifiers. */
+#ifndef GL_ALPHA_SCALE
+#define GL_ALPHA_SCALE 0x0D1C
+#endif
+#ifndef GL_ALPHA_TEST
+#define GL_ALPHA_TEST 0x0BC0
+#endif
+#ifndef GL_BLEND_DST
+#define GL_BLEND_DST 0x0BE0
+#endif
+#ifndef GL_BLEND_SRC
+#define GL_BLEND_SRC 0x0BE1
+#endif
+#ifndef GL_CLAMP
+#define GL_CLAMP 0x2900
+#endif
+#ifndef GL_COLOR_ARRAY
+#define GL_COLOR_ARRAY 0x8076
+#endif
+#ifndef GL_COLOR_LOGIC_OP
+#define GL_COLOR_LOGIC_OP 0x0BF2
+#endif
+#ifndef GL_COMBINE
+#define GL_COMBINE 0x8570
+#endif
+#ifndef GL_COMBINE_ARB
+#define GL_COMBINE_ARB GL_COMBINE
+#endif
+#ifndef GL_COMBINE_ALPHA
+#define GL_COMBINE_ALPHA 0x8572
+#endif
+#ifndef GL_COMBINE_RGB
+#define GL_COMBINE_RGB 0x8571
+#endif
+#ifndef GL_DECAL
+#define GL_DECAL 0x2101
+#endif
+#ifndef GL_EXP
+#define GL_EXP 0x0800
+#endif
+#ifndef GL_EXP2
+#define GL_EXP2 0x0801
+#endif
+#ifndef GL_FILL
+#define GL_FILL 0x1B02
+#endif
+#ifndef GL_FOG
+#define GL_FOG 0x0B60
+#endif
+#ifndef GL_FOG_COLOR
+#define GL_FOG_COLOR 0x0B66
+#endif
+#ifndef GL_FOG_DENSITY
+#define GL_FOG_DENSITY 0x0B62
+#endif
+#ifndef GL_FOG_END
+#define GL_FOG_END 0x0B64
+#endif
+#ifndef GL_FOG_HINT
+#define GL_FOG_HINT 0x0C54
+#endif
+#ifndef GL_FOG_MODE
+#define GL_FOG_MODE 0x0B65
+#endif
+#ifndef GL_FOG_START
+#define GL_FOG_START 0x0B63
+#endif
+#ifndef GL_LINE
+#define GL_LINE 0x1B01
+#endif
+#ifndef GL_MAX_TEXTURE_UNITS_ARB
+#define GL_MAX_TEXTURE_UNITS_ARB 0x84E2
+#endif
+#ifndef GL_MODELVIEW
+#define GL_MODELVIEW 0x1700
+#endif
+#ifndef GL_MODELVIEW_MATRIX
+#define GL_MODELVIEW_MATRIX 0x0BA6
+#endif
+#ifndef GL_MODELVIEW_STACK_DEPTH
+#define GL_MODELVIEW_STACK_DEPTH 0x0BA3
+#endif
+#ifndef GL_MULTISAMPLE
+#define GL_MULTISAMPLE 0x809D
+#endif
+#ifndef GL_OPERAND0_ALPHA
+#define GL_OPERAND0_ALPHA 0x8598
+#endif
+#ifndef GL_OPERAND0_RGB
+#define GL_OPERAND0_RGB 0x8590
+#endif
+#ifndef GL_OPERAND1_ALPHA
+#define GL_OPERAND1_ALPHA 0x8599
+#endif
+#ifndef GL_OPERAND1_RGB
+#define GL_OPERAND1_RGB 0x8591
+#endif
+#ifndef GL_OPERAND2_ALPHA
+#define GL_OPERAND2_ALPHA 0x859A
+#endif
+#ifndef GL_OPERAND2_RGB
+#define GL_OPERAND2_RGB 0x8592
+#endif
+#ifndef GL_PERSPECTIVE_CORRECTION_HINT
+#define GL_PERSPECTIVE_CORRECTION_HINT 0x0C50
+#endif
+#ifndef GL_POLYGON
+#define GL_POLYGON 0x0009
+#endif
+#ifndef GL_PREVIOUS
+#define GL_PREVIOUS 0x8578
+#endif
+#ifndef GL_PROJECTION
+#define GL_PROJECTION 0x1701
+#endif
+#ifndef GL_PROJECTION_MATRIX
+#define GL_PROJECTION_MATRIX 0x0BA7
+#endif
+#ifndef GL_PROJECTION_STACK_DEPTH
+#define GL_PROJECTION_STACK_DEPTH 0x0BA4
+#endif
+#ifndef GL_QUADS
+#define GL_QUADS 0x0007
+#endif
+#ifndef GL_QUAD_STRIP
+#define GL_QUAD_STRIP 0x0008
+#endif
+#ifndef GL_RGB_SCALE
+#define GL_RGB_SCALE 0x8573
+#endif
+#ifndef GL_SMOOTH
+#define GL_SMOOTH 0x1D01
+#endif
+#ifndef GL_SOURCE0_ALPHA
+#define GL_SOURCE0_ALPHA 0x8588
+#endif
+#ifndef GL_SOURCE0_RGB
+#define GL_SOURCE0_RGB 0x8580
+#endif
+#ifndef GL_SOURCE1_ALPHA
+#define GL_SOURCE1_ALPHA 0x8589
+#endif
+#ifndef GL_SOURCE1_RGB
+#define GL_SOURCE1_RGB 0x8581
+#endif
+#ifndef GL_SOURCE2_ALPHA
+#define GL_SOURCE2_ALPHA 0x858A
+#endif
+#ifndef GL_SOURCE2_RGB
+#define GL_SOURCE2_RGB 0x8582
+#endif
+#ifndef GL_TEXTURE0_ARB
+#define GL_TEXTURE0_ARB (GL_TEXTURE0 + 0)
+#endif
+#ifndef GL_TEXTURE1_ARB
+#define GL_TEXTURE1_ARB (GL_TEXTURE0 + 1)
+#endif
+#ifndef GL_TEXTURE2_ARB
+#define GL_TEXTURE2_ARB (GL_TEXTURE0 + 2)
+#endif
+#ifndef GL_TEXTURE3_ARB
+#define GL_TEXTURE3_ARB (GL_TEXTURE0 + 3)
+#endif
+#ifndef GL_TEXTURE4_ARB
+#define GL_TEXTURE4_ARB (GL_TEXTURE0 + 4)
+#endif
+#ifndef GL_TEXTURE5_ARB
+#define GL_TEXTURE5_ARB (GL_TEXTURE0 + 5)
+#endif
+#ifndef GL_TEXTURE6_ARB
+#define GL_TEXTURE6_ARB (GL_TEXTURE0 + 6)
+#endif
+#ifndef GL_TEXTURE7_ARB
+#define GL_TEXTURE7_ARB (GL_TEXTURE0 + 7)
+#endif
+#ifndef GL_TEXTURE_COORD_ARRAY
+#define GL_TEXTURE_COORD_ARRAY 0x8078
+#endif
+#ifndef GL_TEXTURE_ENV
+#define GL_TEXTURE_ENV 0x2300
+#endif
+#ifndef GL_TEXTURE_ENV_COLOR
+#define GL_TEXTURE_ENV_COLOR 0x2201
+#endif
+#ifndef GL_TEXTURE_ENV_MODE
+#define GL_TEXTURE_ENV_MODE 0x2200
+#endif
+#ifndef GL_TEXTURE_HEIGHT
+#define GL_TEXTURE_HEIGHT 0x1001
+#endif
+#ifndef GL_TEXTURE_WIDTH
+#define GL_TEXTURE_WIDTH 0x1000
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

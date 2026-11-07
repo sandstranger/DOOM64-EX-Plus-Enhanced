@@ -201,7 +201,7 @@ boolean I_GLES_IsActive(void) {
 }
 
 const GLubyte* I_GLES_GetString(GLenum name) {
-    if (!g_active || name != GL_EXTENSIONS)
+    if (name != GL_EXTENSIONS)
         return glGetString(name);
 
     if (I_GetGLESVersion() < 3) {
@@ -252,9 +252,10 @@ const GLubyte* I_GLES_GetString(GLenum name) {
 
 boolean I_GLES_Initialize(void) {
     int version = I_GetGLESVersion();
-    if (version == 0) {
+    if (version < 2) {
         g_active = false;
-        return true;
+        SDL_Log("DGL GLES: an OpenGL ES 2.0 or newer context is required");
+        return false;
     }
 
     if (version >= 3)
@@ -335,28 +336,28 @@ void I_GLES_Shutdown(void) {
 }
 
 void I_GLES_MatrixMode(GLenum mode) {
-    if (!g_active) { glMatrixMode(mode); return; }
+    
     if (mode == GL_MODELVIEW || mode == GL_PROJECTION)
         g_matrix_mode = mode;
 }
 
 void I_GLES_LoadIdentity(void) {
-    if (!g_active) { glLoadIdentity(); return; }
+    
     I_GLES_MatrixIdentity(I_GLES_CurrentMatrix());
 }
 
 void I_GLES_LoadMatrixf(const GLfloat* matrix) {
-    if (!g_active) { glLoadMatrixf(matrix); return; }
+    
     memcpy(I_GLES_CurrentMatrix(), matrix, sizeof(GLfloat) * 16);
 }
 
 void I_GLES_MultMatrixf(const GLfloat* matrix) {
-    if (!g_active) { glMultMatrixf(matrix); return; }
+    
     I_GLES_MatrixMultiplyCurrent(matrix);
 }
 
 void I_GLES_PushMatrix(void) {
-    if (!g_active) { glPushMatrix(); return; }
+    
     if (g_matrix_mode == GL_PROJECTION) {
         if (g_projection_top + 1 >= GLES_MATRIX_STACK_DEPTH) return;
         memcpy(g_projection[g_projection_top + 1], g_projection[g_projection_top], sizeof(GLfloat) * 16);
@@ -369,7 +370,7 @@ void I_GLES_PushMatrix(void) {
 }
 
 void I_GLES_PopMatrix(void) {
-    if (!g_active) { glPopMatrix(); return; }
+    
     if (g_matrix_mode == GL_PROJECTION) {
         if (g_projection_top > 0) --g_projection_top;
     } else if (g_modelview_top > 0) {
@@ -379,7 +380,7 @@ void I_GLES_PopMatrix(void) {
 
 void I_GLES_Ortho(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top,
                   GLdouble nearVal, GLdouble farVal) {
-    if (!g_active) { glOrtho(left, right, bottom, top, nearVal, farVal); return; }
+    
     if (right == left || top == bottom || farVal == nearVal)
         return;
     GLfloat matrix[16];
@@ -395,7 +396,7 @@ void I_GLES_Ortho(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top,
 
 void I_GLES_Frustum(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top,
                     GLdouble nearVal, GLdouble farVal) {
-    if (!g_active) { glFrustum(left, right, bottom, top, nearVal, farVal); return; }
+    
     if (right == left || top == bottom || farVal == nearVal || nearVal <= 0.0)
         return;
     GLfloat matrix[16] = { 0 };
@@ -410,7 +411,7 @@ void I_GLES_Frustum(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top
 }
 
 void I_GLES_Translatef(GLfloat x, GLfloat y, GLfloat z) {
-    if (!g_active) { glTranslatef(x, y, z); return; }
+    
     GLfloat matrix[16];
     I_GLES_MatrixIdentity(matrix);
     matrix[12] = x; matrix[13] = y; matrix[14] = z;
@@ -418,7 +419,7 @@ void I_GLES_Translatef(GLfloat x, GLfloat y, GLfloat z) {
 }
 
 void I_GLES_Rotatef(GLfloat angle, GLfloat x, GLfloat y, GLfloat z) {
-    if (!g_active) { glRotatef(angle, x, y, z); return; }
+    
     GLfloat length = sqrtf(x*x + y*y + z*z);
     if (length <= 0.000001f)
         return;
@@ -434,7 +435,7 @@ void I_GLES_Rotatef(GLfloat angle, GLfloat x, GLfloat y, GLfloat z) {
 }
 
 void I_GLES_Scalef(GLfloat x, GLfloat y, GLfloat z) {
-    if (!g_active) { glScalef(x, y, z); return; }
+    
     GLfloat matrix[16];
     I_GLES_MatrixIdentity(matrix);
     matrix[0] = x; matrix[5] = y; matrix[10] = z;
@@ -442,7 +443,7 @@ void I_GLES_Scalef(GLfloat x, GLfloat y, GLfloat z) {
 }
 
 void I_GLES_GetFloatv(GLenum pname, GLfloat* values) {
-    if (!g_active) { glGetFloatv(pname, values); return; }
+    
     if (pname == GL_MODELVIEW_MATRIX) {
         memcpy(values, g_modelview[g_modelview_top], sizeof(GLfloat) * 16);
         return;
@@ -455,7 +456,7 @@ void I_GLES_GetFloatv(GLenum pname, GLfloat* values) {
 }
 
 void I_GLES_GetDoublev(GLenum pname, GLdouble* values) {
-    if (!g_active) { glGetDoublev(pname, values); return; }
+    
     if (pname == GL_MODELVIEW_MATRIX || pname == GL_PROJECTION_MATRIX) {
         GLfloat matrix[16];
         I_GLES_GetFloatv(pname, matrix);
@@ -633,7 +634,7 @@ void I_GLES_DrawIndexedGeometry(GLsizei vertexCount, const vtx_t* vertices,
 }
 
 void I_GLES_Begin(GLenum mode) {
-    if (!g_active) { glBegin(mode); return; }
+    
     if (g_inside_begin)
         I_GLES_End();
     g_inside_begin = true;
@@ -643,7 +644,7 @@ void I_GLES_Begin(GLenum mode) {
 }
 
 void I_GLES_End(void) {
-    if (!g_active) { glEnd(); return; }
+    
     if (!g_inside_begin)
         return;
     g_inside_begin = false;
@@ -683,25 +684,25 @@ void I_GLES_End(void) {
 }
 
 void I_GLES_Vertex2f(GLfloat x, GLfloat y) {
-    if (!g_active) { glVertex2f(x, y); return; }
+    
     I_GLES_AppendImmediateVertex(x, y, 0.0f);
 }
 void I_GLES_Vertex3f(GLfloat x, GLfloat y, GLfloat z) {
-    if (!g_active) { glVertex3f(x, y, z); return; }
+    
     I_GLES_AppendImmediateVertex(x, y, z);
 }
 void I_GLES_Vertex4f(GLfloat x, GLfloat y, GLfloat z, GLfloat w) {
-    if (!g_active) { glVertex4f(x, y, z, w); return; }
+    
     if (fabsf(w) < 0.000001f) w = 1.0f;
     I_GLES_AppendImmediateVertex(x / w, y / w, z / w);
 }
 void I_GLES_Color4f(GLfloat r, GLfloat g, GLfloat b, GLfloat a) {
-    if (!g_active) { glColor4f(r, g, b, a); return; }
+    
     g_current_color[0] = r; g_current_color[1] = g;
     g_current_color[2] = b; g_current_color[3] = a;
 }
 void I_GLES_Color4ub(GLubyte r, GLubyte g, GLubyte b, GLubyte a) {
-    if (!g_active) { glColor4ub(r, g, b, a); return; }
+    
     g_current_color[0] = (GLfloat)r / 255.0f;
     g_current_color[1] = (GLfloat)g / 255.0f;
     g_current_color[2] = (GLfloat)b / 255.0f;
@@ -712,11 +713,11 @@ void I_GLES_Color4ubv(const GLubyte* color) {
     I_GLES_Color4ub(color[0], color[1], color[2], color[3]);
 }
 void I_GLES_TexCoord2f(GLfloat s, GLfloat t) {
-    if (!g_active) { glTexCoord2f(s, t); return; }
+    
     g_current_texcoord[0] = s; g_current_texcoord[1] = t;
 }
 void I_GLES_Rectf(GLfloat x1, GLfloat y1, GLfloat x2, GLfloat y2) {
-    if (!g_active) { glRectf(x1, y1, x2, y2); return; }
+    
     I_GLES_Begin(GL_TRIANGLE_STRIP);
     I_GLES_Vertex2f(x1, y1);
     I_GLES_Vertex2f(x2, y1);
@@ -729,33 +730,25 @@ void I_GLES_Recti(GLint x1, GLint y1, GLint x2, GLint y2) {
 }
 
 void I_GLES_SetVertexPointer(GLint size, GLenum type, GLsizei stride, const GLvoid* pointer) {
-    if (!g_active) { glVertexPointer(size, type, stride, pointer); return; }
+    
     (void)size; (void)type; (void)stride; (void)pointer;
 }
 void I_GLES_SetColorPointer(GLint size, GLenum type, GLsizei stride, const GLvoid* pointer) {
-    if (!g_active) { glColorPointer(size, type, stride, pointer); return; }
+    
     (void)size; (void)type; (void)stride; (void)pointer;
 }
 void I_GLES_SetTexCoordPointer(GLint size, GLenum type, GLsizei stride, const GLvoid* pointer) {
-    if (!g_active) { glTexCoordPointer(size, type, stride, pointer); return; }
+    
     (void)size; (void)type; (void)stride; (void)pointer;
 }
 void I_GLES_EnableClientState(GLenum array) {
-    if (!g_active) { glEnableClientState(array); return; }
+    
 }
 void I_GLES_DisableClientState(GLenum array) {
-    if (!g_active) { glDisableClientState(array); return; }
+    
 }
 
 void I_GLES_Enable(GLenum cap) {
-    if (!g_active) {
-        glEnable(cap);
-        if (cap == GL_TEXTURE_2D) {
-            g_texture_enabled[g_active_texture_unit] = true;
-            I_ShaderSetUseTexture(1);
-        }
-        return;
-    }
     if (cap == GL_TEXTURE_2D) {
         if (g_active_texture_unit >= 0 && g_active_texture_unit < GLES_MAX_TEXTURE_UNITS)
             g_texture_enabled[g_active_texture_unit] = true;
@@ -777,14 +770,6 @@ void I_GLES_Enable(GLenum cap) {
     glEnable(cap);
 }
 void I_GLES_Disable(GLenum cap) {
-    if (!g_active) {
-        glDisable(cap);
-        if (cap == GL_TEXTURE_2D) {
-            g_texture_enabled[g_active_texture_unit] = false;
-            I_ShaderSetUseTexture(0);
-        }
-        return;
-    }
     if (cap == GL_TEXTURE_2D) {
         if (g_active_texture_unit >= 0 && g_active_texture_unit < GLES_MAX_TEXTURE_UNITS)
             g_texture_enabled[g_active_texture_unit] = false;
@@ -806,7 +791,6 @@ void I_GLES_Disable(GLenum cap) {
     glDisable(cap);
 }
 GLboolean I_GLES_IsEnabled(GLenum cap) {
-    if (!g_active) return glIsEnabled(cap);
     if (cap == GL_TEXTURE_2D)
         return (g_active_texture_unit >= 0 && g_active_texture_unit < GLES_MAX_TEXTURE_UNITS)
             ? g_texture_enabled[g_active_texture_unit] : GL_FALSE;
@@ -816,29 +800,29 @@ GLboolean I_GLES_IsEnabled(GLenum cap) {
     return glIsEnabled(cap);
 }
 void I_GLES_AlphaFunc(GLenum func, GLclampf reference) {
-    if (!g_active) { glAlphaFunc(func, reference); return; }
+    
     g_alpha_func = func;
     g_alpha_reference = reference;
     I_ShaderSetAlphaTest(g_alpha_test_enabled, g_alpha_func, g_alpha_reference);
 }
 void I_GLES_DepthRange(GLclampf nearVal, GLclampf farVal) {
-    if (!g_active) { glDepthRange(nearVal, farVal); return; }
+    
     if (pglDepthRangef) pglDepthRangef(nearVal, farVal);
 }
 void I_GLES_ClearDepth(GLclampd depth) {
-    if (!g_active) { glClearDepth(depth); return; }
+    
     if (pglClearDepthf) pglClearDepthf((GLfloat)depth);
 }
 
 void I_GLES_Fogf(GLenum pname, GLfloat param) {
-    if (!g_active) { glFogf(pname, param); return; }
+    
     if (pname == GL_FOG_START) g_fog_start = param;
     else if (pname == GL_FOG_END) g_fog_end = param;
     else if (pname == GL_FOG_DENSITY) g_fog_density = param;
     I_GLES_CommitFog();
 }
 void I_GLES_Fogfv(GLenum pname, const GLfloat* params) {
-    if (!g_active) { glFogfv(pname, params); return; }
+    
     if (pname == GL_FOG_COLOR && params) {
         g_fog_color[0] = params[0]; g_fog_color[1] = params[1];
         g_fog_color[2] = params[2]; g_fog_color[3] = params[3];
@@ -846,7 +830,7 @@ void I_GLES_Fogfv(GLenum pname, const GLfloat* params) {
     I_GLES_CommitFog();
 }
 void I_GLES_Fogi(GLenum pname, GLint param) {
-    if (!g_active) { glFogi(pname, param); return; }
+    
     if (pname == GL_FOG_MODE) g_fog_mode = I_GLES_FogMode(param);
     I_GLES_CommitFog();
 }
@@ -858,7 +842,7 @@ static GLint I_GLES_NormalizeCombinerSource(GLint source) {
 }
 
 void I_GLES_TexEnvi(GLenum target, GLenum pname, GLint param) {
-    if (!g_active) { glTexEnvi(target, pname, param); return; }
+    
     if (target != GL_TEXTURE_ENV)
         return;
     switch (pname) {
@@ -929,7 +913,7 @@ void I_GLES_TexEnvi(GLenum target, GLenum pname, GLint param) {
     }
 }
 void I_GLES_TexEnvfv(GLenum target, GLenum pname, const GLfloat* params) {
-    if (!g_active) { glTexEnvfv(target, pname, params); return; }
+    
     if (target == GL_TEXTURE_ENV && pname == GL_TEXTURE_ENV_COLOR && params)
         I_SectorCombiner_SetEnvColor(params[0], params[1], params[2], params[3]);
 }
@@ -939,7 +923,7 @@ static GLint I_GLES_NormalizeWrap(GLint param) {
 }
 
 void I_GLES_TexParameteri(GLenum target, GLenum pname, GLint param) {
-    if (!g_active) { glTexParameteri(target, pname, param); return; }
+    
     if (I_GetGLESVersion() == 2 &&
         (pname == GL_TEXTURE_BASE_LEVEL || pname == GL_TEXTURE_MAX_LEVEL))
         return;
@@ -951,7 +935,7 @@ void I_GLES_TexParameteri(GLenum target, GLenum pname, GLint param) {
     glTexParameteri(target, pname, param);
 }
 void I_GLES_TexParameterf(GLenum target, GLenum pname, GLfloat param) {
-    if (!g_active) { glTexParameterf(target, pname, param); return; }
+    
     if (pname == GL_TEXTURE_MAX_ANISOTROPY_EXT &&
         !SDL_GL_ExtensionSupported("GL_EXT_texture_filter_anisotropic"))
         return;
@@ -963,7 +947,7 @@ static void I_GLES_ConvertLegacyPixels(GLenum format, GLsizei width, GLsizei hei
                                        GLenum* outFormat, GLubyte** converted) {
     *outFormat = format;
     *converted = NULL;
-    if (!g_active || I_GetGLESVersion() < 3 || type != GL_UNSIGNED_BYTE || !source)
+    if (I_GetGLESVersion() < 3 || type != GL_UNSIGNED_BYTE || !source)
         return;
     if (format != GL_LUMINANCE && format != GL_ALPHA && format != GL_LUMINANCE_ALPHA)
         return;
@@ -992,10 +976,7 @@ static void I_GLES_ConvertLegacyPixels(GLenum format, GLsizei width, GLsizei hei
 void I_GLES_TexImage2D(GLenum target, GLint level, GLint internalFormat,
                        GLsizei width, GLsizei height, GLint border,
                        GLenum format, GLenum type, const GLvoid* pixels) {
-    if (!g_active) {
-        glTexImage2D(target, level, internalFormat, width, height, border, format, type, pixels);
-        return;
-    }
+    
     GLenum uploadFormat = format;
     GLubyte* converted = NULL;
     I_GLES_ConvertLegacyPixels(format, width, height, type, pixels, &uploadFormat, &converted);
@@ -1024,10 +1005,7 @@ void I_GLES_TexImage2D(GLenum target, GLint level, GLint internalFormat,
 void I_GLES_TexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset,
                           GLsizei width, GLsizei height, GLenum format,
                           GLenum type, const GLvoid* pixels) {
-    if (!g_active) {
-        glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, type, pixels);
-        return;
-    }
+    
     GLenum uploadFormat = format;
     GLubyte* converted = NULL;
     I_GLES_ConvertLegacyPixels(format, width, height, type, pixels, &uploadFormat, &converted);
@@ -1041,10 +1019,7 @@ void I_GLES_TexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffs
 }
 
 void I_GLES_ActiveTexture(GLenum texture) {
-    if (g_active)
-        pglActiveTexture(texture);
-    else
-        glActiveTexture(texture);
+    pglActiveTexture(texture);
 
     g_active_texture_unit = (int)(texture - GL_TEXTURE0);
     if (g_active_texture_unit < 0 || g_active_texture_unit >= GLES_MAX_TEXTURE_UNITS)
@@ -1052,20 +1027,15 @@ void I_GLES_ActiveTexture(GLenum texture) {
 
     I_ShaderSetTextureUnit(g_active_texture_unit);
     I_ShaderSetUseTexture(g_texture_enabled[g_active_texture_unit] ? 1 : 0);
-    if (g_active)
-        I_SectorCombiner_SetActiveUnit(g_active_texture_unit);
+    I_SectorCombiner_SetActiveUnit(g_active_texture_unit);
 }
 void I_GLES_ClientActiveTexture(GLenum texture) {
-    if (!g_active) {
-        glClientActiveTexture(texture);
-        return;
-    }
-    /* Native GLES has no client texture-coordinate unit selection. */
+    (void)texture;
 }
 
 void I_GLES_BindTexture(GLenum target, GLuint texture) {
     glBindTexture(target, texture);
-    if (g_active && target == GL_TEXTURE_2D)
+    if (target == GL_TEXTURE_2D)
         g_bound_texture[g_active_texture_unit] = texture;
 }
 void I_GLES_GenTextures(GLsizei count, GLuint* textures) {
@@ -1073,7 +1043,7 @@ void I_GLES_GenTextures(GLsizei count, GLuint* textures) {
 }
 void I_GLES_DeleteTextures(GLsizei count, const GLuint* textures) {
     glDeleteTextures(count, textures);
-    if (!g_active || !textures) return;
+    if (!textures) return;
     for (GLsizei i = 0; i < count; ++i) {
         for (int u = 0; u < GLES_MAX_TEXTURE_UNITS; ++u)
             if (g_bound_texture[u] == textures[i]) g_bound_texture[u] = 0;
@@ -1083,7 +1053,7 @@ void I_GLES_DeleteTextures(GLsizei count, const GLuint* textures) {
 }
 
 void I_GLES_GetTexLevelParameteriv(GLenum target, GLint level, GLenum pname, GLint* params) {
-    if (!g_active) { glGetTexLevelParameteriv(target, level, pname, params); return; }
+    
     if (target == GL_TEXTURE_2D && level == 0 && params) {
         texture_info_t* info = I_GLES_FindTextureInfo(I_GLES_BoundTexture(), false);
         if (pname == GL_TEXTURE_WIDTH) { *params = info ? info->width : 0; return; }
@@ -1096,7 +1066,7 @@ void I_GLES_GetTexParameteriv(GLenum target, GLenum pname, GLint* params) {
 }
 
 void I_GLES_GetTexImage(GLenum target, GLint level, GLenum format, GLenum type, GLvoid* pixels) {
-    if (!g_active) { glGetTexImage(target, level, format, type, pixels); return; }
+    
     if (target != GL_TEXTURE_2D || level != 0 || !pixels ||
         !g_readback_framebuffer || !pglBindFramebuffer || !pglFramebufferTexture2D ||
         !pglCheckFramebufferStatus) {
@@ -1126,7 +1096,7 @@ void I_GLES_GetTexImage(GLenum target, GLint level, GLenum format, GLenum type, 
 }
 
 void I_GLES_GetIntegerv(GLenum pname, GLint* params) {
-    if (!g_active) { glGetIntegerv(pname, params); return; }
+    
     if (!params) return;
     if (pname == GL_MAX_TEXTURE_UNITS_ARB) {
         /* Fixed-function texture stages become fragment samplers here.
@@ -1150,7 +1120,7 @@ void I_GLES_GetIntegerv(GLenum pname, GLint* params) {
     glGetIntegerv(pname, params);
 }
 void I_GLES_GetBooleanv(GLenum pname, GLboolean* params) {
-    if (!g_active) { glGetBooleanv(pname, params); return; }
+    
     if (!params) return;
     if (pname == GL_TEXTURE_2D || pname == GL_ALPHA_TEST || pname == GL_FOG) {
         *params = I_GLES_IsEnabled(pname);
@@ -1159,7 +1129,7 @@ void I_GLES_GetBooleanv(GLenum pname, GLboolean* params) {
     glGetBooleanv(pname, params);
 }
 void I_GLES_GetFloatvRaw(GLenum pname, GLfloat* params) {
-    if (!g_active) { glGetFloatv(pname, params); return; }
+    
     if (pname == GL_MODELVIEW_MATRIX || pname == GL_PROJECTION_MATRIX) {
         I_GLES_GetFloatv(pname, params);
         return;
@@ -1173,23 +1143,23 @@ void I_GLES_GetFloatvRaw(GLenum pname, GLfloat* params) {
 }
 
 void I_GLES_PolygonMode(GLenum face, GLenum mode) {
-    if (!g_active) { glPolygonMode(face, mode); return; }
+    
     if (face == GL_FRONT_AND_BACK || face == GL_FRONT || face == GL_BACK)
         g_wireframe = (mode == GL_LINE);
 }
 void I_GLES_PolygonOffset(GLfloat factor, GLfloat units) {
-    if (!g_active) { glPolygonOffset(factor, units); return; }
+    
     glPolygonOffset(factor, units);
 }
 void I_GLES_LineWidth(GLfloat width) {
-    if (!g_active) { glLineWidth(width); return; }
+    
     glLineWidth(width);
 }
 void I_GLES_ShadeModel(GLenum mode) {
-    if (!g_active) { glShadeModel(mode); return; }
+    
     (void)mode;
 }
 void I_GLES_Hint(GLenum target, GLenum mode) {
-    if (!g_active) { glHint(target, mode); return; }
+    
     (void)target; (void)mode;
 }

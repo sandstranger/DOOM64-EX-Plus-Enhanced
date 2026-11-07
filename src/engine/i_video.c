@@ -118,15 +118,8 @@ void setUseGLES2_0State (const bool useGLES2_0){
 
 int I_GetGLESVersion(void) {
 #ifdef ANDROID
-    /*
-     * GL4ES exposes an OpenGL compatibility version (normally 2.1) over
-     * its GLES backend. Keep its GLSL 1.20 shaders; only native GLES drivers
-     * should receive the ESSL 1.00 / 3.00 shader variants.
-     */
     const char* version = (const char*)glGetString(GL_VERSION);
-    /* GL4ES can be configured with an arbitrary exposed GL_VERSION string.
-       Its own wrapper marker must win over any such override. */
-    if (!version || SDL_strstr(version, "gl4es wrapper"))
+    if (!version)
         return 0;
     const char* esVersion = SDL_strstr(version, "OpenGL ES ");
     if (!esVersion)
@@ -431,13 +424,22 @@ void I_InitScreen(void) {
 
 #if ANDROID
     angle_blobcache_install("doom64_ex_plus_enhanced");
-    if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
-        SDL_GL_DestroyContext(glContext);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
+    if (!gladLoadGLES2Loader((GLADloadproc)SDL_GL_GetProcAddress)) {
+        SDL_Log("I_InitScreen: failed to load OpenGL ES 2.0/3.0 entry points");
+        I_ShutdownVideo();
         return;
     }
     gladWasLoaded = true;
+    const int actualGLESVersion = I_GetGLESVersion();
+    const int requiredGLESVersion = g_useGLES2_0 ? 2 : 3;
+    if (actualGLESVersion < requiredGLESVersion ||
+        !GLAD_GL_ES_VERSION_2_0 ||
+        (requiredGLESVersion >= 3 && !GLAD_GL_ES_VERSION_3_0)) {
+        SDL_Log("I_InitScreen: requested GLES %d.0 but context reports GLES %d.%d",
+                requiredGLESVersion, GLVersion.major, GLVersion.minor);
+        I_ShutdownVideo();
+        return;
+    }
     if (!I_GLES_Initialize()) {
         SDL_Log("I_InitScreen: native GLES backend initialization failed");
         I_ShutdownVideo();

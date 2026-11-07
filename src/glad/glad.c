@@ -359,6 +359,7 @@ static int max_loaded_major;
 static int max_loaded_minor;
 
 static const char *exts = NULL;
+static void free_exts(void);
 static int num_exts_i = 0;
 static char **exts_i = NULL;
 
@@ -373,22 +374,22 @@ static int get_exts(void) {
 
         num_exts_i = 0;
         glGetIntegerv(GL_NUM_EXTENSIONS, &num_exts_i);
-        if (num_exts_i > 0) {
-            exts_i = (char **)malloc((size_t)num_exts_i * (sizeof *exts_i));
+        if (num_exts_i < 0 || (num_exts_i > 0 && !glad_glGetStringi)) return 0;
+        if (num_exts_i == 0) {
+            exts_i = NULL;
+            return 1;
         }
 
-        if (exts_i == NULL) {
-            return 0;
-        }
+        exts_i = (char **)calloc((size_t)num_exts_i, sizeof *exts_i);
+        if (exts_i == NULL) return 0;
 
         for(index = 0; index < num_exts_i; index++) {
             const char *gl_str_tmp = (const char*)glGetStringi(GL_EXTENSIONS, index);
+            if (gl_str_tmp == NULL) { free_exts(); return 0; }
             size_t len = strlen(gl_str_tmp);
-
-            char *local_str = (char*)malloc((len+1) * sizeof(char));
-            if(local_str != NULL) {
-                memcpy(local_str, gl_str_tmp, (len+1) * sizeof(char));
-            }
+            char *local_str = (char*)malloc(len + 1);
+            if (local_str == NULL) { free_exts(); return 0; }
+            memcpy(local_str, gl_str_tmp, len + 1);
             exts_i[index] = local_str;
         }
     }
@@ -405,6 +406,7 @@ static void free_exts(void) {
         free((void *)exts_i);
         exts_i = NULL;
     }
+    num_exts_i = 0;
 }
 
 static int has_ext(const char *ext) {
@@ -3188,47 +3190,44 @@ static int find_extensionsGLES2(void) {
 }
 
 static void find_coreGLES2(void) {
+    int major = 0, minor = 0;
+    const char* version = (const char*)glGetString(GL_VERSION);
+    const char* prefixes[] = { "OpenGL ES-CM ", "OpenGL ES-CL ", "OpenGL ES ", NULL };
 
-    /* Thank you @elmindreda
-     * https://github.com/elmindreda/greg/blob/master/templates/greg.c.in#L176
-     * https://github.com/glfw/glfw/blob/master/src/context.c#L36
-     */
-    int i, major, minor;
-
-    const char* version;
-    const char* prefixes[] = {
-        "OpenGL ES-CM ",
-        "OpenGL ES-CL ",
-        "OpenGL ES ",
-        NULL
-    };
-
-    version = (const char*) glGetString(GL_VERSION);
+    GLAD_GL_ES_VERSION_2_0 = 0;
+    GLAD_GL_ES_VERSION_3_0 = 0;
+    max_loaded_major = 0;
+    max_loaded_minor = 0;
     if (!version) return;
 
-    for (i = 0;  prefixes[i];  i++) {
+    int prefix_found = 0;
+    for (int i = 0; prefixes[i]; ++i) {
         const size_t length = strlen(prefixes[i]);
         if (strncmp(version, prefixes[i], length) == 0) {
             version += length;
+            prefix_found = 1;
             break;
         }
     }
+    if (!prefix_found) return;
 
-/* PR #18 */
 #ifdef _MSC_VER
-    sscanf_s(version, "%d.%d", &major, &minor);
+    if (sscanf_s(version, "%d.%d", &major, &minor) != 2)
 #else
-    sscanf(version, "%d.%d", &major, &minor);
+    if (sscanf(version, "%d.%d", &major, &minor) != 2)
 #endif
+        return;
 
-    GLVersion.major = major; GLVersion.minor = minor;
-    max_loaded_major = major; max_loaded_minor = minor;
-	GLAD_GL_ES_VERSION_2_0 = (major == 2 && minor >= 0) || major > 2;
-	GLAD_GL_ES_VERSION_3_0 = (major == 3 && minor >= 0) || major > 3;
-	if (GLVersion.major > 3 || (GLVersion.major >= 3 && GLVersion.minor >= 0)) {
-		max_loaded_major = 3;
-		max_loaded_minor = 0;
-	}
+    GLVersion.major = major;
+    GLVersion.minor = minor;
+    max_loaded_major = major;
+    max_loaded_minor = minor;
+    GLAD_GL_ES_VERSION_2_0 = major >= 2;
+    GLAD_GL_ES_VERSION_3_0 = major >= 3;
+    if (max_loaded_major > 3) {
+        max_loaded_major = 3;
+        max_loaded_minor = 0;
+    }
 }
 
 int gladLoadGLES2Loader(GLADloadproc load) {
@@ -3237,6 +3236,7 @@ int gladLoadGLES2Loader(GLADloadproc load) {
 	if(glGetString == NULL) return 0;
 	if(glGetString(GL_VERSION) == NULL) return 0;
 	find_coreGLES2();
+	if (!GLAD_GL_ES_VERSION_2_0) return 0;
 	load_GL_ES_VERSION_2_0(load);
 	load_GL_ES_VERSION_3_0(load);
 
