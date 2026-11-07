@@ -938,6 +938,9 @@ void GL_UpdateEnvTexture(rcolor color) {
 	rcolor rgb[16];
 	byte* c;
 	int i;
+	/* This helper temporarily edits unit 1; restore the actual caller unit
+	   so curunit and GL_ACTIVE_TEXTURE remain synchronized. */
+	int restoreUnit = curunit < 0 ? 0 : curunit;
 
 	if (!has_GL_ARB_multitexture) {
 		return;
@@ -985,7 +988,7 @@ void GL_UpdateEnvTexture(rcolor color) {
 		(byte*)rgb
 	);
 
-	dglActiveTextureARB(GL_TEXTURE0_ARB);
+	dglActiveTextureARB(GL_TEXTURE0_ARB + restoreUnit);
 }
 
 //

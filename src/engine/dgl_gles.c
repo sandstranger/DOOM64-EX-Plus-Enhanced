@@ -854,10 +854,8 @@ void I_GLES_Fogi(GLenum pname, GLint param) {
 }
 
 static GLint I_GLES_NormalizeCombinerSource(GLint source) {
-    /* GL_TEXTURE0_ARB .. GL_TEXTURE7_ARB are legacy stage selectors.
-       The native GLES shader samples the currently active texture unit. */
-    if (source >= 0x84C0 && source < 0x84C8)
-        return GL_TEXTURE;
+    /* Keep GL_TEXTURE0_ARB .. GL_TEXTURE7_ARB intact. The ESSL combiner
+       resolves explicit source selectors to the corresponding sampler. */
     return source;
 }
 
