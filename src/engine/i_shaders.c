@@ -350,18 +350,18 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 		return NULL;
 
 	const boolean isVertex = (type == GL_VERTEX_SHADER);
-	const char* body = SDL_strchr(source, '\\n');
+	const char* body = SDL_strchr(source, '\n');
 	body = body ? body + 1 : source;
 
 	const char* header = NULL;
 	if (glesVersion == 2) {
 		header = isVertex
-			? "#version 100\\nprecision mediump float;\\nattribute vec4 aPosition;\\nattribute vec4 aColor;\\nattribute vec4 aTexCoord0;\\nuniform mat4 uModelViewMatrix;\\nuniform mat4 uModelViewProjectionMatrix;\\n"
-			: "#version 100\\nprecision mediump float;\\n";
+			? "#version 100\nprecision mediump float;\nattribute vec4 aPosition;\nattribute vec4 aColor;\nattribute vec4 aTexCoord0;\nuniform mat4 uModelViewMatrix;\nuniform mat4 uModelViewProjectionMatrix;\n"
+			: "#version 100\nprecision mediump float;\n";
 	} else {
 		header = isVertex
-			? "#version 300 es\\nprecision mediump float;\\nin vec4 aPosition;\\nin vec4 aColor;\\nin vec4 aTexCoord0;\\nuniform mat4 uModelViewMatrix;\\nuniform mat4 uModelViewProjectionMatrix;\\n"
-			: "#version 300 es\\nprecision mediump float;\\nout vec4 fragColor;\\n";
+			? "#version 300 es\nprecision mediump float;\nin vec4 aPosition;\nin vec4 aColor;\nin vec4 aTexCoord0;\nuniform mat4 uModelViewMatrix;\nuniform mat4 uModelViewProjectionMatrix;\n"
+			: "#version 300 es\nprecision mediump float;\nout vec4 fragColor;\n";
 	}
 
 	static const shader_replacement_t vertexReplacements[] = {
@@ -388,7 +388,7 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 
 	while (*input) {
 		boolean replaced = false;
-		if (!I_ShaderIdentifierChar(input > body ? input[-1] : '\\0')) {
+		if (!I_ShaderIdentifierChar(input > body ? input[-1] : '\0')) {
 			const shader_replacement_t* list = vertexReplacements;
 			const size_t count = isVertex ? SDL_arraysize(vertexReplacements) : 0;
 			for (size_t i = 0; i < count; ++i) {
@@ -435,7 +435,7 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 			*output++ = *input++;
 	}
 
-	*output = '\\0';
+	*output = '\0';
 	return result;
 }
 
@@ -697,6 +697,10 @@ void I_ShaderFullscreenTint(float r, float g, float b, float a) {
  */
 void I_ShaderUpdateMatrices(void) {
 	if (I_GetGLESVersion() == 0 || !pglUniformMatrix4fv)
+		return;
+	if (is_current_prog == 0 ||
+		(is_current_prog != shader_struct.prog &&
+		 is_current_prog != generic_tint_overlay_prog))
 		return;
 
 	float modelView[16];
