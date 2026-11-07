@@ -54,6 +54,7 @@
 #endif
 
 void I_SectorCombiner_Init(void);
+void I_SectorCombiner_SetActiveUnit(int unit);
 void I_SectorCombiner_Bind(int useTexture, int texWidth, int texHeight);
 void I_SectorCombiner_Unbind(void);
 void I_SectorCombiner_SetEnvColor(float r, float g, float b, float a);

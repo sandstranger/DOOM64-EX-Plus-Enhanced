@@ -312,6 +312,9 @@ boolean I_GLES_Initialize(void) {
         pglGenFramebuffers(1, &g_readback_framebuffer);
 
     g_active = true;
+    I_ShaderSetTextureUnit(0);
+    I_ShaderSetUseTexture(g_texture_enabled[0] ? 1 : 0);
+    I_SectorCombiner_SetActiveUnit(0);
     SDL_Log("DGL GLES: native GLES %d backend initialized (shader + VBO path)", version);
     return true;
 }
@@ -747,7 +750,14 @@ void I_GLES_DisableClientState(GLenum array) {
 }
 
 void I_GLES_Enable(GLenum cap) {
-    if (!g_active) { glEnable(cap); return; }
+    if (!g_active) {
+        glEnable(cap);
+        if (cap == GL_TEXTURE_2D) {
+            g_texture_enabled[g_active_texture_unit] = true;
+            I_ShaderSetUseTexture(1);
+        }
+        return;
+    }
     if (cap == GL_TEXTURE_2D) {
         if (g_active_texture_unit >= 0 && g_active_texture_unit < GLES_MAX_TEXTURE_UNITS)
             g_texture_enabled[g_active_texture_unit] = true;
@@ -769,7 +779,14 @@ void I_GLES_Enable(GLenum cap) {
     glEnable(cap);
 }
 void I_GLES_Disable(GLenum cap) {
-    if (!g_active) { glDisable(cap); return; }
+    if (!g_active) {
+        glDisable(cap);
+        if (cap == GL_TEXTURE_2D) {
+            g_texture_enabled[g_active_texture_unit] = false;
+            I_ShaderSetUseTexture(0);
+        }
+        return;
+    }
     if (cap == GL_TEXTURE_2D) {
         if (g_active_texture_unit >= 0 && g_active_texture_unit < GLES_MAX_TEXTURE_UNITS)
             g_texture_enabled[g_active_texture_unit] = false;
@@ -1025,13 +1042,19 @@ void I_GLES_TexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffs
 }
 
 void I_GLES_ActiveTexture(GLenum texture) {
-    if (!g_active) { glActiveTexture(texture); return; }
-    pglActiveTexture(texture);
+    if (g_active)
+        pglActiveTexture(texture);
+    else
+        glActiveTexture(texture);
+
     g_active_texture_unit = (int)(texture - GL_TEXTURE0);
     if (g_active_texture_unit < 0 || g_active_texture_unit >= GLES_MAX_TEXTURE_UNITS)
         g_active_texture_unit = 0;
+
     I_ShaderSetTextureUnit(g_active_texture_unit);
     I_ShaderSetUseTexture(g_texture_enabled[g_active_texture_unit] ? 1 : 0);
+    if (g_active)
+        I_SectorCombiner_SetActiveUnit(g_active_texture_unit);
 }
 void I_GLES_ClientActiveTexture(GLenum texture) {
     if (!g_active) {

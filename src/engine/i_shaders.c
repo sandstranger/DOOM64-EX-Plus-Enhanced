@@ -38,10 +38,11 @@ extern void I_SectorCombiner_Commit(void);
 CVAR_EXTERNAL(r_filter);
 
 static GLint sLocTexel = -1;
-static GLint sLocUseTex = -1;
+static GLint sLocUseTexUnits[4] = { -1, -1, -1, -1 };
 static int g_shader_texture_unit = 0;
-static GLfloat g_texel_x = 0.0f;
-static GLfloat g_texel_y = 0.0f;
+static int g_shader_use_texture[4] = { 1, 0, 0, 0 };
+static GLfloat g_texel_x[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+static GLfloat g_texel_y[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 static GLint sLocAlphaTestEnabled = -1;
 static GLint sLocAlphaFunc = -1;
 static GLint sLocAlphaRef = -1;
@@ -75,11 +76,11 @@ typedef struct {
 
 static struct {
 	GLuint prog;
-	GLint  locTex;
+	GLint  locTex[4];
 	GLint  locModelView;
 	GLint  locModelViewProjection;
 	int    initialised;
-} shader_struct = { 0, -1, -1, -1, 0 };
+} shader_struct = { 0, { -1, -1, -1, -1 }, -1, -1, 0 };
 
 static comb_state_t gComb;
 static GLint  generic_tint_overlay_colour = -1;
@@ -368,14 +369,51 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 	body = body ? body + 1 : source;
 
 	const char* header = NULL;
-	if (glesVersion == 2) {
-		header = isVertex
+	char generatedFragmentHeader[8192];
+	if (isVertex) {
+		header = glesVersion == 2
 			? "#version 100\nprecision highp float;\nattribute vec4 aPosition;\nattribute vec4 aColor;\nattribute vec4 aTexCoord0;\nuniform mat4 uModelViewMatrix;\nuniform mat4 uModelViewProjectionMatrix;\n"
-			: "#version 100\n#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nuniform int uAlphaTestEnabled;\nuniform int uAlphaFunc;\nuniform float uAlphaRef;\nuniform float uColorScale;\nuniform int uCombineRGB;\nuniform vec4 uEnvColor;\nuniform int uRGBSource0;\nuniform int uRGBSource1;\nuniform int uRGBSource2;\nuniform int uRGBOperand0;\nuniform int uRGBOperand1;\nuniform int uRGBOperand2;\nuniform int uCombineAlpha;\nuniform float uEnvAlpha;\nuniform int uAlphaSource0;\nuniform int uAlphaSource1;\nuniform int uAlphaSource2;\nuniform int uAlphaOperand0;\nuniform int uAlphaOperand1;\nuniform int uAlphaOperand2;\n";
+			: "#version 300 es\nprecision highp float;\nin vec4 aPosition;\nin vec4 aColor;\nin vec4 aTexCoord0;\nuniform mat4 uModelViewMatrix;\nuniform mat4 uModelViewProjectionMatrix;\n";
 	} else {
-		header = isVertex
-			? "#version 300 es\nprecision highp float;\nin vec4 aPosition;\nin vec4 aColor;\nin vec4 aTexCoord0;\nuniform mat4 uModelViewMatrix;\nuniform mat4 uModelViewProjectionMatrix;\n"
-			: "#version 300 es\n#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nout vec4 fragColor;\nuniform int uAlphaTestEnabled;\nuniform int uAlphaFunc;\nuniform float uAlphaRef;\nuniform float uColorScale;\nuniform int uCombineRGB;\nuniform vec4 uEnvColor;\nuniform int uRGBSource0;\nuniform int uRGBSource1;\nuniform int uRGBSource2;\nuniform int uRGBOperand0;\nuniform int uRGBOperand1;\nuniform int uRGBOperand2;\nuniform int uCombineAlpha;\nuniform float uEnvAlpha;\nuniform int uAlphaSource0;\nuniform int uAlphaSource1;\nuniform int uAlphaSource2;\nuniform int uAlphaOperand0;\nuniform int uAlphaOperand1;\nuniform int uAlphaOperand2;\n";
+		const char* prefix = glesVersion == 2
+			? "#version 100\n#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nuniform int uAlphaTestEnabled;\nuniform int uAlphaFunc;\nuniform float uAlphaRef;\nuniform float uColorScale;\n"
+			: "#version 300 es\n#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\nout vec4 fragColor;\nuniform int uAlphaTestEnabled;\nuniform int uAlphaFunc;\nuniform float uAlphaRef;\nuniform float uColorScale;\n";
+		SDL_strlcpy(generatedFragmentHeader, prefix, sizeof(generatedFragmentHeader));
+		size_t offset = SDL_strlen(generatedFragmentHeader);
+		for (int unit = 0; unit < 4; ++unit) {
+			int written = SDL_snprintf(generatedFragmentHeader + offset,
+				sizeof(generatedFragmentHeader) - offset,
+				"uniform int uCombineRGB%d;\n"
+				"uniform int uCombineAlpha%d;\n"
+				"uniform vec4 uEnvColor%d;\n",
+				unit, unit, unit);
+			if (written < 0 || (size_t)written >= sizeof(generatedFragmentHeader) - offset)
+				return NULL;
+			offset += (size_t)written;
+			if (unit > 0) {
+				written = SDL_snprintf(generatedFragmentHeader + offset,
+					sizeof(generatedFragmentHeader) - offset,
+					"uniform sampler2D uTex%d;\n"
+					"uniform int uUseTex%d;\n",
+					unit, unit);
+				if (written < 0 || (size_t)written >= sizeof(generatedFragmentHeader) - offset)
+					return NULL;
+				offset += (size_t)written;
+			}
+			for (int slot = 0; slot < 3; ++slot) {
+				written = SDL_snprintf(generatedFragmentHeader + offset,
+					sizeof(generatedFragmentHeader) - offset,
+					"uniform int uRGBSource%d_%d;\n"
+					"uniform int uRGBOperand%d_%d;\n"
+					"uniform int uAlphaSource%d_%d;\n"
+					"uniform int uAlphaOperand%d_%d;\n",
+					unit, slot, unit, slot, unit, slot, unit, slot);
+				if (written < 0 || (size_t)written >= sizeof(generatedFragmentHeader) - offset)
+					return NULL;
+				offset += (size_t)written;
+			}
+		}
+		header = generatedFragmentHeader;
 	}
 
 	static const shader_replacement_t vertexReplacements[] = {
@@ -390,7 +428,11 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 		{ "texture2D", "texture" }
 	};
 	static const shader_replacement_t nativeFragmentReplacements[] = {
-		{ "apply_combiner(col.rgb)", "apply_native_combiner(_texel, vColor)" }
+		{ "apply_combiner(col.rgb)", "_pipelineColor.rgb" }
+	};
+	static const shader_replacement_t nativeUniformReplacements[] = {
+		{ "uTex", "uTex0" },
+		{ "uUseTex", "uUseTex0" }
 	};
 
 	const size_t headerLength = SDL_strlen(header);
@@ -443,6 +485,21 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 						!I_ShaderIdentifierChar(input[tokenLength])) {
 						const size_t replacementLength = SDL_strlen(nativeFragmentReplacements[i].to);
 						SDL_memcpy(output, nativeFragmentReplacements[i].to, replacementLength);
+						output += replacementLength;
+						input += tokenLength;
+						replaced = true;
+						break;
+					}
+				}
+			}
+
+			if (!replaced && !isVertex) {
+				for (size_t i = 0; i < SDL_arraysize(nativeUniformReplacements); ++i) {
+					const size_t tokenLength = SDL_strlen(nativeUniformReplacements[i].from);
+					if (SDL_strncmp(input, nativeUniformReplacements[i].from, tokenLength) == 0 &&
+						!I_ShaderIdentifierChar(input[tokenLength])) {
+						const size_t replacementLength = SDL_strlen(nativeUniformReplacements[i].to);
+						SDL_memcpy(output, nativeUniformReplacements[i].to, replacementLength);
 						output += replacementLength;
 						input += tokenLength;
 						replaced = true;
@@ -509,6 +566,7 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 			SDL_memcpy(simplified + prefixLength + replacementLength, closeBrace + 1, suffixLength + 1);
 			SDL_free(result);
 			result = simplified;
+			output = result + SDL_strlen(result);
 		}
 	}
 
@@ -517,41 +575,53 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 		/* Only the main world fragment programs use the combiner/alpha-test
 		   contract. The solid tint overlay intentionally does not. */
 		static const char alphaFunction[] =
-			"\nvec4 _rgbArg(int source, int operand, vec4 texel, vec4 primary) {\n"
-			"  vec4 value = primary;\n"
-			"  if (source == 0x1702) value = texel;\n"
-			"  else if (source == 0x8576) value = uEnvColor;\n"
-			"  if (operand == 0x0301) return vec4(1.0 - value.rgb, 1.0 - value.a);\n"
-			"  if (operand == 0x0302) return vec4(vec3(value.a), value.a);\n"
-			"  if (operand == 0x0303) return vec4(vec3(1.0 - value.a), 1.0 - value.a);\n"
+			"\nvec4 _combineArg(int source, int operand, int unit, vec4 tex0, vec4 tex1, vec4 tex2, vec4 tex3, vec4 previous, vec4 primary, vec4 envColor) {\n"
+			"  vec4 value = previous;\n"
+			"  if (source == 0x1702) { if (unit == 0) value = tex0; else if (unit == 1) value = tex1; else if (unit == 2) value = tex2; else value = tex3; }\n"
+			"  else if (source == 0x84C0) value = tex0;\n"
+			"  else if (source == 0x84C1) value = tex1;\n"
+			"  else if (source == 0x84C2) value = tex2;\n"
+			"  else if (source == 0x84C3) value = tex3;\n"
+			"  else if (source == 0x8578) value = previous;\n"
+			"  else if (source == 0x8577) value = primary;\n"
+			"  else if (source == 0x8576) value = envColor;\n"
+			"  if (operand == 0x0301) value.rgb = 1.0 - value.rgb;\n"
+			"  else if (operand == 0x0302) value = vec4(value.a);\n"
+			"  else if (operand == 0x0303) value = vec4(1.0 - value.a);\n"
+			"  else if (operand == 0x0308) { float s = min(primary.a, 1.0 - value.a); value = vec4(vec3(s), 1.0); }\n"
 			"  return value;\n"
 			"}\n"
-			"vec3 apply_native_combiner(vec4 texel, vec4 primary) {\n"
-			"  if (uUseTex == 0) return primary.rgb;\n"
-			"  vec4 a0 = _rgbArg(uRGBSource0, uRGBOperand0, texel, primary);\n"
-			"  vec4 a1 = _rgbArg(uRGBSource1, uRGBOperand1, texel, primary);\n"
-			"  vec4 a2 = _rgbArg(uRGBSource2, uRGBOperand2, texel, primary);\n"
-			"  if (uCombineRGB == 7681) return a0.rgb;\n"
-			"  if (uCombineRGB == 260) return clamp(a0.rgb + a1.rgb, 0.0, 1.0);\n"
-			"  if (uCombineRGB == 34165) return clamp(mix(a1.rgb, a0.rgb, a2.rgb), 0.0, 1.0);\n"
-			"  return clamp(a0.rgb * a1.rgb, 0.0, 1.0);\n"
+			"vec4 _combineStage(vec4 previous, vec4 primary, vec4 tex0, vec4 tex1, vec4 tex2, vec4 tex3, int unit, int combineRGB, int combineAlpha, vec4 envColor, ivec3 rgbSources, ivec3 rgbOperands, ivec3 alphaSources, ivec3 alphaOperands) {\n"
+			"  vec3 r0 = _combineArg(rgbSources.x, rgbOperands.x, unit, tex0, tex1, tex2, tex3, previous, primary, envColor).rgb;\n"
+			"  vec3 r1 = _combineArg(rgbSources.y, rgbOperands.y, unit, tex0, tex1, tex2, tex3, previous, primary, envColor).rgb;\n"
+			"  vec3 r2 = _combineArg(rgbSources.z, rgbOperands.z, unit, tex0, tex1, tex2, tex3, previous, primary, envColor).rgb;\n"
+			"  float a0 = _combineArg(alphaSources.x, alphaOperands.x, unit, tex0, tex1, tex2, tex3, previous, primary, envColor).a;\n"
+			"  float a1 = _combineArg(alphaSources.y, alphaOperands.y, unit, tex0, tex1, tex2, tex3, previous, primary, envColor).a;\n"
+			"  float a2 = _combineArg(alphaSources.z, alphaOperands.z, unit, tex0, tex1, tex2, tex3, previous, primary, envColor).a;\n"
+			"  vec3 rgb = r0 * r1;\n"
+			"  if (combineRGB == 7681) rgb = r0;\n"
+			"  else if (combineRGB == 260) rgb = r0 + r1;\n"
+			"  else if (combineRGB == 34165) rgb = mix(r1, r0, r2);\n"
+			"  else if (combineRGB == 0x84E7) rgb = r0 - r1;\n"
+			"  else if (combineRGB == 0x8574) rgb = r0 + r1 - vec3(0.5);\n"
+			"  float alpha = a0 * a1;\n"
+			"  if (combineAlpha == 7681) alpha = a0;\n"
+			"  else if (combineAlpha == 260) alpha = a0 + a1;\n"
+			"  else if (combineAlpha == 34165) alpha = mix(a1, a0, a2);\n"
+			"  else if (combineAlpha == 0x84E7) alpha = a0 - a1;\n"
+			"  else if (combineAlpha == 0x8574) alpha = a0 + a1 - 0.5;\n"
+			"  return clamp(vec4(rgb, alpha), 0.0, 1.0);\n"
 			"}\n"
-			"float _alphaArg(int source, int operand, float texAlpha, float primaryAlpha) {\n"
-			"  float value = primaryAlpha;\n"
-			"  if (source == 0x1702) value = texAlpha;\n"
-			"  else if (source == 0x8576) value = uEnvAlpha;\n"
-			"  if (operand == 0x0303) value = 1.0 - value;\n"
-			"  return value;\n"
-			"}\n"
-			"float apply_combiner_alpha(float texAlpha, float primaryAlpha) {\n"
-			"  if (uUseTex == 0) return primaryAlpha;\n"
-			"  float a0 = _alphaArg(uAlphaSource0, uAlphaOperand0, texAlpha, primaryAlpha);\n"
-			"  float a1 = _alphaArg(uAlphaSource1, uAlphaOperand1, texAlpha, primaryAlpha);\n"
-			"  float a2 = _alphaArg(uAlphaSource2, uAlphaOperand2, texAlpha, primaryAlpha);\n"
-			"  if (uCombineAlpha == 7681) return a0;\n"
-			"  if (uCombineAlpha == 260) return clamp(a0 + a1, 0.0, 1.0);\n"
-			"  if (uCombineAlpha == 34165) return clamp(mix(a1, a0, a2), 0.0, 1.0);\n"
-			"  return clamp(a0 * a1, 0.0, 1.0);\n"
+			"vec4 apply_native_pipeline(vec4 primary, vec4 tex0) {\n"
+			"  vec4 tex1 = texture2D(uTex1, vUV);\n"
+			"  vec4 tex2 = texture2D(uTex2, vUV);\n"
+			"  vec4 tex3 = texture2D(uTex3, vUV);\n"
+			"  vec4 previous = primary;\n"
+			"  if (uUseTex0 != 0) previous = _combineStage(previous, primary, tex0, tex1, tex2, tex3, 0, uCombineRGB0, uCombineAlpha0, uEnvColor0, ivec3(uRGBSource0_0, uRGBSource0_1, uRGBSource0_2), ivec3(uRGBOperand0_0, uRGBOperand0_1, uRGBOperand0_2), ivec3(uAlphaSource0_0, uAlphaSource0_1, uAlphaSource0_2), ivec3(uAlphaOperand0_0, uAlphaOperand0_1, uAlphaOperand0_2));\n"
+			"  if (uUseTex1 != 0) previous = _combineStage(previous, primary, tex0, tex1, tex2, tex3, 1, uCombineRGB1, uCombineAlpha1, uEnvColor1, ivec3(uRGBSource1_0, uRGBSource1_1, uRGBSource1_2), ivec3(uRGBOperand1_0, uRGBOperand1_1, uRGBOperand1_2), ivec3(uAlphaSource1_0, uAlphaSource1_1, uAlphaSource1_2), ivec3(uAlphaOperand1_0, uAlphaOperand1_1, uAlphaOperand1_2));\n"
+			"  if (uUseTex2 != 0) previous = _combineStage(previous, primary, tex0, tex1, tex2, tex3, 2, uCombineRGB2, uCombineAlpha2, uEnvColor2, ivec3(uRGBSource2_0, uRGBSource2_1, uRGBSource2_2), ivec3(uRGBOperand2_0, uRGBOperand2_1, uRGBOperand2_2), ivec3(uAlphaSource2_0, uAlphaSource2_1, uAlphaSource2_2), ivec3(uAlphaOperand2_0, uAlphaOperand2_1, uAlphaOperand2_2));\n"
+			"  if (uUseTex3 != 0) previous = _combineStage(previous, primary, tex0, tex1, tex2, tex3, 3, uCombineRGB3, uCombineAlpha3, uEnvColor3, ivec3(uRGBSource3_0, uRGBSource3_1, uRGBSource3_2), ivec3(uRGBOperand3_0, uRGBOperand3_1, uRGBOperand3_2), ivec3(uAlphaSource3_0, uAlphaSource3_1, uAlphaSource3_2), ivec3(uAlphaOperand3_0, uAlphaOperand3_1, uAlphaOperand3_2));\n"
+			"  return previous;\n"
 			"}\n"
 			"bool _alphaPass(float a) {\n"
 			"  if (uAlphaTestEnabled == 0 || uAlphaFunc == 519) return true;\n"
@@ -564,7 +634,8 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 			"  if (uAlphaFunc == 518) return a >= uAlphaRef;\n"
 			"  return true;\n"
 			"}\n";
-		static const char alphaDiscard[] = "\n    col.a = apply_combiner_alpha(_texAlpha, vColor.a);\n    if (!_alphaPass(col.a)) discard;\n";
+		static const char alphaDiscard[] = "\n    vec4 _pipelineColor = apply_native_pipeline(vColor, _texel);\n    col = _pipelineColor;\n    if (!_alphaPass(col.a)) discard;\n";
+
 		char* finalSource = (char*)SDL_malloc(bodyLength * 2 + headerLength + 1024);
 		if (!finalSource) {
 			SDL_free(result);
@@ -712,11 +783,21 @@ static void I_3PointShaderInit(void) {
 		shader_struct.prog = 0;
 		return;
 	}
-	shader_struct.locTex = pglGetUniformLocation(shader_struct.prog, "uTex");
+	if (I_GetGLESVersion() != 0) {
+		for (int unit = 0; unit < 4; ++unit) {
+			char name[32];
+			SDL_snprintf(name, sizeof(name), "uTex%d", unit);
+			shader_struct.locTex[unit] = pglGetUniformLocation(shader_struct.prog, name);
+			SDL_snprintf(name, sizeof(name), "uUseTex%d", unit);
+			sLocUseTexUnits[unit] = pglGetUniformLocation(shader_struct.prog, name);
+		}
+	} else {
+		shader_struct.locTex[0] = pglGetUniformLocation(shader_struct.prog, "uTex");
+		sLocUseTexUnits[0] = pglGetUniformLocation(shader_struct.prog, "uUseTex");
+	}
 	shader_struct.locModelView = pglGetUniformLocation(shader_struct.prog, "uModelViewMatrix");
 	shader_struct.locModelViewProjection = pglGetUniformLocation(shader_struct.prog, "uModelViewProjectionMatrix");
 	sLocTexel = pglGetUniformLocation(shader_struct.prog, "uTexel");
-	sLocUseTex = pglGetUniformLocation(shader_struct.prog, "uUseTex");
 	sLocPassCount = pglGetUniformLocation(shader_struct.prog, "uPassCount");
 	for (int i=0;i<4;i++) {
 		char n1[32], n2[32], n3[32];
@@ -951,12 +1032,27 @@ void I_ShaderBind(void) {
 		pglUseProgram(shader_struct.prog);
 		is_current_prog = shader_struct.prog;
 	}
-	if (shader_struct.locTex >= 0)
-		pglUniform1i(shader_struct.locTex, g_shader_texture_unit);
-	if (sLocUseTex >= 0)
-		pglUniform1i(sLocUseTex, g_use_texture);
-	if (sLocTexel >= 0)
-		pglUniform2f(sLocTexel, g_texel_x, g_texel_y);
+
+	if (I_GetGLESVersion() != 0) {
+		for (int unit = 0; unit < 4; ++unit) {
+			if (shader_struct.locTex[unit] >= 0)
+				pglUniform1i(shader_struct.locTex[unit], unit);
+			if (sLocUseTexUnits[unit] >= 0)
+				pglUniform1i(sLocUseTexUnits[unit], g_shader_use_texture[unit]);
+		}
+		if (sLocTexel >= 0)
+			pglUniform2f(sLocTexel, g_texel_x[0], g_texel_y[0]);
+	} else {
+		int unit = g_shader_texture_unit;
+		if (unit < 0 || unit > 3) unit = 0;
+		if (shader_struct.locTex[0] >= 0)
+			pglUniform1i(shader_struct.locTex[0], unit);
+		if (sLocUseTexUnits[0] >= 0)
+			pglUniform1i(sLocUseTexUnits[0], g_shader_use_texture[unit]);
+		if (sLocTexel >= 0)
+			pglUniform2f(sLocTexel, g_texel_x[unit], g_texel_y[unit]);
+	}
+
 	if (sLocAlphaTestEnabled >= 0)
 		pglUniform1i(sLocAlphaTestEnabled, g_alpha_test_enabled);
 	if (sLocAlphaFunc >= 0)
@@ -967,7 +1063,6 @@ void I_ShaderBind(void) {
 		pglUniform1f(sLocColorScale, g_color_scale);
 	I_SectorCombiner_Commit();
 }
-
 void I_ShaderUnBind(void) {
 	if (!shader_struct.initialised)
 		return;
@@ -978,29 +1073,46 @@ void I_ShaderUnBind(void) {
 }
 
 void I_ShaderSetTextureSize(int w, int h) {
-	g_texel_x = (w > 0 && h > 0) ? 1.0f / (float)w : 0.0f;
-	g_texel_y = (w > 0 && h > 0) ? 1.0f / (float)h : 0.0f;
+	int unit = g_shader_texture_unit;
+	if (unit < 0 || unit > 3) unit = 0;
+	g_texel_x[unit] = (w > 0 && h > 0) ? 1.0f / (float)w : 0.0f;
+	g_texel_y[unit] = (w > 0 && h > 0) ? 1.0f / (float)h : 0.0f;
 	if (!shader_struct.initialised || sLocTexel < 0 ||
 		is_current_prog != shader_struct.prog)
 		return;
-	pglUniform2f(sLocTexel, g_texel_x, g_texel_y);
+	if (I_GetGLESVersion() != 0) {
+		if (unit == 0)
+			pglUniform2f(sLocTexel, g_texel_x[0], g_texel_y[0]);
+	} else {
+		pglUniform2f(sLocTexel, g_texel_x[unit], g_texel_y[unit]);
+	}
 }
 
 void I_ShaderSetUseTexture(int on) {
-	g_use_texture = on ? 1 : 0;
-	if (!shader_struct.initialised || sLocUseTex < 0 || is_current_prog != shader_struct.prog)
+	int unit = g_shader_texture_unit;
+	if (unit < 0 || unit > 3) unit = 0;
+	g_shader_use_texture[unit] = on ? 1 : 0;
+	if (!shader_struct.initialised || is_current_prog != shader_struct.prog)
 		return;
-	pglUniform1i(sLocUseTex, g_use_texture);
+	if (I_GetGLESVersion() != 0) {
+		if (sLocUseTexUnits[unit] >= 0)
+			pglUniform1i(sLocUseTexUnits[unit], g_shader_use_texture[unit]);
+	} else if (sLocUseTexUnits[0] >= 0) {
+		pglUniform1i(sLocUseTexUnits[0], g_shader_use_texture[unit]);
+	}
 }
 
 void I_ShaderSetTextureUnit(int unit) {
-	g_shader_texture_unit = unit < 0 ? 0 : unit;
-	if (!shader_struct.initialised || shader_struct.locTex < 0 ||
-		is_current_prog != shader_struct.prog)
+	g_shader_texture_unit = unit < 0 ? 0 : (unit > 3 ? 3 : unit);
+	if (!shader_struct.initialised || is_current_prog != shader_struct.prog)
 		return;
-	pglUniform1i(shader_struct.locTex, g_shader_texture_unit);
+	if (I_GetGLESVersion() == 0) {
+		if (shader_struct.locTex[0] >= 0)
+			pglUniform1i(shader_struct.locTex[0], g_shader_texture_unit);
+		if (sLocTexel >= 0)
+			pglUniform2f(sLocTexel, g_texel_x[g_shader_texture_unit], g_texel_y[g_shader_texture_unit]);
+	}
 }
-
 void I_ShaderSetAlphaTest(int enabled, int func, float reference) {
 	g_alpha_test_enabled = enabled ? 1 : 0;
 	g_alpha_func = func;
