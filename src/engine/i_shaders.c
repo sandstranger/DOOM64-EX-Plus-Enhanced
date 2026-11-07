@@ -24,6 +24,9 @@
 #include "con_cvar.h"
 #include "i_shaders.h"
 #include "dgl.h"
+#ifdef ANDROID
+#include "dgl_gles.h"
+#endif
 
 extern void I_SectorCombiner_Commit(void);
 
@@ -396,6 +399,10 @@ static GLuint I_OverlayTintShaderCompile(GLenum tp, const char* src) {
 }
 
 void I_OverlayTintShaderInit(void) {
+#ifdef ANDROID
+	if (I_GLES_IsActive())
+		return; /* the native OpenGL ES backend has its own tint program */
+#endif
 	if (generic_tint_overlay_prog) 
 		return;
 	GLuint vs = I_OverlayTintShaderCompile(GL_VERTEX_SHADER,
@@ -412,9 +419,73 @@ void I_OverlayTintShaderInit(void) {
 	generic_tint_overlay_colour = pglGetUniformLocation(generic_tint_overlay_prog, "uColor");
 }
 
+#ifdef ANDROID
+/*
+ * Native OpenGL ES: the same state changes as below, the backend tracks them
+ * without asking the driver and draws the rectangle with its tint program.
+ */
+static void I_ShaderFullscreenTintGLES(float r, float g, float b, float a) {
+	GLboolean wasBlend = glIsEnabled(GL_BLEND);
+	GLboolean wasTex2D = glIsEnabled(GL_TEXTURE_2D);
+	GLboolean wasDepthTest = glIsEnabled(GL_DEPTH_TEST);
+	GLboolean wasAlphaTest = glIsEnabled(GL_ALPHA_TEST);
+
+	GLint oldSrc = 0, oldDst = 0; glGetIntegerv(GL_BLEND_SRC, &oldSrc);
+	glGetIntegerv(GL_BLEND_DST, &oldDst);
+	GLboolean oldDepthMask; glGetBooleanv(GL_DEPTH_WRITEMASK, &oldDepthMask);
+
+	I_GLES_SetTint(true, r, g, b, a);
+
+	GL_SetOrtho(1);
+	if (!wasBlend) glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	if (wasTex2D)
+		glDisable(GL_TEXTURE_2D);
+
+	if (wasAlphaTest)
+		glDisable(GL_ALPHA_TEST);
+
+	if (wasDepthTest)
+		glDisable(GL_DEPTH_TEST);
+
+	glDepthMask(GL_FALSE);
+
+	glColor4ub(255, 255, 255, 255);
+	dglRecti(SCREENWIDTH, SCREENHEIGHT, 0, 0);
+
+	glDepthMask(oldDepthMask);
+
+	if (wasDepthTest)
+		glEnable(GL_DEPTH_TEST);
+	else
+		glDisable(GL_DEPTH_TEST);
+
+	if (wasAlphaTest)
+		glEnable(GL_ALPHA_TEST);
+
+	if (wasTex2D)
+		glEnable(GL_TEXTURE_2D);
+	glBlendFunc(oldSrc, oldDst);
+
+	if (!wasBlend)
+		glDisable(GL_BLEND);
+	GL_ResetViewport();
+
+	I_GLES_SetTint(false, 0.0f, 0.0f, 0.0f, 0.0f);
+}
+#endif
+
 void I_ShaderFullscreenTint(float r, float g, float b, float a) {
 	if (a <= 0.0f)
 		return;
+
+#ifdef ANDROID
+	if (I_GLES_IsActive()) {
+		I_ShaderFullscreenTintGLES(r, g, b, a);
+		return;
+	}
+#endif
 
 	I_OverlayTintShaderInit();
 
@@ -479,6 +550,15 @@ void I_ShaderFullscreenTint(float r, float g, float b, float a) {
 */
 
 void I_ShaderBind(void) {
+#ifdef ANDROID
+	if (I_GLES_IsActive()) {
+		/* Same uniforms as below: the filter is picked on the first bind, then the
+		   texture state is reset and the combiner state committed. */
+		I_GLES_BindWorldShader(r_filter.value == 0);
+		I_SectorCombiner_Commit();
+		return;
+	}
+#endif
 	I_3PointShaderInit();
 	I_OverlayTintShaderInit();
 	if (is_current_prog != shader_struct.prog) {
@@ -495,6 +575,12 @@ void I_ShaderBind(void) {
 }
 
 void I_ShaderUnBind(void) {
+#ifdef ANDROID
+	if (I_GLES_IsActive()) {
+		I_GLES_UnbindWorldShader();
+		return;
+	}
+#endif
 	if (!shader_struct.initialised)
 		return;
 	if (is_current_prog != 0) {
@@ -504,6 +590,12 @@ void I_ShaderUnBind(void) {
 }
 
 void I_ShaderSetTextureSize(int w, int h) {
+#ifdef ANDROID
+	if (I_GLES_IsActive()) {
+		I_GLES_SetWorldTextureSize(w, h);
+		return;
+	}
+#endif
 	if (!shader_struct.initialised || sLocTexel < 0)
 		return;
 	if (w > 0 && h > 0)
@@ -513,6 +605,12 @@ void I_ShaderSetTextureSize(int w, int h) {
 }
 
 void I_ShaderSetUseTexture(int on) {
+#ifdef ANDROID
+	if (I_GLES_IsActive()) {
+		I_GLES_SetWorldUseTexture(on != 0);
+		return;
+	}
+#endif
 	if (!shader_struct.initialised || sLocUseTex < 0)
 		return;
 	pglUniform1i(sLocUseTex, on ? 1 : 0);

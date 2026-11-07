@@ -27,6 +27,7 @@
 #include "glad.h"
 #include "AngleShaderCache.h"
 #include "SwappyController.h"
+#include "dgl_gles.h"
 #endif
 
 #ifdef SDL_PLATFORM_WIN32
@@ -87,6 +88,15 @@ void setUseGLES2_0State (const bool useGLES2_0){
 }
 
 #endif
+
+int I_GetGLESVersion(void) {
+#ifdef ANDROID
+    /* Decided once when the context is created, never queried per call. */
+    return I_GLES_FeatureLevel();
+#else
+    return 0;
+#endif
+}
 
 void GL_OnResize(int w, int h);
 
@@ -260,8 +270,8 @@ void I_InitScreen(void) {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 #endif
 #else
-    SDL_Log(g_useGLES2_0 ? "Legacy OpenGL ES 2.0 is using for rendering" :
-            "OpenGL ES 3.0 is using for rendering");
+    SDL_Log(g_useGLES2_0 ? "OpenGL ES 2.0 renderer selected" :
+            "OpenGL ES 3.0 renderer selected");
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, g_useGLES2_0 ? 2 : 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,   0);
@@ -351,17 +361,36 @@ void I_InitScreen(void) {
         I_Error("I_InitScreen: Failed to create OpenGL context");
         return;
     }
-    SDL_GL_MakeCurrent(window, glContext);
+    if (!SDL_GL_MakeCurrent(window, glContext)) {
+        I_Error("I_InitScreen: Failed to make OpenGL context current");
+        I_ShutdownVideo();
+        return;
+    }
 
 #if ANDROID
     angle_blobcache_install("doom64_ex_plus");
-    if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
-        SDL_GL_DestroyContext(glContext);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
+    if (!gladLoadGLES2Loader((GLADloadproc)SDL_GL_GetProcAddress)) {
+        SDL_Log("I_InitScreen: failed to load OpenGL ES 2.0/3.0 entry points");
+        I_ShutdownVideo();
         return;
     }
     gladWasLoaded = true;
+    /* The OpenGL ES 2.0 mode stays a strict OpenGL ES 2.0 renderer even when the
+       driver hands out a newer context. */
+    const int requiredGLESVersion = g_useGLES2_0 ? 2 : 3;
+    if (GLVersion.major < requiredGLESVersion ||
+        !GLAD_GL_ES_VERSION_2_0 ||
+        (requiredGLESVersion >= 3 && !GLAD_GL_ES_VERSION_3_0)) {
+        SDL_Log("I_InitScreen: requested GLES %d.0 but context reports GLES %d.%d",
+                requiredGLESVersion, GLVersion.major, GLVersion.minor);
+        I_ShutdownVideo();
+        return;
+    }
+    if (!I_GLES_Initialize(requiredGLESVersion)) {
+        SDL_Log("I_InitScreen: native GLES backend initialization failed");
+        I_ShutdownVideo();
+        return;
+    }
 #endif
 
     SDL_GetWindowSizeInPixels(window, &win_px_w, &win_px_h);
@@ -407,6 +436,10 @@ void I_SetMenuCursorMouseRect() {
 //
 
 void I_ShutdownVideo(void) {
+#ifdef ANDROID
+    I_GLES_Shutdown();
+    gladWasLoaded = false;
+#endif
     if (glContext) {
         SDL_GL_DestroyContext(glContext);
         glContext = NULL;

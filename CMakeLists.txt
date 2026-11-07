@@ -165,6 +165,7 @@ SET(SOURCES ${SOURCE_DIR}/i_system.c
 if (NOT ANDROID)
 	add_executable(${PROJECT_NAME} ${SOURCES})
 else ()
+	list(APPEND SOURCES ${SOURCE_DIR}/dgl_gles.c)
 	add_library(${PROJECT_NAME} SHARED ${SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/src/glad/glad.c)
 endif ()
 
