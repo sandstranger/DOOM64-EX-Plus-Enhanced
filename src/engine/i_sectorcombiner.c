@@ -29,6 +29,7 @@
 #include <math.h>
 
 #include "i_sectorcombiner.h"
+#include "i_video.h"
 
 #ifndef COUNTOF
 #define COUNTOF(a) ((int)(sizeof(a)/sizeof((a)[0])))
@@ -93,8 +94,13 @@ static void reset_state(void) {
     memset(&s, 0, sizeof(s));
     s.combine_rgb = GL_MODULATE;
     s.combine_alpha = GL_MODULATE;
+    const boolean nativeGLES = I_GetGLESVersion() != 0;
     for (int i = 0; i < 3; i++) {
-        s.source_rgb[i] = (i == 0) ? GL_TEXTURE : (i == 1 ? 0x8578 : GL_CONSTANT);
+        /* Keep the legacy pass-array defaults on GL4ES. Native ESSL uses
+           the fixed-function GL_COMBINE default argument sequence. */
+        s.source_rgb[i] = nativeGLES
+            ? (i == 0 ? GL_TEXTURE : (i == 1 ? 0x8578 : GL_CONSTANT))
+            : GL_TEXTURE;
         s.operand_rgb[i] = GL_SRC_COLOR;
         s.source_alpha[i] = (i == 0) ? GL_TEXTURE : 0x8578; /* GL_PREVIOUS */
         s.operand_alpha[i] = 0x0302; /* GL_SRC_ALPHA */
