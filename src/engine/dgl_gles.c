@@ -78,7 +78,6 @@ static GLfloat g_fog_start = 0.0f;
 static GLfloat g_fog_end = 1.0f;
 static GLfloat g_fog_density = 1.0f;
 static GLfloat g_fog_color[4] = { 0, 0, 0, 1 };
-static GLfloat g_rgb_scale = 1.0f;
 static boolean g_wireframe = false;
 static GLfloat g_modelview[GLES_MATRIX_STACK_DEPTH][16];
 static GLfloat g_projection[GLES_MATRIX_STACK_DEPTH][16];
@@ -298,7 +297,6 @@ boolean I_GLES_Initialize(void) {
     g_alpha_func = GL_GEQUAL;
     g_alpha_reference = 0.0f;
     g_fog_enabled = false;
-    g_rgb_scale = 1.0f;
     g_wireframe = false;
 
     pglGenBuffers(1, &g_vertex_buffer);
@@ -920,8 +918,10 @@ void I_GLES_TexEnvi(GLenum target, GLenum pname, GLint param) {
     case GL_OPERAND1_ALPHA: I_SectorCombiner_SetOperandAlpha(1, param); break;
     case GL_OPERAND2_ALPHA: I_SectorCombiner_SetOperandAlpha(2, param); break;
     case GL_RGB_SCALE:
-        g_rgb_scale = (GLfloat)param;
-        I_ShaderSetColorScale(g_rgb_scale);
+        I_SectorCombiner_SetRGBScale((GLfloat)param);
+        break;
+    case GL_ALPHA_SCALE:
+        I_SectorCombiner_SetAlphaScale((GLfloat)param);
         break;
     default:
         break;

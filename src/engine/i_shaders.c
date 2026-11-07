@@ -385,8 +385,10 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 				sizeof(generatedFragmentHeader) - offset,
 				"uniform int uCombineRGB%d;\n"
 				"uniform int uCombineAlpha%d;\n"
-				"uniform vec4 uEnvColor%d;\n",
-				unit, unit, unit);
+				"uniform vec4 uEnvColor%d;\n"
+				"uniform float uRGBScale%d;\n"
+				"uniform float uAlphaScale%d;\n",
+				unit, unit, unit, unit, unit);
 			if (written < 0 || (size_t)written >= sizeof(generatedFragmentHeader) - offset)
 				return NULL;
 			offset += (size_t)written;
@@ -591,7 +593,7 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 			"  else if (operand == 0x0308) { float s = min(primary.a, 1.0 - value.a); value = vec4(vec3(s), 1.0); }\n"
 			"  return value;\n"
 			"}\n"
-			"vec4 _combineStage(vec4 previous, vec4 primary, vec4 tex0, vec4 tex1, vec4 tex2, vec4 tex3, int unit, int combineRGB, int combineAlpha, vec4 envColor, ivec3 rgbSources, ivec3 rgbOperands, ivec3 alphaSources, ivec3 alphaOperands) {\n"
+			"vec4 _combineStage(vec4 previous, vec4 primary, vec4 tex0, vec4 tex1, vec4 tex2, vec4 tex3, int unit, int combineRGB, int combineAlpha, vec4 envColor, float rgbScale, float alphaScale, ivec3 rgbSources, ivec3 rgbOperands, ivec3 alphaSources, ivec3 alphaOperands) {\n"
 			"  vec3 r0 = _combineArg(rgbSources.x, rgbOperands.x, unit, tex0, tex1, tex2, tex3, previous, primary, envColor).rgb;\n"
 			"  vec3 r1 = _combineArg(rgbSources.y, rgbOperands.y, unit, tex0, tex1, tex2, tex3, previous, primary, envColor).rgb;\n"
 			"  vec3 r2 = _combineArg(rgbSources.z, rgbOperands.z, unit, tex0, tex1, tex2, tex3, previous, primary, envColor).rgb;\n"
@@ -604,23 +606,25 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 			"  else if (combineRGB == 34165) rgb = mix(r1, r0, r2);\n"
 			"  else if (combineRGB == 0x84E7) rgb = r0 - r1;\n"
 			"  else if (combineRGB == 0x8574) rgb = r0 + r1 - vec3(0.5);\n"
+			"  else if (combineRGB == 0x86AE || combineRGB == 0x86AF) rgb = vec3(clamp(4.0 * dot(r0 - vec3(0.5), r1 - vec3(0.5)), 0.0, 1.0));\n"
 			"  float alpha = a0 * a1;\n"
 			"  if (combineAlpha == 7681) alpha = a0;\n"
 			"  else if (combineAlpha == 260) alpha = a0 + a1;\n"
 			"  else if (combineAlpha == 34165) alpha = mix(a1, a0, a2);\n"
 			"  else if (combineAlpha == 0x84E7) alpha = a0 - a1;\n"
 			"  else if (combineAlpha == 0x8574) alpha = a0 + a1 - 0.5;\n"
-			"  return clamp(vec4(rgb, alpha), 0.0, 1.0);\n"
+			"  if (combineRGB == 0x86AF) alpha = clamp(4.0 * dot(r0 - vec3(0.5), r1 - vec3(0.5)), 0.0, 1.0);\n"
+			"  return clamp(vec4(rgb * rgbScale, alpha * alphaScale), 0.0, 1.0);\n"
 			"}\n"
 			"vec4 apply_native_pipeline(vec4 primary, vec4 tex0) {\n"
 			"  vec4 tex1 = texture2D(uTex1, vUV);\n"
 			"  vec4 tex2 = texture2D(uTex2, vUV);\n"
 			"  vec4 tex3 = texture2D(uTex3, vUV);\n"
 			"  vec4 previous = primary;\n"
-			"  if (uUseTex0 != 0) previous = _combineStage(previous, primary, tex0, tex1, tex2, tex3, 0, uCombineRGB0, uCombineAlpha0, uEnvColor0, ivec3(uRGBSource0_0, uRGBSource0_1, uRGBSource0_2), ivec3(uRGBOperand0_0, uRGBOperand0_1, uRGBOperand0_2), ivec3(uAlphaSource0_0, uAlphaSource0_1, uAlphaSource0_2), ivec3(uAlphaOperand0_0, uAlphaOperand0_1, uAlphaOperand0_2));\n"
-			"  if (uUseTex1 != 0) previous = _combineStage(previous, primary, tex0, tex1, tex2, tex3, 1, uCombineRGB1, uCombineAlpha1, uEnvColor1, ivec3(uRGBSource1_0, uRGBSource1_1, uRGBSource1_2), ivec3(uRGBOperand1_0, uRGBOperand1_1, uRGBOperand1_2), ivec3(uAlphaSource1_0, uAlphaSource1_1, uAlphaSource1_2), ivec3(uAlphaOperand1_0, uAlphaOperand1_1, uAlphaOperand1_2));\n"
-			"  if (uUseTex2 != 0) previous = _combineStage(previous, primary, tex0, tex1, tex2, tex3, 2, uCombineRGB2, uCombineAlpha2, uEnvColor2, ivec3(uRGBSource2_0, uRGBSource2_1, uRGBSource2_2), ivec3(uRGBOperand2_0, uRGBOperand2_1, uRGBOperand2_2), ivec3(uAlphaSource2_0, uAlphaSource2_1, uAlphaSource2_2), ivec3(uAlphaOperand2_0, uAlphaOperand2_1, uAlphaOperand2_2));\n"
-			"  if (uUseTex3 != 0) previous = _combineStage(previous, primary, tex0, tex1, tex2, tex3, 3, uCombineRGB3, uCombineAlpha3, uEnvColor3, ivec3(uRGBSource3_0, uRGBSource3_1, uRGBSource3_2), ivec3(uRGBOperand3_0, uRGBOperand3_1, uRGBOperand3_2), ivec3(uAlphaSource3_0, uAlphaSource3_1, uAlphaSource3_2), ivec3(uAlphaOperand3_0, uAlphaOperand3_1, uAlphaOperand3_2));\n"
+			"  if (uUseTex0 != 0) previous = _combineStage(previous, primary, tex0, tex1, tex2, tex3, 0, uCombineRGB0, uCombineAlpha0, uEnvColor0, uRGBScale0, uAlphaScale0, ivec3(uRGBSource0_0, uRGBSource0_1, uRGBSource0_2), ivec3(uRGBOperand0_0, uRGBOperand0_1, uRGBOperand0_2), ivec3(uAlphaSource0_0, uAlphaSource0_1, uAlphaSource0_2), ivec3(uAlphaOperand0_0, uAlphaOperand0_1, uAlphaOperand0_2));\n"
+			"  if (uUseTex1 != 0) previous = _combineStage(previous, primary, tex0, tex1, tex2, tex3, 1, uCombineRGB1, uCombineAlpha1, uEnvColor1, uRGBScale1, uAlphaScale1, ivec3(uRGBSource1_0, uRGBSource1_1, uRGBSource1_2), ivec3(uRGBOperand1_0, uRGBOperand1_1, uRGBOperand1_2), ivec3(uAlphaSource1_0, uAlphaSource1_1, uAlphaSource1_2), ivec3(uAlphaOperand1_0, uAlphaOperand1_1, uAlphaOperand1_2));\n"
+			"  if (uUseTex2 != 0) previous = _combineStage(previous, primary, tex0, tex1, tex2, tex3, 2, uCombineRGB2, uCombineAlpha2, uEnvColor2, uRGBScale2, uAlphaScale2, ivec3(uRGBSource2_0, uRGBSource2_1, uRGBSource2_2), ivec3(uRGBOperand2_0, uRGBOperand2_1, uRGBOperand2_2), ivec3(uAlphaSource2_0, uAlphaSource2_1, uAlphaSource2_2), ivec3(uAlphaOperand2_0, uAlphaOperand2_1, uAlphaOperand2_2));\n"
+			"  if (uUseTex3 != 0) previous = _combineStage(previous, primary, tex0, tex1, tex2, tex3, 3, uCombineRGB3, uCombineAlpha3, uEnvColor3, uRGBScale3, uAlphaScale3, ivec3(uRGBSource3_0, uRGBSource3_1, uRGBSource3_2), ivec3(uRGBOperand3_0, uRGBOperand3_1, uRGBOperand3_2), ivec3(uAlphaSource3_0, uAlphaSource3_1, uAlphaSource3_2), ivec3(uAlphaOperand3_0, uAlphaOperand3_1, uAlphaOperand3_2));\n"
 			"  return previous;\n"
 			"}\n"
 			"bool _alphaPass(float a) {\n"

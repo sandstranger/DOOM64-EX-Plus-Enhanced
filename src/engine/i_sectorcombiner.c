@@ -71,6 +71,8 @@ typedef struct {
     int   source_alpha[3];
     int   operand_alpha[3];
     float env_color[4];
+    float rgb_scale;
+    float alpha_scale;
 
     int   pass_mode[MAX_PASSES];
     float pass_color[MAX_PASSES][4];
@@ -113,6 +115,8 @@ static void reset_state(sector_combiner_state_t* state, int nativeGLES) {
         state->operand_alpha[i] = 0x0302;
     }
     state->env_color[3] = 1.0f;
+    state->rgb_scale = 1.0f;
+    state->alpha_scale = 1.0f;
     state->use_texture = 1;
 }
 
@@ -236,6 +240,12 @@ static void I_SectorCombinerNativeUniforms(void) {
         SDL_snprintf(name, sizeof(name), "uEnvColor%d", unit);
         loc = pglGetUniformLocation(curProg, name);
         if (loc != -1) pglUniform4f(loc, state->env_color[0], state->env_color[1], state->env_color[2], state->env_color[3]);
+        SDL_snprintf(name, sizeof(name), "uRGBScale%d", unit);
+        loc = pglGetUniformLocation(curProg, name);
+        if (loc != -1) pglUniform1f(loc, state->rgb_scale);
+        SDL_snprintf(name, sizeof(name), "uAlphaScale%d", unit);
+        loc = pglGetUniformLocation(curProg, name);
+        if (loc != -1) pglUniform1f(loc, state->alpha_scale);
 
         for (int slot = 0; slot < 3; ++slot) {
             SDL_snprintf(name, sizeof(name), "uRGBSource%d_%d", unit, slot);
@@ -309,6 +319,23 @@ void I_SectorCombiner_SetEnvColor(float r, float g, float b, float a) {
     state->env_color[3] = a;
     if (I_GetGLESVersion() == 0)
         I_SectorCombinerTexturePasses(&s);
+    I_SectorCombinerUniforms();
+}
+
+void I_SectorCombiner_SetScale(float rgbScale, float alphaScale) {
+    sector_combiner_state_t* state = I_SectorCombinerCurrentState();
+    state->rgb_scale = rgbScale;
+    state->alpha_scale = alphaScale;
+    I_SectorCombinerUniforms();
+}
+
+void I_SectorCombiner_SetRGBScale(float scale) {
+    I_SectorCombinerCurrentState()->rgb_scale = scale;
+    I_SectorCombinerUniforms();
+}
+
+void I_SectorCombiner_SetAlphaScale(float scale) {
+    I_SectorCombinerCurrentState()->alpha_scale = scale;
     I_SectorCombinerUniforms();
 }
 
