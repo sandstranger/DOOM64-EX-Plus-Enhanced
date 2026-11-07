@@ -93,6 +93,31 @@ static GLint   g_max_fragment_units = 1;
 static char*   g_extension_string = NULL;
 
 //
+// Program binary cache (OpenGL ES 3.0 feature level)
+//
+
+#define GLES_CACHE_MAGIC    0x50343644u     // "D64P"
+#define GLES_CACHE_VERSION  1u
+#define GLES_CACHE_MAX_SIZE (16u * 1024u * 1024u)
+#define GLES_CACHE_FOLDER   "doom64_gles_shader_cache"
+
+typedef struct {
+    uint32_t magic;
+    uint32_t version;
+    uint64_t key;
+    uint32_t format;
+    uint32_t size;
+} program_cache_header_t;
+
+static char     g_cache_dir[1024];          // empty: no cache
+static char     g_cache_generation[17];
+static GLint*   g_binary_formats = NULL;
+static GLint    g_binary_format_count = 0;
+static unsigned g_cache_loaded = 0;
+static unsigned g_cache_compiled = 0;
+static int      g_cache_reported = 0;
+
+//
 // Textures
 //
 
@@ -794,6 +819,201 @@ static void I_GLES_BuildFixedFragment(const program_key_t* key, source_t* out) {
 }
 
 //
+// Program binary cache
+//
+// One file per program, <app cache>/doom64_gles_shader_cache/<generation>/<key>.bin,
+// the key being a hash of the shader sources. The generation hashes the driver
+// identification and the shader templates: after a driver or game update the
+// binaries land in a new folder and the old folders are deleted at startup. The
+// driver can still reject a binary, the program is then compiled from source and
+// the file replaced. The folder comes from SDL (Context.getCacheDir()).
+//
+
+static uint64_t I_GLES_Hash(uint64_t hash, const void* data, size_t size) {
+    const unsigned char* bytes = (const unsigned char*)data;
+    for (size_t i = 0; i < size; ++i) {
+        hash ^= bytes[i];
+        hash *= 1099511628211ull;
+    }
+    return hash;
+}
+
+static uint64_t I_GLES_HashString(uint64_t hash, const char* string) {
+    if (string)
+        hash = I_GLES_Hash(hash, string, SDL_strlen(string));
+    return I_GLES_Hash(hash, "", 1);
+}
+
+#define GLES_CACHE_MAX_ENTRIES 64
+
+typedef struct {
+    const char* keep;   // entry to keep, NULL: none
+    int         count;
+    char        names[GLES_CACHE_MAX_ENTRIES][64];
+} cache_listing_t;
+
+static SDL_EnumerationResult SDLCALL I_GLES_ListCacheEntry(void* userdata, const char* dirname,
+                                                           const char* fname) {
+    cache_listing_t* listing = (cache_listing_t*)userdata;
+    (void)dirname;
+    if (listing->keep && SDL_strcmp(fname, listing->keep) == 0)
+        return SDL_ENUM_CONTINUE;
+    if (listing->count >= GLES_CACHE_MAX_ENTRIES || SDL_strlen(fname) >= sizeof(listing->names[0]))
+        return SDL_ENUM_CONTINUE;
+    SDL_strlcpy(listing->names[listing->count++], fname, sizeof(listing->names[0]));
+    return SDL_ENUM_CONTINUE;
+}
+
+static void I_GLES_RemoveCacheFolder(const char* path) {
+    // Generation folders only hold program files, no subfolders.
+    cache_listing_t listing;
+    listing.keep = NULL;
+    listing.count = 0;
+    SDL_EnumerateDirectory(path, I_GLES_ListCacheEntry, &listing);
+    for (int i = 0; i < listing.count; ++i) {
+        char file[1100];
+        SDL_snprintf(file, sizeof(file), "%s/%s", path, listing.names[i]);
+        SDL_RemovePath(file);
+    }
+    SDL_RemovePath(path);
+}
+
+static void I_GLES_InitProgramCache(void) {
+    g_cache_dir[0] = '\0';
+    g_cache_loaded = g_cache_compiled = 0;
+    g_cache_reported = 0;
+    if (g_level < 3)
+        return;
+
+    GLint count = 0;
+    glGetIntegerv(GL_NUM_PROGRAM_BINARY_FORMATS, &count);
+    if (count <= 0) {
+        SDL_Log("DGL GLES: the driver offers no program binary formats, shaders are not cached");
+        return;
+    }
+    g_binary_formats = (GLint*)SDL_malloc((size_t)count * sizeof(GLint));
+    if (!g_binary_formats)
+        return;
+    glGetIntegerv(GL_PROGRAM_BINARY_FORMATS, g_binary_formats);
+    g_binary_format_count = count;
+
+    const char* base = SDL_GetAndroidCachePath();
+    if (!base || !*base) {
+        SDL_Log("DGL GLES: no cache folder (%s), shaders are not cached", SDL_GetError());
+        return;
+    }
+
+    const uint32_t version = GLES_CACHE_VERSION;
+    uint64_t generation = I_GLES_HashString(14695981039346656037ull, "doom64-gles-program-cache");
+    generation = I_GLES_Hash(generation, &version, sizeof(version));
+    static const GLenum strings[] = { GL_VENDOR, GL_RENDERER, GL_VERSION, GL_SHADING_LANGUAGE_VERSION };
+    for (size_t i = 0; i < SDL_arraysize(strings); ++i)
+        generation = I_GLES_HashString(generation, (const char*)glGetString(strings[i]));
+    generation = I_GLES_HashString(generation, I_GLES_VertexPrefix());
+    generation = I_GLES_HashString(generation, I_GLES_FragmentPrefix());
+    generation = I_GLES_HashString(generation, g_fragment_precision);
+    generation = I_GLES_HashString(generation, g_world_vertex);
+    generation = I_GLES_HashString(generation, g_world_fragment);
+    generation = I_GLES_HashString(generation, g_fixed_vertex);
+    generation = I_GLES_HashString(generation, g_tint_vertex);
+    generation = I_GLES_HashString(generation, g_tint_fragment);
+    SDL_snprintf(g_cache_generation, sizeof(g_cache_generation), "%016llx", (unsigned long long)generation);
+
+    char root[1024];
+    SDL_snprintf(root, sizeof(root), "%s/" GLES_CACHE_FOLDER, base);
+
+    // Binaries of other drivers or game versions can never be loaded again.
+    cache_listing_t stale;
+    stale.keep = g_cache_generation;
+    stale.count = 0;
+    SDL_EnumerateDirectory(root, I_GLES_ListCacheEntry, &stale);
+    for (int i = 0; i < stale.count; ++i) {
+        char path[1100];
+        SDL_snprintf(path, sizeof(path), "%s/%s", root, stale.names[i]);
+        I_GLES_RemoveCacheFolder(path);
+    }
+
+    SDL_snprintf(g_cache_dir, sizeof(g_cache_dir), "%s/%s", root, g_cache_generation);
+    if (!SDL_CreateDirectory(g_cache_dir)) {
+        SDL_Log("DGL GLES: cannot create %s (%s), shaders are not cached", g_cache_dir, SDL_GetError());
+        g_cache_dir[0] = '\0';
+        return;
+    }
+    SDL_Log("DGL GLES: program binaries cached in %s", g_cache_dir);
+}
+
+static boolean I_GLES_BinaryFormatListed(GLenum format) {
+    // Only formats the driver lists may be passed to glProgramBinary().
+    for (GLint i = 0; i < g_binary_format_count; ++i) {
+        if ((GLenum)g_binary_formats[i] == format)
+            return true;
+    }
+    return false;
+}
+
+static GLuint I_GLES_LoadCachedProgram(uint64_t key, const char* path) {
+    size_t size = 0;
+    void* data = SDL_LoadFile(path, &size);
+    if (!data)
+        return 0;
+
+    const program_cache_header_t* header = (const program_cache_header_t*)data;
+    GLuint program = 0;
+    if (size >= sizeof(*header) && header->magic == GLES_CACHE_MAGIC &&
+        header->version == GLES_CACHE_VERSION && header->key == key &&
+        header->size > 0 && header->size <= GLES_CACHE_MAX_SIZE &&
+        size == sizeof(*header) + header->size && I_GLES_BinaryFormatListed(header->format)) {
+        program = glCreateProgram();
+        if (program) {
+            glProgramBinary(program, header->format, (const unsigned char*)data + sizeof(*header),
+                            (GLsizei)header->size);
+            GLint linked = GL_FALSE;
+            glGetProgramiv(program, GL_LINK_STATUS, &linked);
+            if (linked != GL_TRUE) {
+                glDeleteProgram(program);
+                program = 0;
+            }
+        }
+    }
+    SDL_free(data);
+    if (!program)
+        SDL_RemovePath(path);
+    return program;
+}
+
+static void I_GLES_SaveCachedProgram(GLuint program, uint64_t key, const char* path) {
+    GLint length = 0;
+    glGetProgramiv(program, GL_PROGRAM_BINARY_LENGTH, &length);
+    if (length <= 0 || (uint32_t)length > GLES_CACHE_MAX_SIZE)
+        return;
+
+    unsigned char* buffer = (unsigned char*)SDL_malloc(sizeof(program_cache_header_t) + (size_t)length);
+    if (!buffer)
+        return;
+    GLsizei written = 0;
+    GLenum format = 0;
+    glGetProgramBinary(program, length, &written, &format, buffer + sizeof(program_cache_header_t));
+    if (written > 0 && written <= length) {
+        program_cache_header_t header;
+        header.magic = GLES_CACHE_MAGIC;
+        header.version = GLES_CACHE_VERSION;
+        header.key = key;
+        header.format = (uint32_t)format;
+        header.size = (uint32_t)written;
+        memcpy(buffer, &header, sizeof(header));
+
+        // A temporary file first, so an interrupted write never leaves a broken binary.
+        char temporary[1100];
+        SDL_snprintf(temporary, sizeof(temporary), "%s.tmp", path);
+        if (!SDL_SaveFile(temporary, buffer, sizeof(header) + (size_t)written) ||
+            !SDL_RenamePath(temporary, path)) {
+            SDL_RemovePath(temporary);
+        }
+    }
+    SDL_free(buffer);
+}
+
+//
 // Program building
 //
 
@@ -818,6 +1038,20 @@ static GLuint I_GLES_CompileShader(GLenum type, const char* source) {
 }
 
 static GLuint I_GLES_LinkProgram(const char* vertexSource, const char* fragmentSource) {
+    const boolean cached = g_cache_dir[0] != '\0';
+    uint64_t key = 0;
+    char path[1100];
+    if (cached) {
+        key = I_GLES_HashString(14695981039346656037ull, vertexSource);
+        key = I_GLES_HashString(key, fragmentSource);
+        SDL_snprintf(path, sizeof(path), "%s/%016llx.bin", g_cache_dir, (unsigned long long)key);
+        GLuint program = I_GLES_LoadCachedProgram(key, path);
+        if (program) {
+            ++g_cache_loaded;
+            return program;
+        }
+    }
+
     GLuint vs = I_GLES_CompileShader(GL_VERTEX_SHADER, vertexSource);
     if (!vs)
         return 0;
@@ -833,6 +1067,8 @@ static GLuint I_GLES_LinkProgram(const char* vertexSource, const char* fragmentS
         glBindAttribLocation(program, 2, "aTexCoord");
         glAttachShader(program, vs);
         glAttachShader(program, fs);
+        if (cached)
+            glProgramParameteri(program, GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE);
         glLinkProgram(program);
         GLint ok = 0;
         glGetProgramiv(program, GL_LINK_STATUS, &ok);
@@ -846,6 +1082,10 @@ static GLuint I_GLES_LinkProgram(const char* vertexSource, const char* fragmentS
         } else {
             glDetachShader(program, vs);
             glDetachShader(program, fs);
+            if (cached) {
+                I_GLES_SaveCachedProgram(program, key, path);
+                ++g_cache_compiled;
+            }
         }
     }
     glDeleteShader(vs);
@@ -1250,6 +1490,12 @@ void I_GLES_Clear(GLbitfield mask) {
 void I_GLES_EndFrame(void) {
     if (!g_active)
         return;
+    if (g_cache_dir[0] && g_cache_reported != g_program_count) {
+        // Only frames that needed new shader variants report.
+        SDL_Log("DGL GLES: %d shader variants, %u loaded from the cache, %u compiled",
+                g_program_count, g_cache_loaded, g_cache_compiled);
+        g_cache_reported = g_program_count;
+    }
     if (g_frame_open) {
         // Depth is never needed after the frame: do not write it back.
         const GLenum depth = GL_DEPTH;
@@ -1529,6 +1775,7 @@ boolean I_GLES_Initialize(int featureLevel) {
     glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &g_max_fragment_units);
 
     I_GLES_ResetState();
+    I_GLES_InitProgramCache();
 
     g_vbo = g_ibo = 0;
     if (g_has_map_range) {
@@ -1571,6 +1818,10 @@ void I_GLES_Shutdown(void) {
     g_used_program = 0;
     g_vbo = g_ibo = g_readback_framebuffer = 0;
     g_active = false;
+    SDL_free(g_binary_formats);
+    g_binary_formats = NULL;
+    g_binary_format_count = 0;
+    g_cache_dir[0] = '\0';
     free(g_texinfo);
     g_texinfo = NULL;
     g_texinfo_size = 0;
