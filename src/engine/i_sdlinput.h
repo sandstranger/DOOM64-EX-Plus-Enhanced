@@ -36,6 +36,7 @@ float I_MouseAccel(float val);
 void I_MouseAccelChange(void);
 
 void ISDL_RegisterKeyCvars(void);
+void I_ApplyMouseLookDefault(void);
 
 void I_GetEvent(SDL_Event* Event);
 void I_ReadMouse(void);

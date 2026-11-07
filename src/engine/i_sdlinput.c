@@ -30,6 +30,9 @@
 #include "d_main.h"
 #include "con_cvar.h"
 #include "dgl.h"
+#ifdef ANDROID
+#include "dgl_gles.h"
+#endif
 #include "g_settings.h"
 #ifdef ANDROID
 #include <stdlib.h>
@@ -40,16 +43,16 @@ CVAR(v_msensitivityx, 32);
 CVAR(v_msensitivityy, 32);
 CVAR(v_macceleration, 0);
 CVAR(v_mlookinvert, 0);
+// 1 once mouse look has been switched on for a config written before it was on
+// by default, see I_ApplyMouseLookDefault
+CVAR(v_mlookdefault, 0);
 CVAR(v_yaxismove, 0);
 CVAR(v_xaxismove, 0);
 CVAR_EXTERNAL(m_menumouse);
 CVAR_EXTERNAL(p_autoaim);
 
-CVAR_CMD(v_mlook, 0) {
+CVAR_CMD(v_mlook, 1) {
 	if (cvar->value > 0) {
-		if(!g_in_load_settings) {
-			I_Printf("WARNING: mouse look: skies will not render properly with high pitch. Do not report.\n");
-		}
 		return;
 	}
 
@@ -863,6 +866,7 @@ static float GetDisplayRefreshRate(void) {
 void I_FinishUpdate(void) {
 	I_UpdateGrab();
 #ifdef ANDROID
+	I_GLES_EndFrame();
 	if (!SwappySwapBuffers()) {
 		SDL_GL_SwapWindow(window);
 	}
@@ -884,6 +888,23 @@ void I_InitInputs(void) {
 }
 
 //
+// I_ApplyMouseLookDefault
+//
+// Mouse look is on by default. Configs written before still hold the old
+// default (every cvar is saved, and the option was not even in the menu), so it
+// is switched on once for them; whatever the player picks after that is kept.
+//
+
+void I_ApplyMouseLookDefault(void) {
+	if (v_mlookdefault.value > 0) {
+		return;
+	}
+
+	CON_CvarSetValue(v_mlook.name, 1);
+	CON_CvarSetValue(v_mlookdefault.name, 1);
+}
+
+//
 // ISDL_RegisterCvars
 //
 
@@ -893,6 +914,7 @@ void ISDL_RegisterKeyCvars(void) {
 	CON_CvarRegister(&v_macceleration);
 	CON_CvarRegister(&v_mlook);
 	CON_CvarRegister(&v_mlookinvert);
+	CON_CvarRegister(&v_mlookdefault);
 	CON_CvarRegister(&v_yaxismove);
 	CON_CvarRegister(&v_xaxismove);
 }

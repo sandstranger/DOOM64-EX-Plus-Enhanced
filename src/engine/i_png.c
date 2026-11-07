@@ -334,9 +334,22 @@ byte* I_PNGReadData(int lump, bool palette, bool nopack, bool alpha,
         }
 
         if (color_type == PNG_COLOR_TYPE_PALETTE) {
+            /* Palette swaps and gamma are applied to a copy that is handed back
+               with png_set_PLTE: since libpng 1.6.56 png_info and png_struct keep
+               separate palettes, so edits through the png_get_PLTE pointer no
+               longer reach the palette expansion. */
+            png_color palcopy[PNG_MAX_PALETTE_LENGTH];
             png_colorp pal = NULL;
+            png_colorp infopal = NULL;
             int num_pal = 0;
-            png_get_PLTE(png_ptr, info_ptr, &pal, &num_pal);
+            png_get_PLTE(png_ptr, info_ptr, &infopal, &num_pal);
+            if (infopal && num_pal > 0) {
+                if (num_pal > PNG_MAX_PALETTE_LENGTH) {
+                    num_pal = PNG_MAX_PALETTE_LENGTH;
+                }
+                dmemcpy(palcopy, infopal, num_pal * sizeof(png_color));
+                pal = palcopy;
+            }
 
             if (pal && palindex) {
                 int i;
@@ -383,7 +396,10 @@ byte* I_PNGReadData(int lump, bool palette, bool nopack, bool alpha,
                 }
             }
 
-            if (pal) I_TranslatePalette(pal, num_pal);
+            if (pal) {
+                I_TranslatePalette(pal, num_pal);
+                png_set_PLTE(png_ptr, info_ptr, pal, num_pal);
+            }
             png_set_palette_to_rgb(png_ptr);
             color_type = PNG_COLOR_TYPE_RGB;
         }

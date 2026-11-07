@@ -140,6 +140,12 @@ boolean GL_CheckExtension(const char *ext) {
 void* GL_RegisterProc(const char *address) {
 
     void *proc = SDL_GL_GetProcAddress(address);
+#ifdef ANDROID
+    if (I_GLES_IsActive()) {
+        if (dstreq(address, "glActiveTextureARB"))
+            proc = SDL_GL_GetProcAddress("glActiveTexture");
+    }
+#endif
     if(!proc) {
         CON_Warnf("GL_RegisterProc: Failed to get proc address: %s", address);
         return NULL;
@@ -574,10 +580,22 @@ void GL_Init(void) {
 
     r_fillmode.value = 1.0f;
 
-    GL_ARB_multitexture_Init();
-    GL_ARB_texture_env_combine_Init();
-    GL_EXT_texture_env_combine_Init();
-    GL_EXT_texture_filter_anisotropic_Init();
+#ifdef ANDROID
+    if (I_GLES_IsActive()) {
+        /* The native OpenGL ES backend emulates multitexturing and the texture
+           combiners, the way GL4ES reports them. */
+        has_GL_ARB_multitexture = true;
+        has_GL_ARB_texture_env_combine = true;
+        has_GL_EXT_texture_env_combine = true;
+        GL_EXT_texture_filter_anisotropic_Init();
+    } else
+#endif
+    {
+        GL_ARB_multitexture_Init();
+        GL_ARB_texture_env_combine_Init();
+        GL_EXT_texture_env_combine_Init();
+        GL_EXT_texture_filter_anisotropic_Init();
+    }
 
     if(!has_GL_ARB_multitexture) {
         CON_Warnf("GL_ARB_multitexture not supported...\n");

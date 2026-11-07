@@ -28,6 +28,10 @@
 #include "gl_main.h"
 #include "gl_texture.h"
 #include "i_system.h"
+#include "i_shaders.h"
+#ifdef ANDROID
+#include "dgl_gles.h"
+#endif
 
 #define MAXINDICES  0x10000
 
@@ -126,7 +130,11 @@ void dglDrawGeometry(int count, vtx_t* vtx) {
 	I_Printf("dglDrawGeometry(count=0x%x, vtx=0x%p)\n", count, vtx);
 #endif
 
+#ifdef ANDROID
+	I_GLES_DrawIndexedGeometry(count, vtx, indicecnt, drawIndices);
+#else
 	dglDrawElements(GL_TRIANGLES, indicecnt, GL_UNSIGNED_SHORT, drawIndices);
+#endif
 
 	if (devparm) {
 		statindice += indicecnt;
