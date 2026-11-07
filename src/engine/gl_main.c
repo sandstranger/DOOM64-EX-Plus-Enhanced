@@ -447,16 +447,19 @@ void GL_SetState(int bit, boolean enable) {
         TOGGLEGLBIT(GLSTATE_CULL, GL_CULL_FACE);
         break;
     case GLSTATE_TEXTURE0:
-        TOGGLEGLBIT(GLSTATE_TEXTURE0, GL_TEXTURE_2D);
-        break;
     case GLSTATE_TEXTURE1:
-        TOGGLEGLBIT(GLSTATE_TEXTURE1, GL_TEXTURE_2D);
-        break;
     case GLSTATE_TEXTURE2:
-        TOGGLEGLBIT(GLSTATE_TEXTURE2, GL_TEXTURE_2D);
-        break;
     case GLSTATE_TEXTURE3:
-        TOGGLEGLBIT(GLSTATE_TEXTURE3, GL_TEXTURE_2D);
+        /* Texture units can also be toggled directly through dglEnable/
+           dglDisable. Do not trust the shadow bit in that case: explicitly
+           apply the requested state to the currently active texture unit. */
+        if (enable) {
+            dglEnable(GL_TEXTURE_2D);
+            glstate_flag |= (1 << bit);
+        } else {
+            dglDisable(GL_TEXTURE_2D);
+            glstate_flag &= ~(1 << bit);
+        }
         break;
     default:
         CON_Warnf("GL_SetState: unknown bit flag: %i\n", bit);
