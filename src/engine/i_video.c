@@ -102,7 +102,7 @@ int win_px_h = 0;
 #if ANDROID
 static int g_screenWidth = -1;
 static int g_screenHeight = -1;
-bool g_useGLES2_0 = false;
+static bool g_useGLES2_0 = false;
 
 __attribute__((used)) __attribute__((visibility("default")))
 void setScreenResolution (const int screenWidth, const int screenHeight){
