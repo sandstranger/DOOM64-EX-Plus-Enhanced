@@ -54,17 +54,11 @@
 #endif
 
 void I_SectorCombiner_Init(void);
-void I_SectorCombiner_SetActiveUnit(int unit);
 void I_SectorCombiner_Bind(int useTexture, int texWidth, int texHeight);
 void I_SectorCombiner_Unbind(void);
 void I_SectorCombiner_SetEnvColor(float r, float g, float b, float a);
-void I_SectorCombiner_SetScale(float rgbScale, float alphaScale);
-void I_SectorCombiner_SetRGBScale(float scale);
-void I_SectorCombiner_SetAlphaScale(float scale);
 void I_SectorCombiner_SetCombineRGB(int mode);
 void I_SectorCombiner_SetCombineAlpha(int mode);
-void I_SectorCombiner_SetSourceAlpha(int slot, int source);
-void I_SectorCombiner_SetOperandAlpha(int slot, int operand);
 void I_SectorCombiner_SetSourceRGB(int slot, int source);
 void I_SectorCombiner_SetOperandRGB(int slot, int operand);
 void I_SectorCombiner_SetFog(int enabled, float r, float g, float b, float factor);

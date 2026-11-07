@@ -447,29 +447,16 @@ void GL_SetState(int bit, boolean enable) {
         TOGGLEGLBIT(GLSTATE_CULL, GL_CULL_FACE);
         break;
     case GLSTATE_TEXTURE0:
+        TOGGLEGLBIT(GLSTATE_TEXTURE0, GL_TEXTURE_2D);
+        break;
     case GLSTATE_TEXTURE1:
+        TOGGLEGLBIT(GLSTATE_TEXTURE1, GL_TEXTURE_2D);
+        break;
     case GLSTATE_TEXTURE2:
+        TOGGLEGLBIT(GLSTATE_TEXTURE2, GL_TEXTURE_2D);
+        break;
     case GLSTATE_TEXTURE3:
-#ifdef ANDROID
-        if (!I_GLES_IsActive()) {
-            switch (bit) {
-            case GLSTATE_TEXTURE0: TOGGLEGLBIT(GLSTATE_TEXTURE0, GL_TEXTURE_2D); break;
-            case GLSTATE_TEXTURE1: TOGGLEGLBIT(GLSTATE_TEXTURE1, GL_TEXTURE_2D); break;
-            case GLSTATE_TEXTURE2: TOGGLEGLBIT(GLSTATE_TEXTURE2, GL_TEXTURE_2D); break;
-            case GLSTATE_TEXTURE3: TOGGLEGLBIT(GLSTATE_TEXTURE3, GL_TEXTURE_2D); break;
-            }
-            break;
-        }
-#endif
-        /* Native GLES texture units may be toggled directly through dglEnable/
-           dglDisable. Do not trust the shadow bit: force the requested state. */
-        if (enable) {
-            dglEnable(GL_TEXTURE_2D);
-            glstate_flag |= (1 << bit);
-        } else {
-            dglDisable(GL_TEXTURE_2D);
-            glstate_flag &= ~(1 << bit);
-        }
+        TOGGLEGLBIT(GLSTATE_TEXTURE3, GL_TEXTURE_2D);
         break;
     default:
         CON_Warnf("GL_SetState: unknown bit flag: %i\n", bit);
@@ -587,14 +574,19 @@ void GL_Init(void) {
     dglEnable(GL_SCISSOR_TEST);
     dglEnable(GL_DITHER);
 
+    GL_SetTextureFilter();
+    GL_SetDefaultCombiner();
+    GL_SetColorScale();
+
     r_fillmode.value = 1.0f;
+
 #ifdef ANDROID
     if (I_GLES_IsActive()) {
-        /* Multi-unit switching is retained; the shader implements the
-           texture-env combine state, not the removed fixed-function API. */
+        /* The native OpenGL ES backend emulates multitexturing and the texture
+           combiners, the way GL4ES reports them. */
         has_GL_ARB_multitexture = true;
         has_GL_ARB_texture_env_combine = true;
-        has_GL_EXT_texture_env_combine = false;
+        has_GL_EXT_texture_env_combine = true;
         GL_EXT_texture_filter_anisotropic_Init();
     } else
 #endif
@@ -604,22 +596,12 @@ void GL_Init(void) {
         GL_EXT_texture_env_combine_Init();
         GL_EXT_texture_filter_anisotropic_Init();
     }
-    /* Mark the GL backend ready only after a current context and extension
-       state exist. Filter/default-combiner helpers intentionally guard on it. */
-    usingGL = true;
-    GL_SetTextureFilter();
-
-    /* Initialize combiner storage before GL_SetDefaultCombiner mutates it. */
-    I_SectorCombiner_Init();
-    GL_SetDefaultCombiner();
-    GL_SetColorScale();
 
     if(!has_GL_ARB_multitexture) {
         CON_Warnf("GL_ARB_multitexture not supported...\n");
     }
 
-    gl_has_combiner = I_GLES_IsActive() ? true :
-        (has_GL_ARB_texture_env_combine | has_GL_EXT_texture_env_combine);
+    gl_has_combiner = (has_GL_ARB_texture_env_combine | has_GL_EXT_texture_env_combine);
 
     if(!gl_has_combiner) {
         CON_Warnf("Texture combiners not supported...\n");
@@ -643,6 +625,10 @@ void GL_Init(void) {
 #endif
     }
 
+    usingGL = true;
+
     G_AddCommand("dumpglext", CMD_DumpGLExtensions, 0);
 
+    // atsb: initialise the glue!!!
+    I_SectorCombiner_Init();
 }

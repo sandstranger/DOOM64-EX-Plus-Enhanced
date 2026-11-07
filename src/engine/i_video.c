@@ -118,19 +118,8 @@ void setUseGLES2_0State (const bool useGLES2_0){
 
 int I_GetGLESVersion(void) {
 #ifdef ANDROID
-    const char* version = (const char*)glGetString(GL_VERSION);
-    if (!version)
-        return 0;
-    const char* esVersion = SDL_strstr(version, "OpenGL ES ");
-    if (!esVersion)
-        return 0;
-
-    const char* major = esVersion + SDL_strlen("OpenGL ES ");
-    if (*major == '2')
-        return 2;
-    if (*major >= '3' && *major <= '9')
-        return 3;
-    return 0;
+    /* Decided once when the context is created, never queried per call. */
+    return I_GLES_FeatureLevel();
 #else
     return 0;
 #endif
@@ -434,9 +423,10 @@ void I_InitScreen(void) {
         return;
     }
     gladWasLoaded = true;
-    const int actualGLESVersion = I_GetGLESVersion();
+    /* The OpenGL ES 2.0 mode stays a strict OpenGL ES 2.0 renderer even when the
+       driver hands out a newer context. */
     const int requiredGLESVersion = g_useGLES2_0 ? 2 : 3;
-    if (actualGLESVersion < requiredGLESVersion ||
+    if (GLVersion.major < requiredGLESVersion ||
         !GLAD_GL_ES_VERSION_2_0 ||
         (requiredGLESVersion >= 3 && !GLAD_GL_ES_VERSION_3_0)) {
         SDL_Log("I_InitScreen: requested GLES %d.0 but context reports GLES %d.%d",
@@ -444,7 +434,7 @@ void I_InitScreen(void) {
         I_ShutdownVideo();
         return;
     }
-    if (!I_GLES_Initialize()) {
+    if (!I_GLES_Initialize(requiredGLESVersion)) {
         SDL_Log("I_InitScreen: native GLES backend initialization failed");
         I_ShutdownVideo();
         return;

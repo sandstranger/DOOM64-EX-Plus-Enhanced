@@ -277,12 +277,34 @@ typedef GLboolean (APIENTRYP PFNGLUNMAPBUFFERARBPROC) (GLenum target);
 extern "C" {
 #endif
 
-/* Native GLES renderer. All matrix and immediate-mode state is CPU-side;
-   draws are submitted with GLES vertex attributes and streaming buffers. */
-boolean I_GLES_Initialize(void);
+/*
+ * Native OpenGL ES 2.0/3.0 renderer (Android), see dgl_gles.c.
+ *
+ * Fixed-function state (matrices, texture environment, alpha test, fog) lives on
+ * the CPU. Every draw selects a program compiled for exactly the state it needs,
+ * uploads only the uniforms that changed and streams its geometry through ring
+ * buffers.
+ */
+boolean I_GLES_Initialize(int featureLevel);
 void I_GLES_Shutdown(void);
 boolean I_GLES_IsActive(void);
+int I_GLES_FeatureLevel(void);
 const GLubyte* I_GLES_GetString(GLenum name);
+
+/* Tile-based GPUs: call right before every buffer swap. */
+void I_GLES_EndFrame(void);
+
+/* Shader selection, mirroring what the desktop/GL4ES build binds. */
+void I_GLES_BindWorldShader(boolean threePointFilter);
+void I_GLES_UnbindWorldShader(void);
+void I_GLES_SetWorldTextureSize(int width, int height);
+void I_GLES_SetWorldUseTexture(boolean on);
+void I_GLES_SetWorldCombiner(int useTexture, int texWidth, int texHeight,
+                             int passCount, int passMode, const float* passColor,
+                             float passFactor, int fogEnabled, const float* fogColor,
+                             float fogFactor, int fogMode, float fogStart, float fogEnd,
+                             float fogDensity);
+void I_GLES_SetTint(boolean active, float r, float g, float b, float a);
 
 void I_GLES_MatrixMode(GLenum mode);
 void I_GLES_LoadIdentity(void);
@@ -324,6 +346,9 @@ void I_GLES_Enable(GLenum cap);
 void I_GLES_Disable(GLenum cap);
 GLboolean I_GLES_IsEnabled(GLenum cap);
 void I_GLES_AlphaFunc(GLenum func, GLclampf reference);
+void I_GLES_BlendFunc(GLenum sfactor, GLenum dfactor);
+void I_GLES_DepthMask(GLboolean flag);
+void I_GLES_Clear(GLbitfield mask);
 void I_GLES_DepthRange(GLclampf nearVal, GLclampf farVal);
 void I_GLES_ClearDepth(GLclampd depth);
 void I_GLES_Fogf(GLenum pname, GLfloat param);
@@ -339,6 +364,8 @@ void I_GLES_TexImage2D(GLenum target, GLint level, GLint internalFormat,
 void I_GLES_TexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset,
                           GLsizei width, GLsizei height, GLenum format,
                           GLenum type, const GLvoid* pixels);
+void I_GLES_CopyTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset,
+                              GLint x, GLint y, GLsizei width, GLsizei height);
 void I_GLES_ActiveTexture(GLenum texture);
 void I_GLES_ClientActiveTexture(GLenum texture);
 void I_GLES_BindTexture(GLenum target, GLuint texture);

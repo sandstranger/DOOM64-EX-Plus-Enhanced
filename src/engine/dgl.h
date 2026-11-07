@@ -4246,80 +4246,141 @@ has_GL_EXT_texture_filter_anisotropic = GL_CheckExtension("GL_EXT_texture_filter
 
 
 /*
- * Native Android GLES compatibility layer.
+ * Native Android OpenGL ES 2.0/3.0 backend.
  *
- * The desktop and GL4ES builds keep the generated dgl -> OpenGL mappings
- * above. Native GLES 2.0/3.0 routes fixed-function calls to dgl_gles.c,
- * where matrices, immediate geometry, texture environment, alpha test and
- * fog are emulated with CPU state, VBOs and shader uniforms.
+ * The desktop build keeps the generated dgl -> OpenGL mappings above. On
+ * Android fixed-function calls go to dgl_gles.c, which keeps matrices, the
+ * texture environment, alpha test and fog on the CPU and draws with programs
+ * compiled for the state of each draw.
  */
 #ifdef ANDROID
 #undef dglGetString
 #define dglGetString(name) I_GLES_GetString(name)
+#undef glBegin
 #define glBegin(mode) I_GLES_Begin(mode)
+#undef glEnd
 #define glEnd() I_GLES_End()
+#undef glVertex2f
 #define glVertex2f(x,y) I_GLES_Vertex2f((GLfloat)(x),(GLfloat)(y))
+#undef glVertex3f
 #define glVertex3f(x,y,z) I_GLES_Vertex3f((GLfloat)(x),(GLfloat)(y),(GLfloat)(z))
+#undef glVertex4f
 #define glVertex4f(x,y,z,w) I_GLES_Vertex4f((GLfloat)(x),(GLfloat)(y),(GLfloat)(z),(GLfloat)(w))
+#undef glColor4f
 #define glColor4f(r,g,b,a) I_GLES_Color4f((GLfloat)(r),(GLfloat)(g),(GLfloat)(b),(GLfloat)(a))
+#undef glColor4ub
 #define glColor4ub(r,g,b,a) I_GLES_Color4ub((GLubyte)(r),(GLubyte)(g),(GLubyte)(b),(GLubyte)(a))
+#undef glColor4ubv
 #define glColor4ubv(c) I_GLES_Color4ubv((const GLubyte*)(c))
+#undef glTexCoord2f
 #define glTexCoord2f(s,t) I_GLES_TexCoord2f((GLfloat)(s),(GLfloat)(t))
+#undef glRectf
 #define glRectf(x1,y1,x2,y2) I_GLES_Rectf((GLfloat)(x1),(GLfloat)(y1),(GLfloat)(x2),(GLfloat)(y2))
+#undef glRecti
 #define glRecti(x1,y1,x2,y2) I_GLES_Recti((GLint)(x1),(GLint)(y1),(GLint)(x2),(GLint)(y2))
 
+#undef glMatrixMode
 #define glMatrixMode(mode) I_GLES_MatrixMode(mode)
+#undef glLoadIdentity
 #define glLoadIdentity() I_GLES_LoadIdentity()
+#undef glLoadMatrixf
 #define glLoadMatrixf(m) I_GLES_LoadMatrixf(m)
+#undef glMultMatrixf
 #define glMultMatrixf(m) I_GLES_MultMatrixf(m)
+#undef glPushMatrix
 #define glPushMatrix() I_GLES_PushMatrix()
+#undef glPopMatrix
 #define glPopMatrix() I_GLES_PopMatrix()
+#undef glOrtho
 #define glOrtho(l,r,b,t,n,f) I_GLES_Ortho(l,r,b,t,n,f)
+#undef glFrustum
 #define glFrustum(l,r,b,t,n,f) I_GLES_Frustum(l,r,b,t,n,f)
+#undef glTranslatef
 #define glTranslatef(x,y,z) I_GLES_Translatef((GLfloat)(x),(GLfloat)(y),(GLfloat)(z))
+#undef glTranslated
 #define glTranslated(x,y,z) I_GLES_Translatef((GLfloat)(x),(GLfloat)(y),(GLfloat)(z))
+#undef glRotatef
 #define glRotatef(a,x,y,z) I_GLES_Rotatef((GLfloat)(a),(GLfloat)(x),(GLfloat)(y),(GLfloat)(z))
+#undef glRotated
 #define glRotated(a,x,y,z) I_GLES_Rotatef((GLfloat)(a),(GLfloat)(x),(GLfloat)(y),(GLfloat)(z))
+#undef glScalef
 #define glScalef(x,y,z) I_GLES_Scalef((GLfloat)(x),(GLfloat)(y),(GLfloat)(z))
+#undef glScaled
 #define glScaled(x,y,z) I_GLES_Scalef((GLfloat)(x),(GLfloat)(y),(GLfloat)(z))
+#undef glGetFloatv
 #define glGetFloatv(p,v) I_GLES_GetFloatv((p),(v))
+#undef glGetDoublev
 #define glGetDoublev(p,v) I_GLES_GetDoublev((p),(v))
+#undef glGetIntegerv
 #define glGetIntegerv(p,v) I_GLES_GetIntegerv((p),(v))
+#undef glGetBooleanv
 #define glGetBooleanv(p,v) I_GLES_GetBooleanv((p),(v))
 
+#undef glEnable
 #define glEnable(cap) I_GLES_Enable(cap)
+#undef glDisable
 #define glDisable(cap) I_GLES_Disable(cap)
+#undef glIsEnabled
 #define glIsEnabled(cap) I_GLES_IsEnabled(cap)
+#undef glAlphaFunc
 #define glAlphaFunc(func,ref) I_GLES_AlphaFunc((func),(GLclampf)(ref))
+#undef glDepthRange
 #define glDepthRange(n,f) I_GLES_DepthRange((GLclampf)(n),(GLclampf)(f))
+#undef glClearDepth
 #define glClearDepth(d) I_GLES_ClearDepth((GLclampd)(d))
+#undef glFogf
 #define glFogf(p,v) I_GLES_Fogf((p),(GLfloat)(v))
+#undef glFogfv
 #define glFogfv(p,v) I_GLES_Fogfv((p),(v))
+#undef glFogi
 #define glFogi(p,v) I_GLES_Fogi((p),(GLint)(v))
+#undef glTexEnvi
 #define glTexEnvi(t,p,v) I_GLES_TexEnvi((t),(p),(GLint)(v))
+#undef glTexEnvfv
 #define glTexEnvfv(t,p,v) I_GLES_TexEnvfv((t),(p),(v))
 
+#undef glTexParameteri
 #define glTexParameteri(t,p,v) I_GLES_TexParameteri((t),(p),(GLint)(v))
+#undef glTexParameterf
 #define glTexParameterf(t,p,v) I_GLES_TexParameterf((t),(p),(GLfloat)(v))
+#undef glTexImage2D
 #define glTexImage2D(t,l,i,w,h,b,f,ty,p) I_GLES_TexImage2D((t),(l),(i),(w),(h),(b),(f),(ty),(p))
+#undef glTexSubImage2D
 #define glTexSubImage2D(t,l,x,y,w,h,f,ty,p) I_GLES_TexSubImage2D((t),(l),(x),(y),(w),(h),(f),(ty),(p))
+#undef glActiveTexture
 #define glActiveTexture(t) I_GLES_ActiveTexture(t)
+#undef glBindTexture
 #define glBindTexture(t,n) I_GLES_BindTexture((t),(n))
+#undef glGenTextures
 #define glGenTextures(n,p) I_GLES_GenTextures((n),(p))
+#undef glDeleteTextures
 #define glDeleteTextures(n,p) I_GLES_DeleteTextures((n),(p))
+#undef glGetTexLevelParameteriv
 #define glGetTexLevelParameteriv(t,l,p,v) I_GLES_GetTexLevelParameteriv((t),(l),(p),(v))
+#undef glGetTexParameteriv
 #define glGetTexParameteriv(t,p,v) I_GLES_GetTexParameteriv((t),(p),(v))
+#undef glGetTexImage
 #define glGetTexImage(t,l,f,ty,p) I_GLES_GetTexImage((t),(l),(f),(ty),(p))
 
+#undef glPolygonMode
 #define glPolygonMode(f,m) I_GLES_PolygonMode((f),(m))
+#undef glPolygonOffset
 #define glPolygonOffset(f,u) I_GLES_PolygonOffset((f),(u))
+#undef glLineWidth
 #define glLineWidth(w) I_GLES_LineWidth((GLfloat)(w))
+#undef glShadeModel
 #define glShadeModel(m) I_GLES_ShadeModel(m)
+#undef glHint
 #define glHint(t,m) I_GLES_Hint((t),(m))
+#undef glEnableClientState
 #define glEnableClientState(a) I_GLES_EnableClientState(a)
+#undef glDisableClientState
 #define glDisableClientState(a) I_GLES_DisableClientState(a)
+#undef glVertexPointer
 #define glVertexPointer(s,t,st,p) I_GLES_SetVertexPointer((s),(t),(st),(p))
+#undef glColorPointer
 #define glColorPointer(s,t,st,p) I_GLES_SetColorPointer((s),(t),(st),(p))
+#undef glTexCoordPointer
 #define glTexCoordPointer(s,t,st,p) I_GLES_SetTexCoordPointer((s),(t),(st),(p))
 
 /* Desktop GL extension entry points have no client-active-texture equivalent
@@ -4328,6 +4389,16 @@ has_GL_EXT_texture_filter_anisotropic = GL_CheckExtension("GL_EXT_texture_filter
 #define dglActiveTextureARB(texture) I_GLES_ActiveTexture(texture)
 #undef dglClientActiveTextureARB
 #define dglClientActiveTextureARB(texture) I_GLES_ClientActiveTexture(texture)
+
+/* Frame and render state the backend has to know about. */
+#undef glClear
+#define glClear(m) I_GLES_Clear(m)
+#undef glDepthMask
+#define glDepthMask(f) I_GLES_DepthMask(f)
+#undef glBlendFunc
+#define glBlendFunc(s,d) I_GLES_BlendFunc((s),(d))
+#undef glCopyTexSubImage2D
+#define glCopyTexSubImage2D(t,l,xo,yo,x,y,w,h) I_GLES_CopyTexSubImage2D((t),(l),(xo),(yo),(x),(y),(w),(h))
 #endif
 
 #endif // __DGL_H__

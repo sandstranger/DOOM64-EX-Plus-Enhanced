@@ -938,9 +938,6 @@ void GL_UpdateEnvTexture(rcolor color) {
 	rcolor rgb[16];
 	byte* c;
 	int i;
-	/* This helper temporarily edits unit 1; restore the actual caller unit
-	   so curunit and GL_ACTIVE_TEXTURE remain synchronized. */
-	int restoreUnit = curunit < 0 ? 0 : curunit;
 
 	if (!has_GL_ARB_multitexture) {
 		return;
@@ -988,7 +985,7 @@ void GL_UpdateEnvTexture(rcolor color) {
 		(byte*)rgb
 	);
 
-	dglActiveTextureARB(GL_TEXTURE0_ARB + restoreUnit);
+	dglActiveTextureARB(GL_TEXTURE0_ARB);
 }
 
 //
@@ -1007,16 +1004,14 @@ void GL_UnloadTexture(dtexture* texture) {
 //
 
 void GL_SetTextureUnit(int unit, int enable) {
-	if (!has_GL_ARB_multitexture || r_fillmode.value <= 0 || unit < 0 || unit > 3)
+	if (!has_GL_ARB_multitexture || r_fillmode.value <= 0 || unit > 3)
+		return;
+	if (curunit == unit)
 		return;
 
-	if (curunit != unit) {
-		curunit = unit;
-		dglActiveTextureARB(GL_TEXTURE0_ARB + unit);
-	}
+	curunit = unit;
 
-	/* The unit may already be active while its GL_TEXTURE_2D enable state
-	   has changed through a direct dglEnable/Disable call. Always apply it. */
+	dglActiveTextureARB(GL_TEXTURE0_ARB + unit);
 	GL_SetState(GLSTATE_TEXTURE0 + unit, enable);
 
 	if (enable) {
@@ -1062,7 +1057,6 @@ void GL_SetCombineStateAlpha(int combine) {
 		return;
 	state->combine_alpha = combine;
 	dglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA, state->combine_alpha);
-	I_SectorCombiner_SetCombineAlpha(combine);
 }
 
 //
@@ -1127,7 +1121,6 @@ void GL_SetCombineSourceAlpha(int source, int target) {
 
 	state->source_alpha[source] = target;
 	dglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA + source, state->source_alpha[source]);
-	I_SectorCombiner_SetSourceAlpha(source, target);
 }
 
 //
@@ -1163,7 +1156,6 @@ void GL_SetCombineOperandAlpha(int operand, int target) {
 
 	state->operand_alpha[operand] = target;
 	dglTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA + operand, state->operand_alpha[operand]);
-	I_SectorCombiner_SetOperandAlpha(operand, target);
 }
 
 //

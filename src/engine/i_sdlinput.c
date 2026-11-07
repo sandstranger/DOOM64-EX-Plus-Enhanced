@@ -30,6 +30,9 @@
 #include "d_main.h"
 #include "con_cvar.h"
 #include "dgl.h"
+#ifdef ANDROID
+#include "dgl_gles.h"
+#endif
 #include "g_settings.h"
 #ifdef ANDROID
 #include <stdlib.h>
@@ -1438,6 +1441,7 @@ static float GetDisplayRefreshRate(void) {
 void I_FinishUpdate(void) {
 	I_UpdateGrab();
 #ifdef ANDROID
+	I_GLES_EndFrame();
 	if (!SwappySwapBuffers()){
 		SDL_GL_SwapWindow(window);
 	}
