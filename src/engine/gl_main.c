@@ -575,6 +575,7 @@ void GL_Init(void) {
     dglEnable(GL_DITHER);
 
     GL_SetTextureFilter();
+    r_fillmode.value = 1.0f;
 #ifdef ANDROID
     if (I_GLES_IsActive()) {
         /* Multi-unit switching is retained; the shader implements the
@@ -593,8 +594,6 @@ void GL_Init(void) {
     }
     GL_SetDefaultCombiner();
     GL_SetColorScale();
-
-    r_fillmode.value = 1.0f;
 
     if(!has_GL_ARB_multitexture) {
         CON_Warnf("GL_ARB_multitexture not supported...\n");
