@@ -39,6 +39,7 @@ CVAR_EXTERNAL(r_filter);
 
 static GLint sLocTexel = -1;
 static GLint sLocUseTex = -1;
+static int g_shader_texture_unit = 0;
 static GLint sLocAlphaTestEnabled = -1;
 static GLint sLocAlphaFunc = -1;
 static GLint sLocAlphaRef = -1;
@@ -864,7 +865,7 @@ void I_ShaderBind(void) {
 		is_current_prog = shader_struct.prog;
 	}
 	if (shader_struct.locTex >= 0)
-		pglUniform1i(shader_struct.locTex, 0);
+		pglUniform1i(shader_struct.locTex, g_shader_texture_unit);
 	if (sLocUseTex >= 0)
 		pglUniform1i(sLocUseTex, g_use_texture);
 	if (sLocTexel >= 0)
@@ -903,6 +904,14 @@ void I_ShaderSetUseTexture(int on) {
 	if (!shader_struct.initialised || sLocUseTex < 0 || is_current_prog != shader_struct.prog)
 		return;
 	pglUniform1i(sLocUseTex, g_use_texture);
+}
+
+void I_ShaderSetTextureUnit(int unit) {
+	g_shader_texture_unit = unit < 0 ? 0 : unit;
+	if (!shader_struct.initialised || shader_struct.locTex < 0 ||
+		is_current_prog != shader_struct.prog)
+		return;
+	pglUniform1i(shader_struct.locTex, g_shader_texture_unit);
 }
 
 void I_ShaderSetAlphaTest(int enabled, int func, float reference) {

@@ -231,7 +231,11 @@ boolean I_GLES_Initialize(void) {
     g_projection_top = 0;
     g_matrix_mode = GL_MODELVIEW;
     g_active_texture_unit = 0;
+    memset(g_bound_texture, 0, sizeof(g_bound_texture));
+    memset(g_texture_enabled, 0, sizeof(g_texture_enabled));
     g_texture_enabled[0] = true;
+    g_current_color[0] = g_current_color[1] = g_current_color[2] = g_current_color[3] = 1.0f;
+    g_current_texcoord[0] = g_current_texcoord[1] = 0.0f;
     g_alpha_test_enabled = false;
     g_alpha_func = GL_GEQUAL;
     g_alpha_reference = 0.0f;
@@ -255,12 +259,12 @@ boolean I_GLES_Initialize(void) {
 }
 
 void I_GLES_Shutdown(void) {
-    if (g_active) {
-        if (g_vertex_buffer) pglDeleteBuffers(1, &g_vertex_buffer);
-        if (g_index_buffer) pglDeleteBuffers(1, &g_index_buffer);
-        if (g_readback_framebuffer && pglDeleteFramebuffers)
-            pglDeleteFramebuffers(1, &g_readback_framebuffer);
-    }
+    if (g_vertex_buffer && pglDeleteBuffers)
+        pglDeleteBuffers(1, &g_vertex_buffer);
+    if (g_index_buffer && pglDeleteBuffers)
+        pglDeleteBuffers(1, &g_index_buffer);
+    if (g_readback_framebuffer && pglDeleteFramebuffers)
+        pglDeleteFramebuffers(1, &g_readback_framebuffer);
     g_active = false;
     g_vertex_buffer = g_index_buffer = g_readback_framebuffer = 0;
     free(g_texture_info);
@@ -652,7 +656,7 @@ void I_GLES_Enable(GLenum cap) {
     if (cap == GL_TEXTURE_2D) {
         if (g_active_texture_unit >= 0 && g_active_texture_unit < GLES_MAX_TEXTURE_UNITS)
             g_texture_enabled[g_active_texture_unit] = true;
-        if (g_active_texture_unit == 0) I_ShaderSetUseTexture(1);
+        I_ShaderSetUseTexture(g_texture_enabled[g_active_texture_unit] ? 1 : 0);
         return;
     }
     if (cap == GL_ALPHA_TEST) {
@@ -674,7 +678,7 @@ void I_GLES_Disable(GLenum cap) {
     if (cap == GL_TEXTURE_2D) {
         if (g_active_texture_unit >= 0 && g_active_texture_unit < GLES_MAX_TEXTURE_UNITS)
             g_texture_enabled[g_active_texture_unit] = false;
-        if (g_active_texture_unit == 0) I_ShaderSetUseTexture(0);
+        I_ShaderSetUseTexture(g_texture_enabled[g_active_texture_unit] ? 1 : 0);
         return;
     }
     if (cap == GL_ALPHA_TEST) {
@@ -742,8 +746,20 @@ void I_GLES_TexEnvi(GLenum target, GLenum pname, GLint param) {
         return;
     switch (pname) {
     case GL_TEXTURE_ENV_MODE:
-        if (param != GL_COMBINE)
+        if (param != GL_COMBINE) {
+            /* Legacy GL_TEXTURE_ENV_MODE controls both RGB and alpha
+               equations and resets their default argument ordering. */
             I_SectorCombiner_SetCombineRGB(param);
+            I_SectorCombiner_SetCombineAlpha(param);
+            I_SectorCombiner_SetSourceRGB(0, GL_TEXTURE);
+            I_SectorCombiner_SetOperandRGB(0, GL_SRC_COLOR);
+            I_SectorCombiner_SetSourceRGB(1, 0x8578); /* GL_PREVIOUS */
+            I_SectorCombiner_SetOperandRGB(1, GL_SRC_COLOR);
+            I_SectorCombiner_SetSourceAlpha(0, GL_TEXTURE);
+            I_SectorCombiner_SetOperandAlpha(0, 0x0302); /* GL_SRC_ALPHA */
+            I_SectorCombiner_SetSourceAlpha(1, 0x8578); /* GL_PREVIOUS */
+            I_SectorCombiner_SetOperandAlpha(1, 0x0302); /* GL_SRC_ALPHA */
+        }
         break;
     case GL_COMBINE_RGB:
         I_SectorCombiner_SetCombineRGB(param);
@@ -889,8 +905,8 @@ void I_GLES_ActiveTexture(GLenum texture) {
     g_active_texture_unit = (int)(texture - GL_TEXTURE0);
     if (g_active_texture_unit < 0 || g_active_texture_unit >= GLES_MAX_TEXTURE_UNITS)
         g_active_texture_unit = 0;
-    if (g_active_texture_unit == 0)
-        I_ShaderSetUseTexture(g_texture_enabled[0] ? 1 : 0);
+    I_ShaderSetTextureUnit(g_active_texture_unit);
+    I_ShaderSetUseTexture(g_texture_enabled[g_active_texture_unit] ? 1 : 0);
 }
 void I_GLES_BindTexture(GLenum target, GLuint texture) {
     glBindTexture(target, texture);
