@@ -740,6 +740,14 @@ void I_GLES_Fogi(GLenum pname, GLint param) {
     I_GLES_CommitFog();
 }
 
+static GLint I_GLES_NormalizeCombinerSource(GLint source) {
+    /* GL_TEXTURE0_ARB .. GL_TEXTURE7_ARB are legacy stage selectors.
+       The native GLES shader samples the currently active texture unit. */
+    if (source >= 0x84C0 && source < 0x84C8)
+        return GL_TEXTURE;
+    return source;
+}
+
 void I_GLES_TexEnvi(GLenum target, GLenum pname, GLint param) {
     if (!g_active) { glTexEnvi(target, pname, param); return; }
     if (target != GL_TEXTURE_ENV)
@@ -767,15 +775,15 @@ void I_GLES_TexEnvi(GLenum target, GLenum pname, GLint param) {
     case GL_COMBINE_ALPHA:
         I_SectorCombiner_SetCombineAlpha(param);
         break;
-    case GL_SOURCE0_RGB: I_SectorCombiner_SetSourceRGB(0, param); break;
-    case GL_SOURCE1_RGB: I_SectorCombiner_SetSourceRGB(1, param); break;
-    case GL_SOURCE2_RGB: I_SectorCombiner_SetSourceRGB(2, param); break;
+    case GL_SOURCE0_RGB: I_SectorCombiner_SetSourceRGB(0, I_GLES_NormalizeCombinerSource(param)); break;
+    case GL_SOURCE1_RGB: I_SectorCombiner_SetSourceRGB(1, I_GLES_NormalizeCombinerSource(param)); break;
+    case GL_SOURCE2_RGB: I_SectorCombiner_SetSourceRGB(2, I_GLES_NormalizeCombinerSource(param)); break;
     case GL_OPERAND0_RGB: I_SectorCombiner_SetOperandRGB(0, param); break;
     case GL_OPERAND1_RGB: I_SectorCombiner_SetOperandRGB(1, param); break;
     case GL_OPERAND2_RGB: I_SectorCombiner_SetOperandRGB(2, param); break;
-    case GL_SOURCE0_ALPHA: I_SectorCombiner_SetSourceAlpha(0, param); break;
-    case GL_SOURCE1_ALPHA: I_SectorCombiner_SetSourceAlpha(1, param); break;
-    case GL_SOURCE2_ALPHA: I_SectorCombiner_SetSourceAlpha(2, param); break;
+    case GL_SOURCE0_ALPHA: I_SectorCombiner_SetSourceAlpha(0, I_GLES_NormalizeCombinerSource(param)); break;
+    case GL_SOURCE1_ALPHA: I_SectorCombiner_SetSourceAlpha(1, I_GLES_NormalizeCombinerSource(param)); break;
+    case GL_SOURCE2_ALPHA: I_SectorCombiner_SetSourceAlpha(2, I_GLES_NormalizeCombinerSource(param)); break;
     case GL_OPERAND0_ALPHA: I_SectorCombiner_SetOperandAlpha(0, param); break;
     case GL_OPERAND1_ALPHA: I_SectorCombiner_SetOperandAlpha(1, param); break;
     case GL_OPERAND2_ALPHA: I_SectorCombiner_SetOperandAlpha(2, param); break;

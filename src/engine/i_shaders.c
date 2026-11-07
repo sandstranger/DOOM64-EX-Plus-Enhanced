@@ -231,14 +231,14 @@ static const char* fragment_shader_bilateral_3point =
 "void main(){\n"
 "  // 1: no texture\n"
 "  if (uUseTex == 0) {\n"
-"    float _texAlpha = 1.0; vec4 col = vColor; vec3 rgb = apply_combiner(col.rgb);\n"
+"    vec4 _texel = vec4(1.0); float _texAlpha = 1.0; vec4 col = vColor; vec3 rgb = apply_combiner(col.rgb);\n"
 "    rgb = enhance_colors(rgb);\n"
 "    if (uFogEnabled!=0) {\n    float fogF = 1.0;\n    if (uFogMode == 1) {\n        float denom = max(uFogEnd - uFogStart, 0.0001);\n        fogF = clamp((uFogEnd - vEyeDist) / denom, 0.0, 1.0);\n    } else if (uFogMode == 2) {\n        fogF = clamp(exp(-uFogDensity * vEyeDist), 0.0, 1.0);\n    } else if (uFogMode == 3) {\n        float d = uFogDensity * vEyeDist;\n        fogF = clamp(exp(-(d*d)), 0.0, 1.0);\n    } else {\n        fogF = clamp(1.0 - uFogFactor, 0.0, 1.0);\n    }\n    rgb = mix(uFogColor, rgb, fogF);\n}\n"
 "    gl_FragColor = vec4(clamp(rgb,0.0,1.0), col.a); return; }\n"
 "\n"
 "  // 2: texture but no 3-point\n"
 "  if (uTexel.x <= 0.0 || uTexel.y <= 0.0) {\n"
-"    vec4 sampled = texture2D(uTex, vUV); float _texAlpha = sampled.a; vec4 col = sampled * vColor; vec3 rgb = apply_combiner(col.rgb);\n"
+"    vec4 sampled = texture2D(uTex, vUV); vec4 _texel = sampled; float _texAlpha = sampled.a; vec4 col = sampled * vColor; vec3 rgb = apply_combiner(col.rgb);\n"
 "    rgb = enhance_colors(rgb);\n"
 "    if (uFogEnabled!=0) {\n    float fogF = 1.0;\n    if (uFogMode == 1) {\n        float denom = max(uFogEnd - uFogStart, 0.0001);\n        fogF = clamp((uFogEnd - vEyeDist) / denom, 0.0, 1.0);\n    } else if (uFogMode == 2) {\n        fogF = clamp(exp(-uFogDensity * vEyeDist), 0.0, 1.0);\n    } else if (uFogMode == 3) {\n        float d = uFogDensity * vEyeDist;\n        fogF = clamp(exp(-(d*d)), 0.0, 1.0);\n    } else {\n        fogF = clamp(1.0 - uFogFactor, 0.0, 1.0);\n    }\n    rgb = mix(uFogColor, rgb, fogF);\n}\n"
 "    gl_FragColor = vec4(clamp(rgb,0.0,1.0), col.a); return; }\n"
@@ -269,7 +269,7 @@ static const char* fragment_shader_bilateral_3point =
 "  vec4 tex  = mix(triA, triB, w);\n"
 "  if (uBleed > 0.0) { vec4 avg = 0.25*(c00+c10+c01+c11); tex = mix(tex, avg, clamp(uBleed,0.0,1.0)); }\n"
 "\n"
-"  float _texAlpha = tex.a; vec4 col = tex * vColor; vec3 rgb = apply_combiner(col.rgb);\n"
+"  vec4 _texel = tex; float _texAlpha = tex.a; vec4 col = tex * vColor; vec3 rgb = apply_combiner(col.rgb);\n"
 "  rgb = enhance_colors(rgb);\n"
 "  if (uFogEnabled!=0) {\n    float fogF = 1.0;\n    if (uFogMode == 1) {\n        float denom = max(uFogEnd - uFogStart, 0.0001);\n        fogF = clamp((uFogEnd - vEyeDist) / denom, 0.0, 1.0);\n    } else if (uFogMode == 2) {\n        fogF = clamp(exp(-uFogDensity * vEyeDist), 0.0, 1.0);\n    } else if (uFogMode == 3) {\n        float d = uFogDensity * vEyeDist;\n        fogF = clamp(exp(-(d*d)), 0.0, 1.0);\n    } else {\n        fogF = clamp(1.0 - uFogFactor, 0.0, 1.0);\n    }\n    rgb = mix(uFogColor, rgb, fogF);\n}\n"
 "  gl_FragColor = vec4(clamp(rgb,0.0,1.0), col.a);\n"
@@ -280,6 +280,7 @@ static const char* fragment_shader_bilateral =
 "#version 120\n\n"
 "#define ADD_SCALE 0.60\n"
 "uniform sampler2D uTex;\n"
+"uniform int uUseTex;\n"
 "varying vec2 vUV;\n"
 "varying vec4 vColor;\nvarying float vEyeDist;\n"
 "float _lum(vec3 c){ return dot(c, vec3(0.2126,0.7152,0.0722)); }\n"
@@ -331,7 +332,8 @@ static const char* fragment_shader_bilateral =
 "}\n"
 "\n"
 "void main(){\n"
-"  vec4 sampled = texture2D(uTex, vUV); float _texAlpha = sampled.a; vec4 col = sampled * vColor;\n"
+"  vec4 _texel = (uUseTex != 0) ? texture2D(uTex, vUV) : vec4(1.0);\n"
+"  float _texAlpha = _texel.a; vec4 col = _texel * vColor;\n"
 "  vec3 rgb = apply_combiner(col.rgb);\n"
 "  rgb = enhance_colors(rgb);\n"
 "  if (uFogEnabled!=0) {\n    float fogF = 1.0;\n    if (uFogMode == 1) {\n        float denom = max(uFogEnd - uFogStart, 0.0001);\n        fogF = clamp((uFogEnd - vEyeDist) / denom, 0.0, 1.0);\n    } else if (uFogMode == 2) {\n        fogF = clamp(exp(-uFogDensity * vEyeDist), 0.0, 1.0);\n    } else if (uFogMode == 3) {\n        float d = uFogDensity * vEyeDist;\n        fogF = clamp(exp(-(d*d)), 0.0, 1.0);\n    } else {\n        fogF = clamp(1.0 - uFogFactor, 0.0, 1.0);\n    }\n    rgb = mix(uFogColor, rgb, fogF);\n}\n"
@@ -367,11 +369,11 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 	if (glesVersion == 2) {
 		header = isVertex
 			? "#version 100\nprecision mediump float;\nattribute vec4 aPosition;\nattribute vec4 aColor;\nattribute vec4 aTexCoord0;\nuniform mat4 uModelViewMatrix;\nuniform mat4 uModelViewProjectionMatrix;\n"
-			: "#version 100\nprecision mediump float;\nuniform int uAlphaTestEnabled;\nuniform int uAlphaFunc;\nuniform float uAlphaRef;\nuniform float uColorScale;\nuniform int uCombineAlpha;\nuniform float uEnvAlpha;\nuniform int uAlphaSource0;\nuniform int uAlphaSource1;\nuniform int uAlphaSource2;\nuniform int uAlphaOperand0;\nuniform int uAlphaOperand1;\nuniform int uAlphaOperand2;\n";
+			: "#version 100\nprecision mediump float;\nuniform int uAlphaTestEnabled;\nuniform int uAlphaFunc;\nuniform float uAlphaRef;\nuniform float uColorScale;\nuniform int uCombineRGB;\nuniform vec4 uEnvColor;\nuniform int uRGBSource0;\nuniform int uRGBSource1;\nuniform int uRGBSource2;\nuniform int uRGBOperand0;\nuniform int uRGBOperand1;\nuniform int uRGBOperand2;\nuniform int uCombineAlpha;\nuniform float uEnvAlpha;\nuniform int uAlphaSource0;\nuniform int uAlphaSource1;\nuniform int uAlphaSource2;\nuniform int uAlphaOperand0;\nuniform int uAlphaOperand1;\nuniform int uAlphaOperand2;\n";
 	} else {
 		header = isVertex
 			? "#version 300 es\nprecision mediump float;\nin vec4 aPosition;\nin vec4 aColor;\nin vec4 aTexCoord0;\nuniform mat4 uModelViewMatrix;\nuniform mat4 uModelViewProjectionMatrix;\n"
-			: "#version 300 es\nprecision mediump float;\nout vec4 fragColor;\nuniform int uAlphaTestEnabled;\nuniform int uAlphaFunc;\nuniform float uAlphaRef;\nuniform float uColorScale;\nuniform int uCombineAlpha;\nuniform float uEnvAlpha;\nuniform int uAlphaSource0;\nuniform int uAlphaSource1;\nuniform int uAlphaSource2;\nuniform int uAlphaOperand0;\nuniform int uAlphaOperand1;\nuniform int uAlphaOperand2;\n";
+			: "#version 300 es\nprecision mediump float;\nout vec4 fragColor;\nuniform int uAlphaTestEnabled;\nuniform int uAlphaFunc;\nuniform float uAlphaRef;\nuniform float uColorScale;\nuniform int uCombineRGB;\nuniform vec4 uEnvColor;\nuniform int uRGBSource0;\nuniform int uRGBSource1;\nuniform int uRGBSource2;\nuniform int uRGBOperand0;\nuniform int uRGBOperand1;\nuniform int uRGBOperand2;\nuniform int uCombineAlpha;\nuniform float uEnvAlpha;\nuniform int uAlphaSource0;\nuniform int uAlphaSource1;\nuniform int uAlphaSource2;\nuniform int uAlphaOperand0;\nuniform int uAlphaOperand1;\nuniform int uAlphaOperand2;\n";
 	}
 
 	static const shader_replacement_t vertexReplacements[] = {
@@ -384,6 +386,9 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 	static const shader_replacement_t es3Replacements[] = {
 		{ "gl_FragColor", "fragColor" },
 		{ "texture2D", "texture" }
+	};
+	static const shader_replacement_t nativeFragmentReplacements[] = {
+		{ "apply_combiner(col.rgb)", "apply_native_combiner(_texel, vColor)" }
 	};
 
 	const size_t headerLength = SDL_strlen(header);
@@ -429,6 +434,21 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 				}
 			}
 
+			if (!replaced && !isVertex) {
+				for (size_t i = 0; i < SDL_arraysize(nativeFragmentReplacements); ++i) {
+					const size_t tokenLength = SDL_strlen(nativeFragmentReplacements[i].from);
+					if (SDL_strncmp(input, nativeFragmentReplacements[i].from, tokenLength) == 0 &&
+						!I_ShaderIdentifierChar(input[tokenLength])) {
+						const size_t replacementLength = SDL_strlen(nativeFragmentReplacements[i].to);
+						SDL_memcpy(output, nativeFragmentReplacements[i].to, replacementLength);
+						output += replacementLength;
+						input += tokenLength;
+						replaced = true;
+						break;
+					}
+				}
+			}
+
 			if (!replaced && glesVersion == 3 &&
 				SDL_strncmp(input, "varying", 7) == 0 &&
 				!I_ShaderIdentifierChar(input[7])) {
@@ -448,9 +468,30 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 	*output = '\0';
 
 	/* Native ESSL gets shader-based alpha testing. Desktop/GL4ES source stays intact. */
-	if (!isVertex) {
+	if (!isVertex && SDL_strstr(result + headerLength, "vec4 col =")) {
+		/* Only the main world fragment programs use the combiner/alpha-test
+		   contract. The solid tint overlay intentionally does not. */
 		static const char alphaFunction[] =
-			"\nfloat _alphaArg(int source, int operand, float texAlpha, float primaryAlpha) {\n"
+			"\nvec4 _rgbArg(int source, int operand, vec4 texel, vec4 primary) {\n"
+			"  vec4 value = primary;\n"
+			"  if (source == 0x1702) value = texel;\n"
+			"  else if (source == 0x8576) value = uEnvColor;\n"
+			"  if (operand == 0x0301) return vec4(1.0 - value.rgb, 1.0 - value.a);\n"
+			"  if (operand == 0x0302) return vec4(vec3(value.a), value.a);\n"
+			"  if (operand == 0x0303) return vec4(vec3(1.0 - value.a), 1.0 - value.a);\n"
+			"  return value;\n"
+			"}\n"
+			"vec3 apply_native_combiner(vec4 texel, vec4 primary) {\n"
+			"  if (uUseTex == 0) return primary.rgb;\n"
+			"  vec4 a0 = _rgbArg(uRGBSource0, uRGBOperand0, texel, primary);\n"
+			"  vec4 a1 = _rgbArg(uRGBSource1, uRGBOperand1, texel, primary);\n"
+			"  vec4 a2 = _rgbArg(uRGBSource2, uRGBOperand2, texel, primary);\n"
+			"  if (uCombineRGB == 7681) return a0.rgb;\n"
+			"  if (uCombineRGB == 260) return clamp(a0.rgb + a1.rgb, 0.0, 1.0);\n"
+			"  if (uCombineRGB == 34165) return clamp(mix(a1.rgb, a0.rgb, a2.rgb), 0.0, 1.0);\n"
+			"  return clamp(a0.rgb * a1.rgb, 0.0, 1.0);\n"
+			"}\n"
+			"float _alphaArg(int source, int operand, float texAlpha, float primaryAlpha) {\n"
 			"  float value = primaryAlpha;\n"
 			"  if (source == 0x1702) value = texAlpha;\n"
 			"  else if (source == 0x8576) value = uEnvAlpha;\n"

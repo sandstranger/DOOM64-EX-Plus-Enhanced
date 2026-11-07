@@ -94,7 +94,7 @@ static void reset_state(void) {
     s.combine_rgb = GL_MODULATE;
     s.combine_alpha = GL_MODULATE;
     for (int i = 0; i < 3; i++) {
-        s.source_rgb[i] = GL_TEXTURE;
+        s.source_rgb[i] = (i == 0) ? GL_TEXTURE : (i == 1 ? 0x8578 : GL_CONSTANT);
         s.operand_rgb[i] = GL_SRC_COLOR;
         s.source_alpha[i] = (i == 0) ? GL_TEXTURE : 0x8578; /* GL_PREVIOUS */
         s.operand_alpha[i] = 0x0302; /* GL_SRC_ALPHA */
@@ -186,8 +186,19 @@ static void I_SectorCombinerUniforms(void) {
     GLint locFogStart = pglGetUniformLocation(curProg, "uFogStart");
     GLint locFogEnd = pglGetUniformLocation(curProg, "uFogEnd");
     GLint locFogDensity = pglGetUniformLocation(curProg, "uFogDensity");
+    GLint locCombineRGB = pglGetUniformLocation(curProg, "uCombineRGB");
     GLint locCombineAlpha = pglGetUniformLocation(curProg, "uCombineAlpha");
+    GLint locEnvColor = pglGetUniformLocation(curProg, "uEnvColor");
     GLint locEnvAlpha = pglGetUniformLocation(curProg, "uEnvAlpha");
+    GLint locRGBSource[3];
+    GLint locRGBOperand[3];
+    for (int i = 0; i < 3; ++i) {
+        char sourceName[32], operandName[32];
+        SDL_snprintf(sourceName, sizeof(sourceName), "uRGBSource%d", i);
+        SDL_snprintf(operandName, sizeof(operandName), "uRGBOperand%d", i);
+        locRGBSource[i] = pglGetUniformLocation(curProg, sourceName);
+        locRGBOperand[i] = pglGetUniformLocation(curProg, operandName);
+    }
     GLint locAlphaSource[3];
     GLint locAlphaOperand[3];
     for (int i = 0; i < 3; ++i) {
@@ -235,6 +246,16 @@ if (locUseTex != -1)
         pglUniform1f(locFogEnd, s.fog_end);
     if (locFogDensity != -1)
         pglUniform1f(locFogDensity, s.fog_density);
+    if (locCombineRGB != -1)
+        pglUniform1i(locCombineRGB, s.combine_rgb);
+    if (locEnvColor != -1)
+        pglUniform4f(locEnvColor, s.env_color[0], s.env_color[1], s.env_color[2], s.env_color[3]);
+    for (int i = 0; i < 3; ++i) {
+        if (locRGBSource[i] != -1)
+            pglUniform1i(locRGBSource[i], s.source_rgb[i]);
+        if (locRGBOperand[i] != -1)
+            pglUniform1i(locRGBOperand[i], s.operand_rgb[i]);
+    }
     if (locCombineAlpha != -1)
         pglUniform1i(locCombineAlpha, s.combine_alpha);
     if (locEnvAlpha != -1)
