@@ -344,6 +344,14 @@ static void I_SectorCombinerUpdateFog(void) {
 void I_SectorCombiner_Init(void) {
     load_glsl_procs();
     s_active_unit = 0;
+
+    /* A recreated GL context may recycle the same numeric program name.
+       Invalidate cached uniform locations before the next shader is linked. */
+    s_uniform_program = 0;
+    s_loc_fog_enabled = s_loc_fog_color = s_loc_fog_factor = -1;
+    s_loc_fog_mode = s_loc_fog_start = s_loc_fog_end = s_loc_fog_density = -1;
+    SDL_memset(s_stage_locations, 0xFF, sizeof(s_stage_locations));
+
     reset_state(&s, false);
     for (int unit = 0; unit < 4; ++unit)
         reset_state(&s_native[unit], true);
