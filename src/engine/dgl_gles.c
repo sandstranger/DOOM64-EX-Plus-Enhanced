@@ -650,6 +650,33 @@ void I_GLES_End(void) {
     GLenum drawMode = (g_immediate_mode == GL_LINES || g_immediate_mode == GL_LINE_STRIP ||
                        g_immediate_mode == GL_LINE_LOOP) ? GL_LINES :
                       (g_immediate_mode == GL_POINTS ? GL_POINTS : GL_TRIANGLES);
+
+    /* GL_POLYGON and GL_QUADS are polygon primitives, not independent
+       triangles. In polygon-line mode draw only their perimeter, not the
+       diagonal introduced by the triangle-fan/quad triangulation. */
+    if (g_wireframe && g_immediate_mode == GL_POLYGON &&
+        g_immediate_vertex_count >= 2) {
+        g_immediate_index_count = 0;
+        for (GLsizei i = 0; i < g_immediate_vertex_count; ++i) {
+            I_GLES_AddImmediateIndex((GLushort)i);
+            I_GLES_AddImmediateIndex((GLushort)((i + 1) % g_immediate_vertex_count));
+        }
+        drawMode = GL_LINES;
+    } else if (g_wireframe && g_immediate_mode == GL_QUADS) {
+        g_immediate_index_count = 0;
+        for (GLsizei i = 0; i + 3 < g_immediate_vertex_count; i += 4) {
+            I_GLES_AddImmediateIndex((GLushort)(i + 0));
+            I_GLES_AddImmediateIndex((GLushort)(i + 1));
+            I_GLES_AddImmediateIndex((GLushort)(i + 1));
+            I_GLES_AddImmediateIndex((GLushort)(i + 2));
+            I_GLES_AddImmediateIndex((GLushort)(i + 2));
+            I_GLES_AddImmediateIndex((GLushort)(i + 3));
+            I_GLES_AddImmediateIndex((GLushort)(i + 3));
+            I_GLES_AddImmediateIndex((GLushort)(i + 0));
+        }
+        drawMode = GL_LINES;
+    }
+
     I_GLES_DrawBatch(drawMode, g_immediate_vertex_count, g_immediate_vertices,
                      g_immediate_index_count, g_immediate_indices);
 }
