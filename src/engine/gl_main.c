@@ -587,7 +587,6 @@ void GL_Init(void) {
     dglEnable(GL_SCISSOR_TEST);
     dglEnable(GL_DITHER);
 
-    GL_SetTextureFilter();
     r_fillmode.value = 1.0f;
 #ifdef ANDROID
     if (I_GLES_IsActive()) {
@@ -605,6 +604,11 @@ void GL_Init(void) {
         GL_EXT_texture_env_combine_Init();
         GL_EXT_texture_filter_anisotropic_Init();
     }
+    /* Mark the GL backend ready only after a current context and extension
+       state exist. Filter/default-combiner helpers intentionally guard on it. */
+    usingGL = true;
+    GL_SetTextureFilter();
+
     /* Initialize combiner storage before GL_SetDefaultCombiner mutates it. */
     I_SectorCombiner_Init();
     GL_SetDefaultCombiner();
@@ -638,8 +642,6 @@ void GL_Init(void) {
         }
 #endif
     }
-
-    usingGL = true;
 
     G_AddCommand("dumpglext", CMD_DumpGLExtensions, 0);
 
