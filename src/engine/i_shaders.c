@@ -39,6 +39,15 @@ CVAR_EXTERNAL(r_filter);
 
 static GLint sLocTexel = -1;
 static GLint sLocUseTex = -1;
+static GLint sLocAlphaTestEnabled = -1;
+static GLint sLocAlphaFunc = -1;
+static GLint sLocAlphaRef = -1;
+static GLint sLocColorScale = -1;
+static GLint g_alpha_test_enabled = 0;
+static GLint g_alpha_func = 518;
+static GLfloat g_alpha_ref = 0.0f;
+static GLfloat g_color_scale = 1.0f;
+static GLint g_use_texture = 1;
 
 static GLuint generic_tint_overlay_prog = 0;
 
@@ -221,14 +230,14 @@ static const char* fragment_shader_bilateral_3point =
 "void main(){\n"
 "  // 1: no texture\n"
 "  if (uUseTex == 0) {\n"
-"    vec4 col = vColor; vec3 rgb = apply_combiner(col.rgb);\n"
+"    float _texAlpha = 1.0; vec4 col = vColor; vec3 rgb = apply_combiner(col.rgb);\n"
 "    rgb = enhance_colors(rgb);\n"
 "    if (uFogEnabled!=0) {\n    float fogF = 1.0;\n    if (uFogMode == 1) {\n        float denom = max(uFogEnd - uFogStart, 0.0001);\n        fogF = clamp((uFogEnd - vEyeDist) / denom, 0.0, 1.0);\n    } else if (uFogMode == 2) {\n        fogF = clamp(exp(-uFogDensity * vEyeDist), 0.0, 1.0);\n    } else if (uFogMode == 3) {\n        float d = uFogDensity * vEyeDist;\n        fogF = clamp(exp(-(d*d)), 0.0, 1.0);\n    } else {\n        fogF = clamp(1.0 - uFogFactor, 0.0, 1.0);\n    }\n    rgb = mix(uFogColor, rgb, fogF);\n}\n"
 "    gl_FragColor = vec4(clamp(rgb,0.0,1.0), col.a); return; }\n"
 "\n"
 "  // 2: texture but no 3-point\n"
 "  if (uTexel.x <= 0.0 || uTexel.y <= 0.0) {\n"
-"    vec4 col = texture2D(uTex, vUV) * vColor; vec3 rgb = apply_combiner(col.rgb);\n"
+"    vec4 sampled = texture2D(uTex, vUV); float _texAlpha = sampled.a; vec4 col = sampled * vColor; vec3 rgb = apply_combiner(col.rgb);\n"
 "    rgb = enhance_colors(rgb);\n"
 "    if (uFogEnabled!=0) {\n    float fogF = 1.0;\n    if (uFogMode == 1) {\n        float denom = max(uFogEnd - uFogStart, 0.0001);\n        fogF = clamp((uFogEnd - vEyeDist) / denom, 0.0, 1.0);\n    } else if (uFogMode == 2) {\n        fogF = clamp(exp(-uFogDensity * vEyeDist), 0.0, 1.0);\n    } else if (uFogMode == 3) {\n        float d = uFogDensity * vEyeDist;\n        fogF = clamp(exp(-(d*d)), 0.0, 1.0);\n    } else {\n        fogF = clamp(1.0 - uFogFactor, 0.0, 1.0);\n    }\n    rgb = mix(uFogColor, rgb, fogF);\n}\n"
 "    gl_FragColor = vec4(clamp(rgb,0.0,1.0), col.a); return; }\n"
@@ -259,7 +268,7 @@ static const char* fragment_shader_bilateral_3point =
 "  vec4 tex  = mix(triA, triB, w);\n"
 "  if (uBleed > 0.0) { vec4 avg = 0.25*(c00+c10+c01+c11); tex = mix(tex, avg, clamp(uBleed,0.0,1.0)); }\n"
 "\n"
-"  vec4 col = tex * vColor; vec3 rgb = apply_combiner(col.rgb);\n"
+"  float _texAlpha = tex.a; vec4 col = tex * vColor; vec3 rgb = apply_combiner(col.rgb);\n"
 "  rgb = enhance_colors(rgb);\n"
 "  if (uFogEnabled!=0) {\n    float fogF = 1.0;\n    if (uFogMode == 1) {\n        float denom = max(uFogEnd - uFogStart, 0.0001);\n        fogF = clamp((uFogEnd - vEyeDist) / denom, 0.0, 1.0);\n    } else if (uFogMode == 2) {\n        fogF = clamp(exp(-uFogDensity * vEyeDist), 0.0, 1.0);\n    } else if (uFogMode == 3) {\n        float d = uFogDensity * vEyeDist;\n        fogF = clamp(exp(-(d*d)), 0.0, 1.0);\n    } else {\n        fogF = clamp(1.0 - uFogFactor, 0.0, 1.0);\n    }\n    rgb = mix(uFogColor, rgb, fogF);\n}\n"
 "  gl_FragColor = vec4(clamp(rgb,0.0,1.0), col.a);\n"
@@ -321,7 +330,7 @@ static const char* fragment_shader_bilateral =
 "}\n"
 "\n"
 "void main(){\n"
-"  vec4 col = texture2D(uTex, vUV) * vColor;\n"
+"  vec4 sampled = texture2D(uTex, vUV); float _texAlpha = sampled.a; vec4 col = sampled * vColor;\n"
 "  vec3 rgb = apply_combiner(col.rgb);\n"
 "  rgb = enhance_colors(rgb);\n"
 "  if (uFogEnabled!=0) {\n    float fogF = 1.0;\n    if (uFogMode == 1) {\n        float denom = max(uFogEnd - uFogStart, 0.0001);\n        fogF = clamp((uFogEnd - vEyeDist) / denom, 0.0, 1.0);\n    } else if (uFogMode == 2) {\n        fogF = clamp(exp(-uFogDensity * vEyeDist), 0.0, 1.0);\n    } else if (uFogMode == 3) {\n        float d = uFogDensity * vEyeDist;\n        fogF = clamp(exp(-(d*d)), 0.0, 1.0);\n    } else {\n        fogF = clamp(1.0 - uFogFactor, 0.0, 1.0);\n    }\n    rgb = mix(uFogColor, rgb, fogF);\n}\n"
@@ -357,11 +366,11 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 	if (glesVersion == 2) {
 		header = isVertex
 			? "#version 100\nprecision mediump float;\nattribute vec4 aPosition;\nattribute vec4 aColor;\nattribute vec4 aTexCoord0;\nuniform mat4 uModelViewMatrix;\nuniform mat4 uModelViewProjectionMatrix;\n"
-			: "#version 100\nprecision mediump float;\n";
+			: "#version 100\nprecision mediump float;\nuniform int uAlphaTestEnabled;\nuniform int uAlphaFunc;\nuniform float uAlphaRef;\nuniform float uColorScale;\nuniform int uCombineAlpha;\nuniform float uEnvAlpha;\nuniform int uAlphaSource0;\nuniform int uAlphaSource1;\nuniform int uAlphaSource2;\nuniform int uAlphaOperand0;\nuniform int uAlphaOperand1;\nuniform int uAlphaOperand2;\n";
 	} else {
 		header = isVertex
 			? "#version 300 es\nprecision mediump float;\nin vec4 aPosition;\nin vec4 aColor;\nin vec4 aTexCoord0;\nuniform mat4 uModelViewMatrix;\nuniform mat4 uModelViewProjectionMatrix;\n"
-			: "#version 300 es\nprecision mediump float;\nout vec4 fragColor;\n";
+			: "#version 300 es\nprecision mediump float;\nout vec4 fragColor;\nuniform int uAlphaTestEnabled;\nuniform int uAlphaFunc;\nuniform float uAlphaRef;\nuniform float uColorScale;\nuniform int uCombineAlpha;\nuniform float uEnvAlpha;\nuniform int uAlphaSource0;\nuniform int uAlphaSource1;\nuniform int uAlphaSource2;\nuniform int uAlphaOperand0;\nuniform int uAlphaOperand1;\nuniform int uAlphaOperand2;\n";
 	}
 
 	static const shader_replacement_t vertexReplacements[] = {
@@ -378,7 +387,7 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 
 	const size_t headerLength = SDL_strlen(header);
 	const size_t bodyLength = SDL_strlen(body);
-	char* result = (char*)SDL_malloc(bodyLength * 2 + headerLength + 1);
+	char* result = (char*)SDL_malloc(bodyLength * 2 + headerLength + 1024);
 	if (!result)
 		return NULL;
 
@@ -436,6 +445,101 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 	}
 
 	*output = '\0';
+
+	/* Native ESSL gets shader-based alpha testing. Desktop/GL4ES source stays intact. */
+	if (!isVertex) {
+		static const char alphaFunction[] =
+			"\nfloat _alphaArg(int source, int operand, float texAlpha, float primaryAlpha) {\n"
+			"  float value = primaryAlpha;\n"
+			"  if (source == 0x1702) value = texAlpha;\n"
+			"  else if (source == 0x8576) value = uEnvAlpha;\n"
+			"  if (operand == 0x0303) value = 1.0 - value;\n"
+			"  return value;\n"
+			"}\n"
+			"float apply_combiner_alpha(float texAlpha, float primaryAlpha) {\n"
+			"  float a0 = _alphaArg(uAlphaSource0, uAlphaOperand0, texAlpha, primaryAlpha);\n"
+			"  float a1 = _alphaArg(uAlphaSource1, uAlphaOperand1, texAlpha, primaryAlpha);\n"
+			"  float a2 = _alphaArg(uAlphaSource2, uAlphaOperand2, texAlpha, primaryAlpha);\n"
+			"  if (uCombineAlpha == 7681) return a0;\n"
+			"  if (uCombineAlpha == 260) return clamp(a0 + a1, 0.0, 1.0);\n"
+			"  if (uCombineAlpha == 34165) return clamp(mix(a1, a0, a2), 0.0, 1.0);\n"
+			"  return clamp(a0 * a1, 0.0, 1.0);\n"
+			"}\n"
+			"bool _alphaPass(float a) {\n"
+			"  if (uAlphaTestEnabled == 0 || uAlphaFunc == 519) return true;\n"
+			"  if (uAlphaFunc == 512) return false;\n"
+			"  if (uAlphaFunc == 513) return a < uAlphaRef;\n"
+			"  if (uAlphaFunc == 514) return abs(a-uAlphaRef) <= 0.00001;\n"
+			"  if (uAlphaFunc == 515) return a <= uAlphaRef;\n"
+			"  if (uAlphaFunc == 516) return a > uAlphaRef;\n"
+			"  if (uAlphaFunc == 517) return abs(a-uAlphaRef) > 0.00001;\n"
+			"  if (uAlphaFunc == 518) return a >= uAlphaRef;\n"
+			"  return true;\n"
+			"}\n";
+		static const char alphaDiscard[] = "\n    col.a = apply_combiner_alpha(_texAlpha, vColor.a);\n    if (!_alphaPass(col.a)) discard;\n";
+		char* finalSource = (char*)SDL_malloc(bodyLength * 2 + headerLength + 1024);
+		if (!finalSource) {
+			SDL_free(result);
+			return NULL;
+		}
+		SDL_memcpy(finalSource, result, headerLength);
+		char* write = finalSource + headerLength;
+		const char* scan = result + headerLength;
+		const char* end = output;
+		const char* marker = "vec4 col =";
+		while (scan < end) {
+			if ((size_t)(end - scan) >= SDL_strlen(marker) &&
+				SDL_strncmp(scan, marker, SDL_strlen(marker)) == 0) {
+				const char* semicolon = (const char*)SDL_memchr(scan, ';', (size_t)(end - scan));
+				if (semicolon) {
+					size_t declarationLength = (size_t)(semicolon + 1 - scan);
+					SDL_memcpy(write, scan, declarationLength);
+					write += declarationLength;
+					size_t discardLength = sizeof(alphaDiscard) - 1;
+					SDL_memcpy(write, alphaDiscard, discardLength);
+					write += discardLength;
+					scan = semicolon + 1;
+					continue;
+				}
+			}
+			*write++ = *scan++;
+		}
+		*write = '\0';
+
+		size_t functionLength = sizeof(alphaFunction) - 1;
+		/* Insert after all global uniforms/functions and before main(). */
+		char* insertAt = SDL_strstr(finalSource + headerLength, "void main()");
+		if (!insertAt) {
+			SDL_free(finalSource);
+			SDL_free(result);
+			return NULL;
+		}
+		size_t tailLength = (size_t)(write - insertAt);
+		SDL_memmove(insertAt + functionLength, insertAt, tailLength + 1);
+		SDL_memcpy(insertAt, alphaFunction, functionLength);
+		SDL_free(result);
+		result = finalSource;
+	}
+
+	/* The color scale is part of the shader post-process only on native GLES. */
+	if (!isVertex) {
+		const char* marker = "rgb = pow(max(rgb, 0.0), vec3(0.94));";
+		char* scaleAt = SDL_strstr(result + headerLength, marker);
+		if (scaleAt) {
+			static const char scaleLine[] = "\n  rgb *= uColorScale;";
+			size_t markerLength = SDL_strlen(marker);
+			size_t insertLength = sizeof(scaleLine) - 1;
+			char* scaled = (char*)SDL_malloc(bodyLength * 2 + headerLength + 1024);
+			if (!scaled) { SDL_free(result); return NULL; }
+			size_t prefix = (size_t)(scaleAt - result) + markerLength;
+			SDL_memcpy(scaled, result, prefix);
+			SDL_memcpy(scaled + prefix, scaleLine, insertLength);
+			SDL_memcpy(scaled + prefix + insertLength, result + prefix, SDL_strlen(result + prefix) + 1);
+			SDL_free(result);
+			result = scaled;
+		}
+	}
+
 	return result;
 }
 
@@ -443,11 +547,11 @@ static void I_ShaderBindLegacyAttributes(GLuint program, boolean includeColorAnd
 	if (I_GetGLESVersion() == 0)
 		return;
 
-	/* GL4ES maps legacy vertex/color/texcoord arrays to slots 0, 3 and 8. */
+	/* GLES needs contiguous, conventional vertex attribute slots. */
 	pglBindAttribLocation(program, 0, "aPosition");
 	if (includeColorAndTexCoord) {
-		pglBindAttribLocation(program, 3, "aColor");
-		pglBindAttribLocation(program, 8, "aTexCoord0");
+		pglBindAttribLocation(program, 1, "aColor");
+		pglBindAttribLocation(program, 2, "aTexCoord0");
 	}
 }
 
@@ -457,6 +561,12 @@ static GLuint I_3PointShaderCompile(GLenum type, const char* src) {
 		return 0;
 
 	char* esSource = I_ShaderBuildESSource(type, src);
+	if (I_GetGLESVersion() != 0 && !esSource) {
+#ifdef ANDROID
+		SDL_Log("I_3PointShaderCompile: failed to build native ESSL source");
+#endif
+		return 0;
+	}
 	const char* shaderSource = esSource ? esSource : src;
 	pglShaderSource(shader, 1, &shaderSource, NULL);
 	pglCompileShader(shader);
@@ -532,6 +642,10 @@ static void I_3PointShaderInit(void) {
 	sLocFogEnabled = pglGetUniformLocation(shader_struct.prog, "uFogEnabled");
 	sLocFogColor   = pglGetUniformLocation(shader_struct.prog, "uFogColor");
 	sLocFogFactor  = pglGetUniformLocation(shader_struct.prog, "uFogFactor");
+	sLocAlphaTestEnabled = pglGetUniformLocation(shader_struct.prog, "uAlphaTestEnabled");
+	sLocAlphaFunc = pglGetUniformLocation(shader_struct.prog, "uAlphaFunc");
+	sLocAlphaRef = pglGetUniformLocation(shader_struct.prog, "uAlphaRef");
+	sLocColorScale = pglGetUniformLocation(shader_struct.prog, "uColorScale");
 
 	shader_struct.initialised = 1;
 
@@ -565,6 +679,12 @@ static GLuint I_OverlayTintShaderCompile(GLenum tp, const char* src) {
 	if (!sh)
 		return 0;
 	char* esSource = I_ShaderBuildESSource(tp, src);
+	if (I_GetGLESVersion() != 0 && !esSource) {
+#ifdef ANDROID
+		SDL_Log("I_OverlayTintShaderCompile: failed to build native ESSL source");
+#endif
+		return 0;
+	}
 	const char* shaderSource = esSource ? esSource : src;
 	pglShaderSource(sh, 1, &shaderSource, NULL);
 	pglCompileShader(sh);
@@ -737,6 +857,8 @@ void I_ShaderUpdateMatrices(void) {
 void I_ShaderBind(void) {
 	I_3PointShaderInit();
 	I_OverlayTintShaderInit();
+	if (!is_glsl_loaded || !shader_struct.initialised || !shader_struct.prog)
+		return;
 	if (is_current_prog != shader_struct.prog) {
 		pglUseProgram(shader_struct.prog);
 		is_current_prog = shader_struct.prog;
@@ -744,9 +866,17 @@ void I_ShaderBind(void) {
 	if (shader_struct.locTex >= 0)
 		pglUniform1i(shader_struct.locTex, 0);
 	if (sLocUseTex >= 0)
-		pglUniform1i(sLocUseTex, 1);
+		pglUniform1i(sLocUseTex, g_use_texture);
 	if (sLocTexel >= 0)
 		pglUniform2f(sLocTexel, 0.0f, 0.0f);
+	if (sLocAlphaTestEnabled >= 0)
+		pglUniform1i(sLocAlphaTestEnabled, g_alpha_test_enabled);
+	if (sLocAlphaFunc >= 0)
+		pglUniform1i(sLocAlphaFunc, g_alpha_func);
+	if (sLocAlphaRef >= 0)
+		pglUniform1f(sLocAlphaRef, g_alpha_ref);
+	if (sLocColorScale >= 0)
+		pglUniform1f(sLocColorScale, g_color_scale);
 	I_SectorCombiner_Commit();
 }
 
@@ -769,7 +899,26 @@ void I_ShaderSetTextureSize(int w, int h) {
 }
 
 void I_ShaderSetUseTexture(int on) {
-	if (!shader_struct.initialised || sLocUseTex < 0)
+	g_use_texture = on ? 1 : 0;
+	if (!shader_struct.initialised || sLocUseTex < 0 || is_current_prog != shader_struct.prog)
 		return;
-	pglUniform1i(sLocUseTex, on ? 1 : 0);
+	pglUniform1i(sLocUseTex, g_use_texture);
+}
+
+void I_ShaderSetAlphaTest(int enabled, int func, float reference) {
+	g_alpha_test_enabled = enabled ? 1 : 0;
+	g_alpha_func = func;
+	g_alpha_ref = reference;
+	if (!shader_struct.initialised || is_current_prog != shader_struct.prog)
+		return;
+	if (sLocAlphaTestEnabled >= 0) pglUniform1i(sLocAlphaTestEnabled, g_alpha_test_enabled);
+	if (sLocAlphaFunc >= 0) pglUniform1i(sLocAlphaFunc, g_alpha_func);
+	if (sLocAlphaRef >= 0) pglUniform1f(sLocAlphaRef, g_alpha_ref);
+}
+
+void I_ShaderSetColorScale(float scale) {
+	g_color_scale = scale;
+	if (!shader_struct.initialised || is_current_prog != shader_struct.prog || sLocColorScale < 0)
+		return;
+	pglUniform1f(sLocColorScale, g_color_scale);
 }

@@ -59,6 +59,8 @@ void I_SectorCombiner_Unbind(void);
 void I_SectorCombiner_SetEnvColor(float r, float g, float b, float a);
 void I_SectorCombiner_SetCombineRGB(int mode);
 void I_SectorCombiner_SetCombineAlpha(int mode);
+void I_SectorCombiner_SetSourceAlpha(int slot, int source);
+void I_SectorCombiner_SetOperandAlpha(int slot, int operand);
 void I_SectorCombiner_SetSourceRGB(int slot, int source);
 void I_SectorCombiner_SetOperandRGB(int slot, int operand);
 void I_SectorCombiner_SetFog(int enabled, float r, float g, float b, float factor);

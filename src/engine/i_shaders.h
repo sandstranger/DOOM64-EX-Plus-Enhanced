@@ -35,6 +35,8 @@ void I_ShaderSetUseTexture(int on);
 void I_OverlayTintShaderInit(void);
 void I_ShaderFullscreenTint(float r, float g, float b, float a);
 void I_ShaderUpdateMatrices(void);
+void I_ShaderSetAlphaTest(int enabled, int func, float reference);
+void I_ShaderSetColorScale(float scale);
 
 typedef char GLchar;
 typedef int GLint;

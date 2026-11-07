@@ -139,6 +139,12 @@ boolean GL_CheckExtension(const char *ext) {
 
 void* GL_RegisterProc(const char *address) {
     void *proc = SDL_GL_GetProcAddress(address);
+#ifdef ANDROID
+    if (I_GLES_IsActive()) {
+        if (dstreq(address, "glActiveTextureARB"))
+            proc = SDL_GL_GetProcAddress("glActiveTexture");
+    }
+#endif
 
     if(!proc) {
         CON_Warnf("GL_RegisterProc: Failed to get proc address: %s", address);
@@ -574,16 +580,29 @@ void GL_Init(void) {
 
     r_fillmode.value = 1.0f;
 
-    GL_ARB_multitexture_Init();
-    GL_ARB_texture_env_combine_Init();
-    GL_EXT_texture_env_combine_Init();
-    GL_EXT_texture_filter_anisotropic_Init();
+#ifdef ANDROID
+    if (I_GLES_IsActive()) {
+        /* Multi-unit switching is retained; the shader implements the
+           texture-env combine state, not the removed fixed-function API. */
+        has_GL_ARB_multitexture = true;
+        has_GL_ARB_texture_env_combine = true;
+        has_GL_EXT_texture_env_combine = false;
+        GL_EXT_texture_filter_anisotropic_Init();
+    } else
+#endif
+    {
+        GL_ARB_multitexture_Init();
+        GL_ARB_texture_env_combine_Init();
+        GL_EXT_texture_env_combine_Init();
+        GL_EXT_texture_filter_anisotropic_Init();
+    }
 
     if(!has_GL_ARB_multitexture) {
         CON_Warnf("GL_ARB_multitexture not supported...\n");
     }
 
-    gl_has_combiner = (has_GL_ARB_texture_env_combine | has_GL_EXT_texture_env_combine);
+    gl_has_combiner = I_GLES_IsActive() ? true :
+        (has_GL_ARB_texture_env_combine | has_GL_EXT_texture_env_combine);
 
     if(!gl_has_combiner) {
         CON_Warnf("Texture combiners not supported...\n");

@@ -27,6 +27,7 @@
 #include "glad.h"
 #include "AngleShaderCache.h"
 #include "SwappyController.h"
+#include "dgl_gles.h"
 #endif
 
 #ifdef SDL_PLATFORM_WIN32
@@ -433,6 +434,11 @@ void I_InitScreen(void) {
         return;
     }
     gladWasLoaded = true;
+    if (!I_GLES_Initialize()) {
+        SDL_Log("I_InitScreen: native GLES backend initialization failed");
+        I_ShutdownVideo();
+        return;
+    }
 #endif
 
     SDL_GetWindowSizeInPixels(window, &win_px_w, &win_px_h);
@@ -563,6 +569,9 @@ static bool AndroidLifeCycleEventFilter(void*, SDL_Event* event){
 //
 
 void I_ShutdownVideo(void) {
+#ifdef ANDROID
+    I_GLES_Shutdown();
+#endif
     if (glContext) {
         SDL_GL_DestroyContext(glContext);
         glContext = NULL;
