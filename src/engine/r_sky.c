@@ -42,6 +42,7 @@
 #include "r_main.h"
 #include "dgl.h"
 #include "i_sectorcombiner.h"
+#include "i_video.h"
 
 extern vtx_t drawVertex[MAXDLDRAWCOUNT];
 extern void I_ShaderSetTextureSize(int w, int h);
@@ -174,39 +175,172 @@ static rcolor R_ModulateColor(rcolor texel, rcolor color) {
 }
 
 //
-// R_GetSkyEdgeColors
+// Sky picture info
 //
-// Average colors of the top and bottom rows of a sky picture, with the gamma
-// its texture is loaded with. Looking past the edges of a sky shows them:
-// stretching the outermost row instead turns every star in it into a streak.
+// Looking past the edges of a sky shows what the picture does not have: the
+// average colors of its top and bottom rows fill it, stretching the outermost
+// row instead turns every star in it into a streak. Star skies continue with
+// their star field instead: a tile of the star rows at the top of the picture.
+// Read with the gamma the sky texture is loaded with, cached per sky.
 //
 
 CVAR_EXTERNAL(i_gamma);
 
-static int    skyEdgeLump = -1;
-static float  skyEdgeGamma = 0.0f;
-static rcolor skyEdgeTop = 0;
-static rcolor skyEdgeBottom = 0;
+static int      skyInfoLump = -1;
+static float    skyInfoGamma = 0.0f;
+static rcolor   skyEdgeTop = 0;
+static rcolor   skyEdgeBottom = 0;
+static dtexture skyStarTexture = 0;
+static int      skyStarRows = 0;    // rows of skyStarTexture (a power of two), 0: no star field
+static int      skyStarWidth = 0;
 
-static void R_GetSkyEdgeColors(int lump, rcolor* top, rcolor* bottom) {
-    if (lump != skyEdgeLump || i_gamma.value != skyEdgeGamma) {
-        int w = 0;
-        int h = 0;
-        byte* png = I_PNGReadData(lump, false, true, true, &w, &h, NULL, 0);
+static int R_SkyLuminance(const byte* p) {
+    return (p[0] * 54 + p[1] * 183 + p[2] * 19) >> 8;
+}
 
-        skyEdgeTop = skyEdgeBottom = D_RGBA(0, 0, 0, 0xff);
-        if (png) {
-            if (w > 0 && h > 0) {
-                const int rows = h < 4 ? h : 4;
-                skyEdgeTop = R_AverageRows(png, w, 0, rows);
-                skyEdgeBottom = R_AverageRows(png, w, h - rows, rows);
-            }
-            Z_Free(png);
+//
+// R_SkyStarRows
+// Rows at the top of the picture that are a star field: a flat dark
+// background with sparse bright points. 0 if the top is not one.
+//
+
+static int R_SkyStarRows(const byte* rgba, int width, int height) {
+    int histogram[256];
+    int background = 0;
+    int stars = 0;
+    int rows = 0;
+    int x, y;
+
+    for (y = 0; y < height; y++) {
+        const byte* row = rgba + (size_t)y * (size_t)width * 4;
+        int median = 0;
+        int count = 0;
+        int dark = 0;
+        int bright = 0;
+
+        memset(histogram, 0, sizeof(histogram));
+        for (x = 0; x < width; x++) {
+            histogram[R_SkyLuminance(row + x * 4)]++;
         }
-        skyEdgeLump = lump;
-        skyEdgeGamma = i_gamma.value;
+        for (median = 0; median < 255; median++) {
+            count += histogram[median];
+            if (count * 2 >= width) {
+                break;
+            }
+        }
+
+        if (y == 0) {
+            if (median > 64) {
+                return 0;   // a bright top: clouds, a day sky
+            }
+            background = median;
+        }
+        else if (median > background + 10) {
+            break;          // the background brightens: horizon glow, clouds, a planet
+        }
+
+        for (x = 0; x < 256; x++) {
+            if (x <= median + 24) {
+                dark += histogram[x];
+            }
+            else if (x >= median + 48) {
+                bright += histogram[x];
+            }
+        }
+        if (dark * 10 < width * 8) {
+            break;          // not mostly background: more than sparse stars
+        }
+
+        stars += bright;
+        rows++;
     }
 
+    return (rows >= 8 && stars >= 4) ? rows : 0;
+}
+
+//
+// R_BuildSkyStars
+// Repeating, mipmapped texture of the first rows of the picture
+//
+
+static void R_BuildSkyStars(const byte* rgba, int width, int rows) {
+    const boolean nearest = (int)r_skyFilter.value != 0;
+    GLint previous = 0;
+
+    dglGetIntegerv(GL_TEXTURE_BINDING_2D, &previous);
+    dglGenTextures(1, &skyStarTexture);
+    dglBindTexture(GL_TEXTURE_2D, skyStarTexture);
+    dglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, rows, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+    dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, nearest ? GL_NEAREST : GL_LINEAR);
+#ifdef ANDROID
+    // Seen up close on the walls and far away towards the zenith: without
+    // mipmaps the stars would shimmer.
+    glGenerateMipmap(GL_TEXTURE_2D);
+    dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+        nearest ? GL_NEAREST_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR);
+#else
+    dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, nearest ? GL_NEAREST : GL_LINEAR);
+#endif
+    dglBindTexture(GL_TEXTURE_2D, (dtexture)previous);
+}
+
+//
+// R_UpdateSkyInfo
+//
+
+static void R_UpdateSkyInfo(int lump) {
+    int w = 0;
+    int h = 0;
+    byte* png;
+
+    if (lump == skyInfoLump && i_gamma.value == skyInfoGamma) {
+        return;
+    }
+
+    if (skyStarTexture) {
+        dglDeleteTextures(1, &skyStarTexture);
+        skyStarTexture = 0;
+    }
+    skyStarRows = 0;
+    skyStarWidth = 0;
+    skyEdgeTop = skyEdgeBottom = D_RGBA(0, 0, 0, 0xff);
+
+    png = I_PNGReadData(lump, false, true, true, &w, &h, NULL, 0);
+    if (png) {
+        if (w > 0 && h > 0) {
+            const int edgeRows = h < 4 ? h : 4;
+            const int starRows = R_SkyStarRows(png, w, h);
+            // a power of two, so the tile repeats and mipmaps on OpenGL ES 2.0 too
+            const boolean widthRepeats = (w & (w - 1)) == 0 || I_GetGLESVersion() != 2;
+            int tileRows = 8;
+
+            skyEdgeTop = R_AverageRows(png, w, 0, edgeRows);
+            skyEdgeBottom = R_AverageRows(png, w, h - edgeRows, edgeRows);
+
+            while (tileRows * 2 <= starRows) {
+                tileRows *= 2;
+            }
+            if (starRows >= 8 && widthRepeats) {
+                R_BuildSkyStars(png, w, tileRows);
+                skyStarRows = tileRows;
+                skyStarWidth = w;
+            }
+        }
+        Z_Free(png);
+    }
+
+    skyInfoLump = lump;
+    skyInfoGamma = i_gamma.value;
+}
+
+//
+// R_GetSkyEdgeColors
+//
+
+static void R_GetSkyEdgeColors(int lump, rcolor* top, rcolor* bottom) {
+    R_UpdateSkyInfo(lump);
     *top = skyEdgeTop;
     *bottom = skyEdgeBottom;
 }
@@ -355,7 +489,8 @@ skies are also 'only' GL_LINEAR.  GL_NEAREST skies do NOT look good
 */
 static void R_DrawSkyDome(int tiles, float rows, int height,
     int radius, float offset, float topoffs,
-    rcolor c1, rcolor c2, boolean closed, rcolor capTopColor, rcolor capBottomColor) {
+    rcolor c1, rcolor c2, boolean closed, rcolor capTopColor, rcolor capBottomColor,
+    dtexture stars, int starRows, float texRowsPerUnit) {
     fixed_t x, y, z;
     fixed_t lx, ly;
     fixed_t rx, ry;
@@ -491,14 +626,76 @@ static void R_DrawSkyDome(int tiles, float rows, int height,
 
     //
     // Mouse look can face (almost) straight up or down, past the edges of the
-    // ring. Close it with walls and caps in the average colors of the sky's top
-    // and bottom rows, untextured: stretching the outermost row of the picture
-    // turned every star in it into a streak up to the zenith.
+    // ring. Star skies continue upwards with their star field: walls up to 60
+    // degrees above the horizon, then a disc over the viewer, tiled with the
+    // star rows from the top of the picture (mipmapped so they do not shimmer,
+    // and mapped flat on the disc so nothing converges at the zenith). The rest
+    // past the ring gets the average color of the sky's top or bottom rows:
+    // stretching the outermost row of the picture streaked every star in it.
     //
     if (closed) {
         const float capTop = (float)(height * 16);
         const rcolor topColor = R_ModulateColor(capTopColor, c1);
         const rcolor bottomColor = R_ModulateColor(capBottomColor, c2);
+        const boolean starry = stars != 0 && starRows > 0 && texRowsPerUnit > 0.0f;
+        const float wallTop = (float)r * 1.7320508f;    // tan(60 degrees)
+        const float starTop = wallTop > (float)height ? wallTop : (float)height;
+
+        if (starry) {
+            const float vPerUnit = texRowsPerUnit / (float)starRows;
+            const float uPerUnit = (float)tiles / (2.0f * (float)M_PI * (float)r);
+            const float vTop = -(starTop - (float)height) * vPerUnit;
+            GLint skyTexture = 0;
+
+            count = 0;
+            vtx = drawVertex;
+
+            for (i = 0; i < NUM_SKY_DOME_FACES; i++) {
+                angle_t a0 = an * i;
+                angle_t a1 = an * (i + 1);
+                float x0 = F2D3D(FixedMul(INT2F(r), dcos(a0)));
+                float y0 = F2D3D(FixedMul(INT2F(r), dsin(a0)));
+                float x1 = F2D3D(FixedMul(INT2F(r), dcos(a1)));
+                float y1 = F2D3D(FixedMul(INT2F(r), dsin(a1)));
+
+                if (starTop > (float)height) {
+                    // wall: same winding and u as the ring, the tile repeating upwards
+                    vtx[0].x = x0; vtx[0].y = y0; vtx[0].z = (float)height;
+                    vtx[1].x = x0; vtx[1].y = y0; vtx[1].z = starTop;
+                    vtx[2].x = x1; vtx[2].y = y1; vtx[2].z = starTop;
+                    vtx[3].x = x1; vtx[3].y = y1; vtx[3].z = (float)height;
+                    vtx[0].tu = vtx[1].tu = -(tu2 * i);
+                    vtx[2].tu = vtx[3].tu = -(tu2 * (i + 1));
+                    vtx[0].tv = vtx[3].tv = 0.0f;
+                    vtx[1].tv = vtx[2].tv = vTop;
+                    dglSetVertexColor(vtx, c1, 4);
+                    dglTriangle(0 + count, 1 + count, 2 + count);
+                    dglTriangle(3 + count, 0 + count, 2 + count);
+                    count += 4;
+                    vtx += 4;
+                }
+
+                // disc over the viewer, mapped flat, facing down
+                vtx[0].x = 0.0f; vtx[0].y = 0.0f; vtx[0].z = starTop;
+                vtx[1].x = x0;   vtx[1].y = y0;   vtx[1].z = starTop;
+                vtx[2].x = x1;   vtx[2].y = y1;   vtx[2].z = starTop;
+                vtx[0].tu = 0.0f;
+                vtx[0].tv = 0.0f;
+                vtx[1].tu = x0 * uPerUnit;
+                vtx[1].tv = y0 * vPerUnit;
+                vtx[2].tu = x1 * uPerUnit;
+                vtx[2].tv = y1 * vPerUnit;
+                dglSetVertexColor(vtx, c1, 3);
+                dglTriangle(0 + count, 2 + count, 1 + count);
+                count += 3;
+                vtx += 3;
+            }
+
+            dglGetIntegerv(GL_TEXTURE_BINDING_2D, &skyTexture);
+            dglBindTexture(GL_TEXTURE_2D, stars);
+            dglDrawGeometry(count, drawVertex);
+            dglBindTexture(GL_TEXTURE_2D, (dtexture)skyTexture);
+        }
 
         count = 0;
         vtx = drawVertex;
@@ -512,7 +709,7 @@ static void R_DrawSkyDome(int tiles, float rows, int height,
             float y1 = F2D3D(FixedMul(INT2F(r), dsin(a1)));
             int side;
 
-            for (side = 0; side < 2; side++) {
+            for (side = starry ? 1 : 0; side < 2; side++) {
                 const boolean top = (side == 0);
                 const float edge = top ? (float)height : -(float)height;
                 const float far = top ? capTop : -capTop;
@@ -603,6 +800,10 @@ static void R_DrawSimpleSky(int lump, int offset, boolean fillTop) {
 
     I_ShaderUnBind();
 
+    if (fillTop) {
+        R_UpdateSkyInfo(lump);
+    }
+
     gfxLmp = GL_BindGfxTexture(lumpinfo[lump].name, true);
 
     dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (int)r_skyFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
@@ -633,17 +834,29 @@ static void R_DrawSimpleSky(int lump, int offset, boolean fillTop) {
 
     top = (float)offset - lumpheight + R_SkyPitchShift();
 
-    // Looking up shows the space above the picture: fill it with the average
-    // color of its top rows (stretching the top row streaked every star).
+    // Looking up shows the space above the picture: star skies continue with
+    // their star field, the others with the average color of their top rows
+    // (stretching the top row streaked every star).
     fill = fillTop ? R_SkyFillHeight(top) : 0;
     if (fill > 0) {
-        rcolor edgeTop;
-        rcolor edgeBottom;
+        if (skyStarTexture && skyInfoLump == lump && gfxLmp >= 0) {
+            const float scale = (float)gfxwidth[gfxLmp] / (float)skyStarWidth;
 
-        R_GetSkyEdgeColors(lump, &edgeTop, &edgeBottom);
-        dglDisable(GL_TEXTURE_2D);
-        GL_SetupAndDraw2DQuad(0, 0, SCREENWIDTH, fill, 0, 0, 0, 0, edgeTop, 1);
-        dglEnable(GL_TEXTURE_2D);
+            // one texel per screen line like the picture, repeating upwards
+            dglBindTexture(GL_TEXTURE_2D, skyStarTexture);
+            GL_SetupAndDraw2DQuad(0, 0, SCREENWIDTH, fill,
+                pos1 * scale, (width + pos1) * scale, -(float)fill / (float)skyStarRows, 0.0f, WHITE, 1);
+            dglBindTexture(GL_TEXTURE_2D, gfxptr[gfxLmp]);
+        }
+        else {
+            rcolor edgeTop;
+            rcolor edgeBottom;
+
+            R_GetSkyEdgeColors(lump, &edgeTop, &edgeBottom);
+            dglDisable(GL_TEXTURE_2D);
+            GL_SetupAndDraw2DQuad(0, 0, SCREENWIDTH, fill, 0, 0, 0, 0, edgeTop, 1);
+            dglEnable(GL_TEXTURE_2D);
+        }
     }
 
     GL_SetupAndDraw2DQuad(0, top, SCREENWIDTH, lumpheight,
@@ -1222,7 +1435,8 @@ static void R_DrawFire(void) {
         R_DrawSkyDome(16, 1, 1024, 4096, -896, 0.0075f,
             sky->skycolor[0], sky->skycolor[1], true,
             R_AverageRows((const byte*)firetexture, FIRESKY_WIDTH, 0, 4),
-            R_AverageRows((const byte*)firetexture, FIRESKY_WIDTH, FIRESKY_HEIGHT - 4, 4));
+            R_AverageRows((const byte*)firetexture, FIRESKY_WIDTH, FIRESKY_HEIGHT - 4, 4),
+            0, 0, 0.0f);
     }
     GL_SetDefaultCombiner();
     I_ShaderBind();
@@ -1256,9 +1470,14 @@ void R_DrawSky(void) {
                 R_DrawSimpleSky(skypicnum, 128, true);
             }
             else {
+                rcolor edgeTop;
+                rcolor edgeBottom;
+                int gfx;
+
                 GL_SetTextureUnit(0, true);
                 R_NeutralizeShaders();
-                GL_BindGfxTexture(lumpinfo[skypicnum].name, true);
+                R_UpdateSkyInfo(skypicnum);
+                gfx = GL_BindGfxTexture(lumpinfo[skypicnum].name, true);
                 dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (int)r_skyFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
                 dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (int)r_skyFilter.value == 0 ? GL_LINEAR : GL_NEAREST);
 
@@ -1266,12 +1485,11 @@ void R_DrawSky(void) {
                 // drawer will assume that the texture's
                 // dimensions is already in powers of 2
                 //
-                rcolor edgeTop;
-                rcolor edgeBottom;
-
                 R_GetSkyEdgeColors(skypicnum, &edgeTop, &edgeBottom);
                 R_DrawSkyDome(4, 2, 512, 1024,
-                    0, 0, WHITE, WHITE, true, edgeTop, edgeBottom);
+                    0, 0, WHITE, WHITE, true, edgeTop, edgeBottom,
+                    skyStarTexture, skyStarRows,
+                    gfx >= 0 ? (float)gfxheight[gfx] / 1024.0f : 0.0f);
             }
         }
     }
@@ -1315,7 +1533,7 @@ void R_DrawSky(void) {
 
                 // the backdrop is drawn over the sky with transparency: no caps
                 R_DrawSkyDome(5, 1, domeheight, 768,
-                    offset, 0.005f, WHITE, WHITE, false, 0, 0);
+                    offset, 0.005f, WHITE, WHITE, false, 0, 0, 0, 0, 0.0f);
             }
         }
     }
