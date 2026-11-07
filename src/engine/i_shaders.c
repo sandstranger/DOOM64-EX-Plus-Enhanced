@@ -577,7 +577,7 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 	if (!isVertex && SDL_strstr(result + headerLength, "vec4 col =")) {
 		/* Only the main world fragment programs use the combiner/alpha-test
 		   contract. The solid tint overlay intentionally does not. */
-		static const char alphaFunction[] =
+		static const char alphaFunctionFormat[] =
 			"\nvec4 _combineArg(int source, int operand, int unit, vec4 tex0, vec4 tex1, vec4 tex2, vec4 tex3, vec4 previous, vec4 primary, vec4 envColor) {\n"
 			"  vec4 value = previous;\n"
 			"  if (source == 0x1702) { if (unit == 0) value = tex0; else if (unit == 1) value = tex1; else if (unit == 2) value = tex2; else value = tex3; }\n"
@@ -618,9 +618,9 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 			"  return clamp(vec4(rgb * rgbScale, alpha * alphaScale), 0.0, 1.0);\n"
 			"}\n"
 			"vec4 apply_native_pipeline(vec4 primary, vec4 tex0) {\n"
-			"  vec4 tex1 = texture2D(uTex1, vUV);\n"
-			"  vec4 tex2 = texture2D(uTex2, vUV);\n"
-			"  vec4 tex3 = texture2D(uTex3, vUV);\n"
+			"  vec4 tex1 = %s(uTex1, vUV);\n"
+			"  vec4 tex2 = %s(uTex2, vUV);\n"
+			"  vec4 tex3 = %s(uTex3, vUV);\n"
 			"  vec4 previous = primary;\n"
 			"  if (uUseTex0 != 0) previous = _combineStage(previous, primary, tex0, tex1, tex2, tex3, 0, uCombineRGB0, uCombineAlpha0, uEnvColor0, uRGBScale0, uAlphaScale0, ivec3(uRGBSource0_0, uRGBSource0_1, uRGBSource0_2), ivec3(uRGBOperand0_0, uRGBOperand0_1, uRGBOperand0_2), ivec3(uAlphaSource0_0, uAlphaSource0_1, uAlphaSource0_2), ivec3(uAlphaOperand0_0, uAlphaOperand0_1, uAlphaOperand0_2));\n"
 			"  if (uUseTex1 != 0) previous = _combineStage(previous, primary, tex0, tex1, tex2, tex3, 1, uCombineRGB1, uCombineAlpha1, uEnvColor1, uRGBScale1, uAlphaScale1, ivec3(uRGBSource1_0, uRGBSource1_1, uRGBSource1_2), ivec3(uRGBOperand1_0, uRGBOperand1_1, uRGBOperand1_2), ivec3(uAlphaSource1_0, uAlphaSource1_1, uAlphaSource1_2), ivec3(uAlphaOperand1_0, uAlphaOperand1_1, uAlphaOperand1_2));\n"
@@ -670,7 +670,26 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 		}
 		*write = '\0';
 
-		size_t functionLength = sizeof(alphaFunction) - 1;
+		/* This helper is injected after the source-level ESSL 3 texture() rewrite.
+		   Select the sampling builtin explicitly for the active GLSL ES version. */
+		const char* textureFunction = glesVersion == 3 ? "texture" : "texture2D";
+		size_t alphaFunctionCapacity = sizeof(alphaFunctionFormat) +
+			3 * SDL_strlen(textureFunction);
+		char* alphaFunction = (char*)SDL_malloc(alphaFunctionCapacity);
+		if (!alphaFunction) {
+			SDL_free(finalSource);
+			SDL_free(result);
+			return NULL;
+		}
+		int alphaFunctionChars = SDL_snprintf(alphaFunction, alphaFunctionCapacity,
+			alphaFunctionFormat, textureFunction, textureFunction, textureFunction);
+		if (alphaFunctionChars < 0 || (size_t)alphaFunctionChars >= alphaFunctionCapacity) {
+			SDL_free(alphaFunction);
+			SDL_free(finalSource);
+			SDL_free(result);
+			return NULL;
+		}
+		size_t functionLength = (size_t)alphaFunctionChars;
 		/* Insert after all global uniforms/functions and before main(). */
 		char* insertAt = SDL_strstr(finalSource + headerLength, "void main()");
 		if (!insertAt) {
@@ -681,6 +700,7 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 		size_t tailLength = (size_t)(write - insertAt);
 		SDL_memmove(insertAt + functionLength, insertAt, tailLength + 1);
 		SDL_memcpy(insertAt, alphaFunction, functionLength);
+		SDL_free(alphaFunction);
 		SDL_free(result);
 		result = finalSource;
 	}
