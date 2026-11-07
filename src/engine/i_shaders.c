@@ -511,8 +511,8 @@ static void I_3PointShaderInit(void) {
 #else
         fprintf(stderr, "I_3PointShaderInit: Linkage error:\n%.*s\n", (int)n, log);
 #endif
-		if (!ok)
-			return;
+		shader_struct.prog = 0;
+		return;
 	}
 	shader_struct.locTex = pglGetUniformLocation(shader_struct.prog, "uTex");
 	shader_struct.locModelView = pglGetUniformLocation(shader_struct.prog, "uModelViewMatrix");

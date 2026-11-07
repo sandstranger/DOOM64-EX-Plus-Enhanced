@@ -117,7 +117,22 @@ void setUseGLES2_0State (const bool useGLES2_0){
 
 int I_GetGLESVersion(void) {
 #ifdef ANDROID
-    return g_useGLES2_0 ? 2 : 3;
+    /*
+     * GL4ES exposes an OpenGL compatibility version (normally 2.1) over
+     * its GLES backend. Keep its GLSL 1.20 shaders; only native GLES drivers
+     * should receive the ESSL 1.00 / 3.00 shader variants.
+     */
+    const char* version = (const char*)glGetString(GL_VERSION);
+    const char* esVersion = version ? SDL_strstr(version, "OpenGL ES ") : NULL;
+    if (!esVersion)
+        return 0;
+
+    const char* major = esVersion + SDL_strlen("OpenGL ES ");
+    if (*major == '2')
+        return 2;
+    if (*major >= '3' && *major <= '9')
+        return 3;
+    return 0;
 #else
     return 0;
 #endif
