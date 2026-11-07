@@ -28,6 +28,7 @@
 #include "gl_main.h"
 #include "gl_texture.h"
 #include "i_system.h"
+#include "i_shaders.h"
 
 #define MAXINDICES  0x10000
 
@@ -126,6 +127,10 @@ void dglDrawGeometry(int count, vtx_t* vtx) {
 	I_Printf("dglDrawGeometry(count=0x%x, vtx=0x%p)\n", count, vtx);
 #endif
 
+#ifdef ANDROID
+	/* Refresh ESSL matrix uniforms from GL4ES' compatibility stacks. */
+	I_ShaderUpdateMatrices();
+#endif
 	dglDrawElements(GL_TRIANGLES, indicecnt, GL_UNSIGNED_SHORT, drawIndices);
 
 	if (devparm) {

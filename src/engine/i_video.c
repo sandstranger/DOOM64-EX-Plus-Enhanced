@@ -115,6 +115,14 @@ void setUseGLES2_0State (const bool useGLES2_0){
 }
 #endif
 
+int I_GetGLESVersion(void) {
+#ifdef ANDROID
+    return g_useGLES2_0 ? 2 : 3;
+#else
+    return 0;
+#endif
+}
+
 void GL_OnResize(int w, int h);
 
 static void GetNativeDisplayPixels(int* out_w, int* out_h, SDL_Window* window) {
@@ -288,8 +296,8 @@ void I_InitScreen(void) {
 	}
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 #else
-    SDL_Log(g_useGLES2_0 ? "Legacy OpenGL ES 2.0 is using for rendering" :
-            "OpenGL ES 3.1 is using for rendering");
+    SDL_Log(g_useGLES2_0 ? "OpenGL ES 2.0 renderer selected" :
+            "OpenGL ES 3.0 renderer selected");
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, g_useGLES2_0 ? 2 : 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,  0 );

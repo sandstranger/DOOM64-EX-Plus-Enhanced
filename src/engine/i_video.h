@@ -33,6 +33,9 @@ void I_SetMenuCursorMouseRect();
 void I_ToggleFullscreen(void);
 void V_RegisterCvars();
 
+/* Returns 2 or 3 for Android GLES paths, or 0 for desktop OpenGL. */
+int I_GetGLESVersion(void);
+
 extern float display_scale;
 extern int win_px_w, win_px_h;
 

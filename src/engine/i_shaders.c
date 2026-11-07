@@ -24,6 +24,14 @@
 #include "con_cvar.h"
 #include "i_shaders.h"
 #include "dgl.h"
+#include "i_video.h"
+
+#ifndef GL_MODELVIEW_MATRIX
+#define GL_MODELVIEW_MATRIX 0x0BA6
+#endif
+#ifndef GL_PROJECTION_MATRIX
+#define GL_PROJECTION_MATRIX 0x0BA7
+#endif
 
 extern void I_SectorCombiner_Commit(void);
 
@@ -56,11 +64,14 @@ typedef struct {
 static struct {
 	GLuint prog;
 	GLint  locTex;
+	GLint  locModelView;
+	GLint  locModelViewProjection;
 	int    initialised;
-} shader_struct = { 0, -1, 0 };
+} shader_struct = { 0, -1, -1, -1, 0 };
 
 static comb_state_t gComb;
 static GLint  generic_tint_overlay_colour = -1;
+static GLint  generic_tint_overlay_mvp = -1;
 
 /* this is where shaders are defined */
 
@@ -77,12 +88,12 @@ static void   (APIENTRY* pglGetProgramInfoLog)(GLuint, GLsizei, GLsizei*, GLchar
 static void   (APIENTRY* pglUseProgram)(GLuint);
 static GLint(APIENTRY* pglGetUniformLocation)(GLuint, const GLchar*);
 static void   (APIENTRY* pglUniform1i)(GLint, int);
-static void (APIENTRY* pglUniform2f)(GLint, float, float);
-static void (APIENTRY* pglUniform1f)(GLint, float);
-static void (APIENTRY* pglUniform1f)(GLint, float);
-static void (APIENTRY* pglUniform2f)(GLint, float, float);
-static void (APIENTRY* pglUniform3f)(GLint, float, float, float);
-static void (APIENTRY* pglUniform4f)(GLint, float, float, float, float);
+static void   (APIENTRY* pglUniform2f)(GLint, float, float);
+static void   (APIENTRY* pglUniform1f)(GLint, float);
+static void   (APIENTRY* pglUniform3f)(GLint, float, float, float);
+static void   (APIENTRY* pglUniform4f)(GLint, float, float, float, float);
+static void   (APIENTRY* pglUniformMatrix4fv)(GLint, GLsizei, unsigned char, const float*);
+static void   (APIENTRY* pglBindAttribLocation)(GLuint, GLuint, const GLchar*);
 
 static int is_glsl_loaded = 0;
 static GLuint is_current_prog = 0;
@@ -103,7 +114,25 @@ static void I_ShaderLoad(void) {
 	GL_GET(glUniform1f);
 	GL_GET(glUniform3f);
 	GL_GET(glUniform4f);
+	GL_GET(glUniformMatrix4fv);
+	GL_GET(glBindAttribLocation);
 #undef GL_GET
+
+	if (!pglCreateShader || !pglShaderSource || !pglCompileShader ||
+		!pglGetShaderiv || !pglGetShaderInfoLog || !pglCreateProgram ||
+		!pglAttachShader || !pglLinkProgram || !pglGetProgramiv ||
+		!pglGetProgramInfoLog || !pglUseProgram || !pglGetUniformLocation ||
+		!pglUniform1i || !pglUniform2f || !pglUniform1f ||
+		!pglUniform3f || !pglUniform4f ||
+		!pglUniformMatrix4fv || !pglBindAttribLocation) {
+#ifdef ANDROID
+		SDL_Log("I_ShaderLoad: required shader entry points are unavailable");
+#else
+		fprintf(stderr, "I_ShaderLoad: required shader entry points are unavailable\\n");
+#endif
+		return;
+	}
+
 	is_glsl_loaded = 1;
 }
 
@@ -299,10 +328,139 @@ static const char* fragment_shader_bilateral =
 "  gl_FragColor = vec4(clamp(rgb,0.0,1.0), col.a);\n"
 "}\n";
 
+typedef struct {
+	const char* from;
+	const char* to;
+} shader_replacement_t;
+
+static boolean I_ShaderIdentifierChar(char c) {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+		(c >= '0' && c <= '9') || c == '_';
+}
+
+/*
+ * Keep the original GLSL 1.20 source for desktop/GL4ES. Android GLES
+ * receives an ESSL 1.00 or 3.00 prologue and explicit vertex attributes.
+ * The shader body remains shared so filters, fog and combiner behaviour
+ * cannot drift between the two mobile paths.
+ */
+static char* I_ShaderBuildESSource(GLenum type, const char* source) {
+	const int glesVersion = I_GetGLESVersion();
+	if (glesVersion != 2 && glesVersion != 3)
+		return NULL;
+
+	const boolean isVertex = (type == GL_VERTEX_SHADER);
+	const char* body = SDL_strchr(source, '\\n');
+	body = body ? body + 1 : source;
+
+	const char* header = NULL;
+	if (glesVersion == 2) {
+		header = isVertex
+			? "#version 100\\nprecision mediump float;\\nattribute vec4 aPosition;\\nattribute vec4 aColor;\\nattribute vec4 aTexCoord0;\\nuniform mat4 uModelViewMatrix;\\nuniform mat4 uModelViewProjectionMatrix;\\n"
+			: "#version 100\\nprecision mediump float;\\n";
+	} else {
+		header = isVertex
+			? "#version 300 es\\nprecision mediump float;\\nin vec4 aPosition;\\nin vec4 aColor;\\nin vec4 aTexCoord0;\\nuniform mat4 uModelViewMatrix;\\nuniform mat4 uModelViewProjectionMatrix;\\n"
+			: "#version 300 es\\nprecision mediump float;\\nout vec4 fragColor;\\n";
+	}
+
+	static const shader_replacement_t vertexReplacements[] = {
+		{ "gl_ModelViewProjectionMatrix", "uModelViewProjectionMatrix" },
+		{ "gl_ModelViewMatrix", "uModelViewMatrix" },
+		{ "gl_MultiTexCoord0", "aTexCoord0" },
+		{ "gl_Vertex", "aPosition" },
+		{ "gl_Color", "aColor" }
+	};
+	static const shader_replacement_t es3Replacements[] = {
+		{ "gl_FragColor", "fragColor" },
+		{ "texture2D", "texture" }
+	};
+
+	const size_t headerLength = SDL_strlen(header);
+	const size_t bodyLength = SDL_strlen(body);
+	char* result = (char*)SDL_malloc(bodyLength * 2 + headerLength + 1);
+	if (!result)
+		return NULL;
+
+	SDL_memcpy(result, header, headerLength);
+	char* output = result + headerLength;
+	const char* input = body;
+
+	while (*input) {
+		boolean replaced = false;
+		if (!I_ShaderIdentifierChar(input > body ? input[-1] : '\\0')) {
+			const shader_replacement_t* list = vertexReplacements;
+			const size_t count = isVertex ? SDL_arraysize(vertexReplacements) : 0;
+			for (size_t i = 0; i < count; ++i) {
+				const size_t tokenLength = SDL_strlen(list[i].from);
+				if (SDL_strncmp(input, list[i].from, tokenLength) == 0 &&
+					!I_ShaderIdentifierChar(input[tokenLength])) {
+					const size_t replacementLength = SDL_strlen(list[i].to);
+					SDL_memcpy(output, list[i].to, replacementLength);
+					output += replacementLength;
+					input += tokenLength;
+					replaced = true;
+					break;
+				}
+			}
+
+			if (!replaced && glesVersion == 3) {
+				for (size_t i = 0; i < SDL_arraysize(es3Replacements); ++i) {
+					const size_t tokenLength = SDL_strlen(es3Replacements[i].from);
+					if (SDL_strncmp(input, es3Replacements[i].from, tokenLength) == 0 &&
+						!I_ShaderIdentifierChar(input[tokenLength])) {
+						const size_t replacementLength = SDL_strlen(es3Replacements[i].to);
+						SDL_memcpy(output, es3Replacements[i].to, replacementLength);
+						output += replacementLength;
+						input += tokenLength;
+						replaced = true;
+						break;
+					}
+				}
+			}
+
+			if (!replaced && glesVersion == 3 &&
+				SDL_strncmp(input, "varying", 7) == 0 &&
+				!I_ShaderIdentifierChar(input[7])) {
+				const char* qualifier = isVertex ? "out" : "in";
+				const size_t qualifierLength = SDL_strlen(qualifier);
+				SDL_memcpy(output, qualifier, qualifierLength);
+				output += qualifierLength;
+				input += 7;
+				replaced = true;
+			}
+		}
+
+		if (!replaced)
+			*output++ = *input++;
+	}
+
+	*output = '\\0';
+	return result;
+}
+
+static void I_ShaderBindLegacyAttributes(GLuint program, boolean includeColorAndTexCoord) {
+	if (I_GetGLESVersion() == 0)
+		return;
+
+	/* GL4ES maps legacy vertex/color/texcoord arrays to slots 0, 3 and 8. */
+	pglBindAttribLocation(program, 0, "aPosition");
+	if (includeColorAndTexCoord) {
+		pglBindAttribLocation(program, 3, "aColor");
+		pglBindAttribLocation(program, 8, "aTexCoord0");
+	}
+}
+
 static GLuint I_3PointShaderCompile(GLenum type, const char* src) {
 	GLuint shader = pglCreateShader(type);
-	pglShaderSource(shader, 1, &src, NULL);
+	if (!shader)
+		return 0;
+
+	char* esSource = I_ShaderBuildESSource(type, src);
+	const char* shaderSource = esSource ? esSource : src;
+	pglShaderSource(shader, 1, &shaderSource, NULL);
 	pglCompileShader(shader);
+	SDL_free(esSource);
 	GLint ok = 0;
 	pglGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
 	if (!ok) {
@@ -316,14 +474,18 @@ static GLuint I_3PointShaderCompile(GLenum type, const char* src) {
 			type == GL_VERTEX_SHADER ? "vertex" : "fragment", (int)n, log);
 #endif
 	}
+	if (!ok)
+		return 0;
 	return shader;
 }
 
 static void I_3PointShaderInit(void) {
-	if (shader_struct.initialised) 
+	if (shader_struct.initialised)
 		return;
 	GLuint fs;
 	I_ShaderLoad();
+	if (!is_glsl_loaded)
+		return;
 	GLuint vs = I_3PointShaderCompile(GL_VERTEX_SHADER, vertex_shader_bilateral);
 	if (r_filter.value == 0) {
 		fs = I_3PointShaderCompile(GL_FRAGMENT_SHADER, fragment_shader_bilateral_3point);
@@ -331,7 +493,13 @@ static void I_3PointShaderInit(void) {
 	else {
 		fs = I_3PointShaderCompile(GL_FRAGMENT_SHADER, fragment_shader_bilateral);
 	}
+	if (!vs || !fs)
+		return;
+
 	shader_struct.prog = pglCreateProgram();
+	if (!shader_struct.prog)
+		return;
+	I_ShaderBindLegacyAttributes(shader_struct.prog, true);
 	pglAttachShader(shader_struct.prog, vs);
 	pglAttachShader(shader_struct.prog, fs);
 	pglLinkProgram(shader_struct.prog);
@@ -343,8 +511,12 @@ static void I_3PointShaderInit(void) {
 #else
         fprintf(stderr, "I_3PointShaderInit: Linkage error:\n%.*s\n", (int)n, log);
 #endif
+		if (!ok)
+			return;
 	}
 	shader_struct.locTex = pglGetUniformLocation(shader_struct.prog, "uTex");
+	shader_struct.locModelView = pglGetUniformLocation(shader_struct.prog, "uModelViewMatrix");
+	shader_struct.locModelViewProjection = pglGetUniformLocation(shader_struct.prog, "uModelViewProjectionMatrix");
 	sLocTexel = pglGetUniformLocation(shader_struct.prog, "uTexel");
 	sLocUseTex = pglGetUniformLocation(shader_struct.prog, "uUseTex");
 	sLocPassCount = pglGetUniformLocation(shader_struct.prog, "uPassCount");
@@ -390,13 +562,34 @@ static void I_3PointShaderInit(void) {
 
 static GLuint I_OverlayTintShaderCompile(GLenum tp, const char* src) {
 	GLuint sh = pglCreateShader(tp);
-	pglShaderSource(sh, 1, &src, NULL);
+	if (!sh)
+		return 0;
+	char* esSource = I_ShaderBuildESSource(tp, src);
+	const char* shaderSource = esSource ? esSource : src;
+	pglShaderSource(sh, 1, &shaderSource, NULL);
 	pglCompileShader(sh);
+	SDL_free(esSource);
+	GLint ok = 0;
+	pglGetShaderiv(sh, GL_COMPILE_STATUS, &ok);
+	if (!ok) {
+		char log[1024];
+		GLsizei n = 0;
+		pglGetShaderInfoLog(sh, sizeof(log), &n, log);
+#ifdef ANDROID
+		SDL_Log("I_OverlayTintShaderCompile: %.*s", (int)n, log);
+#else
+		fprintf(stderr, "I_OverlayTintShaderCompile: %.*s\\n", (int)n, log);
+#endif
+		return 0;
+	}
 	return sh;
 }
 
 void I_OverlayTintShaderInit(void) {
-	if (generic_tint_overlay_prog) 
+	if (generic_tint_overlay_prog)
+		return;
+	I_ShaderLoad();
+	if (!is_glsl_loaded)
 		return;
 	GLuint vs = I_OverlayTintShaderCompile(GL_VERTEX_SHADER,
 		"#version 120\n\n\n"
@@ -405,11 +598,31 @@ void I_OverlayTintShaderInit(void) {
 		"#version 120\n\n"
 		"uniform vec4 uColor;\n" 
 		"void main(){ gl_FragColor = uColor; }\n");
+	if (!vs || !fs)
+		return;
 	generic_tint_overlay_prog = pglCreateProgram();
+	if (!generic_tint_overlay_prog)
+		return;
+	I_ShaderBindLegacyAttributes(generic_tint_overlay_prog, false);
 	pglAttachShader(generic_tint_overlay_prog, vs);
 	pglAttachShader(generic_tint_overlay_prog, fs);
 	pglLinkProgram(generic_tint_overlay_prog);
+	GLint linked = 0;
+	pglGetProgramiv(generic_tint_overlay_prog, GL_LINK_STATUS, &linked);
+	if (!linked) {
+		char log[1024];
+		GLsizei n = 0;
+		pglGetProgramInfoLog(generic_tint_overlay_prog, sizeof(log), &n, log);
+#ifdef ANDROID
+		SDL_Log("I_OverlayTintShaderInit: link error: %.*s", (int)n, log);
+#else
+		fprintf(stderr, "I_OverlayTintShaderInit: link error: %.*s\\n", (int)n, log);
+#endif
+		generic_tint_overlay_prog = 0;
+		return;
+	}
 	generic_tint_overlay_colour = pglGetUniformLocation(generic_tint_overlay_prog, "uColor");
+	generic_tint_overlay_mvp = pglGetUniformLocation(generic_tint_overlay_prog, "uModelViewProjectionMatrix");
 }
 
 void I_ShaderFullscreenTint(float r, float g, float b, float a) {
@@ -433,9 +646,11 @@ void I_ShaderFullscreenTint(float r, float g, float b, float a) {
 	GLboolean oldDepthMask; glGetBooleanv(GL_DEPTH_WRITEMASK, &oldDepthMask);
 
 	pglUseProgram(generic_tint_overlay_prog);
+	is_current_prog = generic_tint_overlay_prog;
 	pglUniform4f(generic_tint_overlay_colour, r, g, b, a);
 
 	GL_SetOrtho(1);
+	I_ShaderUpdateMatrices();
 	if (!wasBlend) glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -472,6 +687,43 @@ void I_ShaderFullscreenTint(float r, float g, float b, float a) {
 	GL_ResetViewport();
 
 	pglUseProgram(oldProg);
+	is_current_prog = (GLuint)oldProg;
+}
+
+/*
+ * ESSL does not expose the compatibility matrix built-ins used by the
+ * desktop shader. GL4ES still owns the legacy matrix stacks, so mirror
+ * them into explicit uniforms immediately before a draw.
+ */
+void I_ShaderUpdateMatrices(void) {
+	if (I_GetGLESVersion() == 0 || !pglUniformMatrix4fv)
+		return;
+
+	float modelView[16];
+	float projection[16];
+	float modelViewProjection[16];
+	glGetFloatv(GL_MODELVIEW_MATRIX, modelView);
+	glGetFloatv(GL_PROJECTION_MATRIX, projection);
+
+	/* OpenGL matrices are column-major: MVP = projection * modelView. */
+	for (int column = 0; column < 4; ++column) {
+		for (int row = 0; row < 4; ++row) {
+			float value = 0.0f;
+			for (int k = 0; k < 4; ++k)
+				value += projection[k * 4 + row] * modelView[column * 4 + k];
+			modelViewProjection[column * 4 + row] = value;
+		}
+	}
+
+	if (is_current_prog == shader_struct.prog) {
+		if (shader_struct.locModelView >= 0)
+			pglUniformMatrix4fv(shader_struct.locModelView, 1, 0, modelView);
+		if (shader_struct.locModelViewProjection >= 0)
+			pglUniformMatrix4fv(shader_struct.locModelViewProjection, 1, 0, modelViewProjection);
+	} else if (is_current_prog == generic_tint_overlay_prog &&
+		generic_tint_overlay_mvp >= 0) {
+		pglUniformMatrix4fv(generic_tint_overlay_mvp, 1, 0, modelViewProjection);
+	}
 }
 
 /* SHADER FUNCTIONS USED THROUGHOUT THE CODE

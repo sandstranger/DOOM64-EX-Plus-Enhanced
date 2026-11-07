@@ -34,6 +34,7 @@ void I_ShaderSetTextureSize(int w, int h);
 void I_ShaderSetUseTexture(int on);
 void I_OverlayTintShaderInit(void);
 void I_ShaderFullscreenTint(float r, float g, float b, float a);
+void I_ShaderUpdateMatrices(void);
 
 typedef char GLchar;
 typedef int GLint;
