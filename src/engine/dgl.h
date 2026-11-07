@@ -4254,6 +4254,8 @@ has_GL_EXT_texture_filter_anisotropic = GL_CheckExtension("GL_EXT_texture_filter
  * fog are emulated with CPU state, VBOs and shader uniforms.
  */
 #ifdef ANDROID
+#undef dglGetString
+#define dglGetString(name) I_GLES_GetString(name)
 #define glBegin(mode) I_GLES_Begin(mode)
 #define glEnd() I_GLES_End()
 #define glVertex2f(x,y) I_GLES_Vertex2f((GLfloat)(x),(GLfloat)(y))

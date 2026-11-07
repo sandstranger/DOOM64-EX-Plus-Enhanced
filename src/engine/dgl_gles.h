@@ -12,6 +12,7 @@ extern "C" {
 boolean I_GLES_Initialize(void);
 void I_GLES_Shutdown(void);
 boolean I_GLES_IsActive(void);
+const GLubyte* I_GLES_GetString(GLenum name);
 
 void I_GLES_MatrixMode(GLenum mode);
 void I_GLES_LoadIdentity(void);

@@ -9,12 +9,16 @@
 #include "i_video.h"
 #include "i_shaders.h"
 #include "i_sectorcombiner.h"
+#ifndef GL_NUM_EXTENSIONS
+#define GL_NUM_EXTENSIONS 0x821D
+#endif
 
 #define GLES_MATRIX_STACK_DEPTH 32
 #define GLES_MAX_TEXTURE_UNITS  8
 #define GLES_IMMEDIATE_VERTICES 4096
 #define GLES_MAX_TEXTURE_INFO   16384
 
+typedef const GLubyte* (APIENTRY *gles_glGetStringi_t)(GLenum, GLuint);
 typedef void (APIENTRY *gles_glGenBuffers_t)(GLsizei, GLuint*);
 typedef void (APIENTRY *gles_glBindBuffer_t)(GLenum, GLuint);
 typedef void (APIENTRY *gles_glBufferData_t)(GLenum, ptrdiff_t, const void*, GLenum);
@@ -31,6 +35,8 @@ typedef void (APIENTRY *gles_glFramebufferTexture2D_t)(GLenum, GLenum, GLenum, G
 typedef GLenum (APIENTRY *gles_glCheckFramebufferStatus_t)(GLenum);
 typedef void (APIENTRY *gles_glDeleteFramebuffers_t)(GLsizei, const GLuint*);
 
+static gles_glGetStringi_t pglGetStringi;
+static char* g_extension_string = NULL;
 static gles_glGenBuffers_t pglGenBuffers;
 static gles_glBindBuffer_t pglBindBuffer;
 static gles_glBufferData_t pglBufferData;
@@ -195,6 +201,56 @@ boolean I_GLES_IsActive(void) {
     return g_active;
 }
 
+const GLubyte* I_GLES_GetString(GLenum name) {
+    if (!g_active || name != GL_EXTENSIONS)
+        return glGetString(name);
+
+    if (I_GetGLESVersion() < 3) {
+        /* The legacy dump command edits the returned list in place. Return
+           an owned copy instead of modifying the driver's constant string. */
+        const GLubyte* raw = glGetString(name);
+        if (!raw)
+            return raw;
+        size_t required = SDL_strlen((const char*)raw) + 1;
+        char* resized = (char*)SDL_realloc(g_extension_string, required);
+        if (!resized)
+            return (const GLubyte*)"";
+        g_extension_string = resized;
+        SDL_memcpy(g_extension_string, raw, required);
+        return (const GLubyte*)g_extension_string;
+    }
+
+    if (!pglGetStringi)
+        return (const GLubyte*)"";
+
+    GLint count = 0;
+    glGetIntegerv(GL_NUM_EXTENSIONS, &count);
+    if (count < 0) count = 0;
+
+    size_t required = 1;
+    for (GLint i = 0; i < count; ++i) {
+        const GLubyte* extension = pglGetStringi(GL_EXTENSIONS, (GLuint)i);
+        if (extension)
+            required += SDL_strlen((const char*)extension) + (i ? 1 : 0);
+    }
+
+    char* resized = (char*)SDL_realloc(g_extension_string, required);
+    if (!resized)
+        return (const GLubyte*)"";
+    g_extension_string = resized;
+    g_extension_string[0] = '\0';
+
+    for (GLint i = 0; i < count; ++i) {
+        const GLubyte* extension = pglGetStringi(GL_EXTENSIONS, (GLuint)i);
+        if (!extension)
+            continue;
+        if (g_extension_string[0])
+            SDL_strlcat(g_extension_string, " ", required);
+        SDL_strlcat(g_extension_string, (const char*)extension, required);
+    }
+    return (const GLubyte*)g_extension_string;
+}
+
 boolean I_GLES_Initialize(void) {
     int version = I_GetGLESVersion();
     if (version == 0) {
@@ -202,6 +258,8 @@ boolean I_GLES_Initialize(void) {
         return true;
     }
 
+    if (version >= 3)
+        GLES_LOAD_PROC(pglGetStringi, gles_glGetStringi_t, "glGetStringi");
     GLES_LOAD_PROC(pglGenBuffers, gles_glGenBuffers_t, "glGenBuffers");
     GLES_LOAD_PROC(pglBindBuffer, gles_glBindBuffer_t, "glBindBuffer");
     GLES_LOAD_PROC(pglBufferData, gles_glBufferData_t, "glBufferData");
@@ -270,6 +328,9 @@ void I_GLES_Shutdown(void) {
     free(g_texture_info);
     g_texture_info = NULL;
     g_texture_info_capacity = 0;
+    SDL_free(g_extension_string);
+    g_extension_string = NULL;
+    pglGetStringi = NULL;
 }
 
 void I_GLES_MatrixMode(GLenum mode) {
