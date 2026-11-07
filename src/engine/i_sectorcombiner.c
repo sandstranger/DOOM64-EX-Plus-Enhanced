@@ -291,11 +291,8 @@ static void I_SectorCombinerUploadFog(GLuint program) {
     if (s_loc_fog_density != -1) pglUniform1f(s_loc_fog_density, s_native[0].fog_density);
 }
 
-static void I_SectorCombinerUploadStage(int unit) {
-    if (unit < 0 || unit >= 4)
-        return;
-    GLuint program = I_SectorCombinerGetNativeProgram();
-    if (!program)
+static void I_SectorCombinerUploadStageForProgram(int unit, GLuint program) {
+    if (unit < 0 || unit >= 4 || !program)
         return;
 
     sector_combiner_state_t* state = &s_native[unit];
@@ -313,13 +310,17 @@ static void I_SectorCombinerUploadStage(int unit) {
     }
 }
 
+static void I_SectorCombinerUploadStage(int unit) {
+    I_SectorCombinerUploadStageForProgram(unit, I_SectorCombinerGetNativeProgram());
+}
+
 static void I_SectorCombinerUploadFogAndStages(void) {
     GLuint program = I_SectorCombinerGetNativeProgram();
     if (!program)
         return;
     I_SectorCombinerUploadFog(program);
     for (int unit = 0; unit < 4; ++unit)
-        I_SectorCombinerUploadStage(unit);
+        I_SectorCombinerUploadStageForProgram(unit, program);
 }
 
 static void I_SectorCombinerUpdateStage(int rebuildLegacyPasses) {
