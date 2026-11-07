@@ -544,6 +544,7 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 			"  return value;\n"
 			"}\n"
 			"float apply_combiner_alpha(float texAlpha, float primaryAlpha) {\n"
+			"  if (uUseTex == 0) return primaryAlpha;\n"
 			"  float a0 = _alphaArg(uAlphaSource0, uAlphaOperand0, texAlpha, primaryAlpha);\n"
 			"  float a1 = _alphaArg(uAlphaSource1, uAlphaOperand1, texAlpha, primaryAlpha);\n"
 			"  float a2 = _alphaArg(uAlphaSource2, uAlphaOperand2, texAlpha, primaryAlpha);\n"
