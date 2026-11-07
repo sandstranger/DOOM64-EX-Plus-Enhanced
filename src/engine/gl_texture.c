@@ -1007,14 +1007,16 @@ void GL_UnloadTexture(dtexture* texture) {
 //
 
 void GL_SetTextureUnit(int unit, int enable) {
-	if (!has_GL_ARB_multitexture || r_fillmode.value <= 0 || unit > 3)
-		return;
-	if (curunit == unit)
+	if (!has_GL_ARB_multitexture || r_fillmode.value <= 0 || unit < 0 || unit > 3)
 		return;
 
-	curunit = unit;
+	if (curunit != unit) {
+		curunit = unit;
+		dglActiveTextureARB(GL_TEXTURE0_ARB + unit);
+	}
 
-	dglActiveTextureARB(GL_TEXTURE0_ARB + unit);
+	/* The unit may already be active while its GL_TEXTURE_2D enable state
+	   has changed through a direct dglEnable/Disable call. Always apply it. */
 	GL_SetState(GLSTATE_TEXTURE0 + unit, enable);
 
 	if (enable) {
