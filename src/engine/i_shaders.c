@@ -20,6 +20,7 @@
 //-----------------------------------------------------------------------------
 
 #include <SDL3/SDL.h>
+#include <string.h>
 #include "doomstat.h"
 #include "con_cvar.h"
 #include "i_shaders.h"
@@ -653,7 +654,7 @@ static char* I_ShaderBuildESSource(GLenum type, const char* source) {
 		while (scan < end) {
 			if ((size_t)(end - scan) >= SDL_strlen(marker) &&
 				SDL_strncmp(scan, marker, SDL_strlen(marker)) == 0) {
-				const char* semicolon = (const char*)SDL_memchr(scan, ';', (size_t)(end - scan));
+				const char* semicolon = (const char*)memchr(scan, ';', (size_t)(end - scan));
 				if (semicolon) {
 					size_t declarationLength = (size_t)(semicolon + 1 - scan);
 					SDL_memcpy(write, scan, declarationLength);
