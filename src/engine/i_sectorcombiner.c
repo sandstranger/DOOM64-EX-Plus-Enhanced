@@ -487,10 +487,3 @@ void I_SectorCombiner_SetActiveUnit(int unit) {
     if (unit > 3) unit = 3;
     s_active_unit = unit;
 }
-
-
-    if (unit < 0) unit = 0;
-    if (unit > 3) unit = 3;
-    s_active_unit = unit;
-}
-
