@@ -482,7 +482,17 @@ void GL_ClearView(rcolor clearcolor) {
 
     dglGetColorf(clearcolor, f);
     dglClearColor(f[0], f[1], f[2], f[3]);
+
+    // Every drawer starts its frame here: clear the whole surface, color and depth. The depth
+    // write mask the last frame left off (the weapon sprite, GL_BindSpriteTexture, when no HUD
+    // graphic was drawn after it) made glClear skip the depth, and the scissor the last frame
+    // left could make it partial. A tile-based GPU then loads from memory what it was not told
+    // to clear - and the world was depth tested against the last frame's depth.
+    dglDisable(GL_SCISSOR_TEST);
+    dglDepthMask(GL_TRUE);
     dglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    dglEnable(GL_SCISSOR_TEST);    // on for good since GL_Init
+
     dglViewport(ViewWindowX, ViewWindowY, ViewWidth, ViewHeight);
     dglScissor(ViewWindowX, ViewWindowY, ViewWidth, ViewHeight);
 }

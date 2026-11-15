@@ -896,6 +896,7 @@ void GL_BindDummyTexture(void) {
 //
 
 static dtexture envtexture = 0;
+static rcolor lastenvcolor = 0;
 
 void GL_BindEnvTexture(void) {
 	rcolor rgb[16];
@@ -903,6 +904,9 @@ void GL_BindEnvTexture(void) {
 	if (r_fillmode.value <= 0) {
 		return;
 	}
+
+	// unit 1 holds envtexture again: the next GL_UpdateEnvTexture binds its color's texture
+	lastenvcolor = 0;
 
 	dmemset(rgb, 0xff, sizeof(rcolor) * 16);
 
@@ -931,7 +935,19 @@ void GL_BindEnvTexture(void) {
 // GL_UpdateEnvTexture
 //
 
-static rcolor lastenvcolor = 0;
+//
+// The color is a 4x4 texture on unit 1 that the texture stage modulates by. It used to be one
+// texture rewritten for each new color, several times a frame (the sky color, then white for the
+// world; every light level without the texture combiner). A texture the frame has drawn with
+// already cannot be rewritten in place on a tile-based GPU behind GLES: ANGLE's Vulkan backend
+// ends the render pass for it (every tile goes to memory and is loaded back), native drivers copy
+// the texture. Each color gets a texture of its own now, made once and only bound after that.
+//
+
+#define MAX_ENV_TEXTURES 256
+static rcolor envcolors[MAX_ENV_TEXTURES];
+static dtexture envtextures[MAX_ENV_TEXTURES];
+static int numenvtextures = 0;
 
 void GL_UpdateEnvTexture(rcolor color) {
 	rcolor env;
@@ -955,6 +971,15 @@ void GL_UpdateEnvTexture(rcolor color) {
 
 	env = color;
 	lastenvcolor = color;
+
+	for (i = 0; i < numenvtextures; i++) {
+		if (envcolors[i] == color) {
+			dglBindTexture(GL_TEXTURE_2D, envtextures[i]);
+			dglActiveTextureARB(GL_TEXTURE0_ARB);
+			return;
+		}
+	}
+
 	c = (byte*)rgb;
 
 	dmemset(rgb, 0, sizeof(rcolor) * 16);
@@ -973,17 +998,37 @@ void GL_UpdateEnvTexture(rcolor color) {
 #endif
 	}
 
-	dglTexSubImage2D(
-		GL_TEXTURE_2D,
-		0,
-		0,
-		0,
-		4,
-		4,
-		GL_RGBA,
-		GL_UNSIGNED_BYTE,
-		(byte*)rgb
-	);
+	if (numenvtextures < MAX_ENV_TEXTURES) {
+		dtexture texture = 0;
+
+		dglGenTextures(1, &texture);
+		dglBindTexture(GL_TEXTURE_2D, texture);
+		dglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 4, 4, 0, GL_RGBA, GL_UNSIGNED_BYTE, (byte*)rgb);
+		dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);	// one color: no mipmaps to be complete
+		dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		envcolors[numenvtextures] = color;
+		envtextures[numenvtextures] = texture;
+		numenvtextures++;
+	}
+	else {
+		// more colors than that: rewrite envtexture, as before
+		if (envtexture) {
+			dglBindTexture(GL_TEXTURE_2D, envtexture);
+		}
+		dglTexSubImage2D(
+			GL_TEXTURE_2D,
+			0,
+			0,
+			0,
+			4,
+			4,
+			GL_RGBA,
+			GL_UNSIGNED_BYTE,
+			(byte*)rgb
+		);
+	}
 
 	dglActiveTextureARB(GL_TEXTURE0_ARB);
 }
