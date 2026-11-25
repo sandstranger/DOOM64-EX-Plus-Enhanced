@@ -534,11 +534,12 @@ static void I_GamepadInitOnce(void) {
 
 #ifdef ANDROID
     extern char *g_pathToSDLControllerDB;
+    const char *pathToSDLControllerDB = __atomic_load_n(&g_pathToSDLControllerDB, __ATOMIC_ACQUIRE);  // (set on the java side's thread)
 
-    if (SDL_AddGamepadMappingsFromFile(g_pathToSDLControllerDB) < 0) {
+    if (!pathToSDLControllerDB || SDL_AddGamepadMappingsFromFile(pathToSDLControllerDB) < 0) {
         SDL_Log("Couldn't load mappings: %s\n", SDL_GetError());
     } else{
-        SDL_Log("Custom controller db was loaded from: %s", g_pathToSDLControllerDB);
+        SDL_Log("Custom controller db was loaded from: %s", pathToSDLControllerDB);
     }
 #else
 	I_GamepadLoadMappings();
@@ -550,11 +551,11 @@ static void I_GamepadInitOnce(void) {
 }
 
 #ifdef ANDROID
-static bool g_onScreenControlsEnabled = false;
+static bool g_onScreenControlsEnabled = false;    // set on the java side's thread, read on the game's: atomically
 
 __attribute__((used)) __attribute__((visibility("default")))
-void updateOnScreenControlsState(const bool enabled) {
-    g_onScreenControlsEnabled = enabled;
+void updateOnScreenControlsState(const int enabled) {  // (an int: JNA passes a java 'boolean' as a 32 bit int)
+    __atomic_store_n(&g_onScreenControlsEnabled, enabled != 0, __ATOMIC_RELAXED);
 }
 #endif
 
@@ -572,7 +573,8 @@ static void I_GamepadHandleSDLEvent(const SDL_Event* e) {
 #ifdef ANDROID
 			SDL_JoystickID id = e->gdevice.which;
 			bool isVirtual = SDL_IsJoystickVirtual(id);
-			if (!g_onScreenControlsEnabled || (g_onScreenControlsEnabled && isVirtual))
+			const bool onScreenControlsEnabled = __atomic_load_n(&g_onScreenControlsEnabled, __ATOMIC_RELAXED);
+			if (!onScreenControlsEnabled || (onScreenControlsEnabled && isVirtual))
 			{
 				I_GamepadOpen(id);
 			}
@@ -586,8 +588,9 @@ static void I_GamepadHandleSDLEvent(const SDL_Event* e) {
 #ifdef ANDROID
 			SDL_JoystickID id = e->jdevice.which;
 			bool isVirtual = SDL_IsJoystickVirtual(id);
-			if (!SDL_IsGamepad(e->jdevice.which) && (!g_onScreenControlsEnabled ||
-			(g_onScreenControlsEnabled && isVirtual)))
+			const bool onScreenControlsEnabled = __atomic_load_n(&g_onScreenControlsEnabled, __ATOMIC_RELAXED);
+			if (!SDL_IsGamepad(e->jdevice.which) && (!onScreenControlsEnabled ||
+			(onScreenControlsEnabled && isVirtual)))
 			{
 				I_GamepadOpen(id);
 			}
@@ -1354,6 +1357,16 @@ void I_GetEvent(SDL_Event* Event) {
 	case SDL_EVENT_WINDOW_FOCUS_LOST:
 		window_focused = false;
 		break;
+#else
+	// The lifecycle event watch (AndroidLifeCycleEventFilter) sees these first, on the java side's thread: window_focused is
+	// the game's, so it follows them here, on the game's thread
+	case SDL_EVENT_WILL_ENTER_BACKGROUND:
+		window_focused = false;
+		break;
+
+	case SDL_EVENT_DID_ENTER_FOREGROUND:
+		window_focused = true;
+		break;
 #endif
 	case SDL_EVENT_WINDOW_MOUSE_ENTER:
 		window_mouse = true;
@@ -1410,6 +1423,13 @@ int I_ShutdownWait(void) {
 
 void I_StartTic(void) {
 	SDL_Event Event;
+
+#ifdef ANDROID
+	{
+		void I_UpdateJavaQueries(void);
+		I_UpdateJavaQueries();
+	}
+#endif
 
 	while (SDL_PollEvent(&Event)) {
 		I_GetEvent(&Event);

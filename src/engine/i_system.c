@@ -218,7 +218,7 @@ char* I_GetUserDir(void)
 #ifndef ANDROID
 		g_user_dir = SDL_GetPrefPath("", "doom64ex-plus"); // string allocated by SDL
 #else
-        g_user_dir = g_pathToDoom64UserFolder;
+        g_user_dir = __atomic_load_n(&g_pathToDoom64UserFolder, __ATOMIC_ACQUIRE);    // (set on the java side's thread)
 #endif
 		if (g_user_dir) {
 			I_Printf("User data dir: %s\n", g_user_dir);
@@ -252,7 +252,7 @@ static char* FindDataFile(char* file) {
 
 	char* dirs[] = {
 #ifdef ANDROID
-        g_pathToDoom64MainWadsFolder,
+        __atomic_load_n(&g_pathToDoom64MainWadsFolder, __ATOMIC_ACQUIRE),   // (set on the java side's thread)
 #else
         (char *)SDL_GetBasePath(), // install dir (where executable is located)
 		".", // cur dir from where executable is launched

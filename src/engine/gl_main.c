@@ -76,11 +76,21 @@ CVAR_EXTERNAL(r_colorscale);
 
 #ifdef ANDROID
 static float maxAllowedAnisotropyValue = 2.0f;
+// Set by updateMaxAnisotropyValue on the java side's thread (-1: nothing new); the renderer takes it as it uses the values
+// (it set the renderer's max_anisotropic there, while the render thread used it)
+static int s_requestedAnisotropyValue = -1;
 
 __attribute__((used)) __attribute__((visibility("default")))
 void updateMaxAnisotropyValue (int targetAnisotropyValue) {
-    maxAllowedAnisotropyValue = targetAnisotropyValue;
-    max_anisotropic = targetAnisotropyValue;
+    __atomic_store_n(&s_requestedAnisotropyValue, (targetAnisotropyValue < 0) ? 0 : targetAnisotropyValue, __ATOMIC_RELAXED);
+}
+
+static void GL_TakeRequestedAnisotropy(void) {
+    const int requested = __atomic_exchange_n(&s_requestedAnisotropyValue, -1, __ATOMIC_RELAXED);
+    if (requested >= 0) {
+        maxAllowedAnisotropyValue = (float)requested;
+        max_anisotropic = (float)requested;
+    }
 }
 
 #endif
@@ -361,6 +371,9 @@ void GL_SetTextureFilter(void) {
     dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (int)r_filter.value == 1 ? GL_LINEAR : GL_NEAREST);
 
     if(has_GL_EXT_texture_filter_anisotropic) {
+#ifdef ANDROID
+        GL_TakeRequestedAnisotropy();
+#endif
         if(r_anisotropic.value) {
             dglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropic);
         }
@@ -687,6 +700,8 @@ void GL_Init(void) {
     if(has_GL_EXT_texture_filter_anisotropic) {
         dglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropic);
 #ifdef ANDROID
+        GL_TakeRequestedAnisotropy();   // (a value set before the renderer started; GL's maximum caps it below)
+        dglGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropic);
         if (max_anisotropic > maxAllowedAnisotropyValue){
             max_anisotropic = maxAllowedAnisotropyValue;
         }

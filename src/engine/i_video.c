@@ -104,14 +104,15 @@ static int g_screenWidth = -1;
 static int g_screenHeight = -1;
 static bool g_useGLES2_0 = false;
 
+// (both set on the java side's thread, read on the game's: atomically)
 __attribute__((used)) __attribute__((visibility("default")))
 void setScreenResolution (const int screenWidth, const int screenHeight){
-    g_screenWidth = screenWidth;
-    g_screenHeight = screenHeight;
+    __atomic_store_n(&g_screenWidth, screenWidth, __ATOMIC_RELAXED);
+    __atomic_store_n(&g_screenHeight, screenHeight, __ATOMIC_RELAXED);
 }
 __attribute__((used)) __attribute__((visibility("default")))
-void setUseGLES2_0State (const bool useGLES2_0){
-    g_useGLES2_0 = useGLES2_0;
+void setUseGLES2_0State (const int useGLES2_0){    // (an int: JNA passes a java 'boolean' as a 32 bit int)
+    __atomic_store_n(&g_useGLES2_0, useGLES2_0 != 0, __ATOMIC_RELAXED);
 }
 #endif
 
@@ -252,9 +253,11 @@ void I_InitScreen(void) {
 
 #ifdef ANDROID
     v_fullscreen.value = 1;
-    if (g_screenWidth > 0 && g_screenHeight >0){
-        native_w = g_screenWidth;
-        native_h = g_screenHeight;
+    const int screenWidth = __atomic_load_n(&g_screenWidth, __ATOMIC_RELAXED);
+    const int screenHeight = __atomic_load_n(&g_screenHeight, __ATOMIC_RELAXED);
+    if (screenWidth > 0 && screenHeight >0){
+        native_w = screenWidth;
+        native_h = screenHeight;
     } else{
         GetNativeDisplayPixels(&native_w, &native_h, window);
     }
@@ -288,10 +291,11 @@ void I_InitScreen(void) {
 	}
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 #else
-    SDL_Log(g_useGLES2_0 ? "Legacy OpenGL ES 2.0 is using for rendering" :
+    const bool useGLES2_0 = __atomic_load_n(&g_useGLES2_0, __ATOMIC_RELAXED);
+    SDL_Log(useGLES2_0 ? "Legacy OpenGL ES 2.0 is using for rendering" :
             "OpenGL ES 3.1 is using for rendering");
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, g_useGLES2_0 ? 2 : 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, useGLES2_0 ? 2 : 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION,  0 );
 #endif
 
@@ -522,13 +526,13 @@ extern void FMOD_ResumeAll();
 static bool AndroidLifeCycleEventFilter(void*, SDL_Event* event){
     switch (event->type)
     {
+        // (SDL calls this on the java side's thread: only the sound is paused here, through FMOD, which is thread safe;
+        // window_focused is the game's and follows the same events on the game's thread, see I_GetEvent)
         case SDL_EVENT_WILL_ENTER_BACKGROUND:
             FMOD_PauseAll();
-            window_focused = false;
             break;
         case SDL_EVENT_DID_ENTER_FOREGROUND:
             FMOD_ResumeAll();
-            window_focused = true;
             break;
     }
     return true;

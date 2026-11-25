@@ -39,17 +39,23 @@
 const char version_date[] = __DATE__;
 
 #if ANDROID
+// Set by the launcher through JNA, on the java side's thread; read on the game's with __atomic_load_n (atomic publication).
+// The game keeps the pointers (the user folder, the wad search folders), so a setter publishes a new copy and never frees
+// the old one.
 char* g_pathToDoom64MainWadsFolder = nullptr;
 char* g_pathToDoom64UserFolder = nullptr;
 char *g_pathToSDLControllerDB = nullptr;
 
 static void freeChars(char **targetChars)
 {
-    if (targetChars && *targetChars)
-    {
-        free(*targetChars);
-        *targetChars = nullptr;
-    }
+    if (targetChars)
+        free(__atomic_exchange_n(targetChars, (char*)nullptr, __ATOMIC_ACQ_REL));
+}
+
+static void publishChars(char **targetChars, const char *value)
+{
+    char *copy = strdup(value ? value : "");    // (JNA passes null for a null String: strdup(null) crashed)
+    __atomic_exchange_n(targetChars, copy, __ATOMIC_ACQ_REL);   // (the old copy is not freed: the game may still hold it)
 }
 #endif
 
@@ -473,7 +479,11 @@ int main(int argc, char *argv[]) {
 	myargv = argv;
 
 #ifdef ANDROID
-    chdir(g_pathToDoom64UserFolder);
+    {
+        const char *userFolder = __atomic_load_n(&g_pathToDoom64UserFolder, __ATOMIC_ACQUIRE);
+        if (userFolder)
+            chdir(userFolder);
+    }
 #endif
 
 	D_DoomMain();
@@ -495,34 +505,46 @@ void onNativeResume() {
 __attribute__((used)) __attribute__((visibility("default")))
 void onNativePause() {
 }
+// What the java side asks about the game's state, worked out on the game's thread every tic (I_StartTic): the queries read
+// menuactive, gamestate and demoplayback themselves, on the java side's thread, while the game changed them.
+static int g_javaShowScreenControls = 0;
+static int g_javaInvokeMouseButtonsEvents = 1;
+static int g_javaMouseCursorCanBeDrawn = 0;
+
+void I_UpdateJavaQueries(void) {
+    __atomic_store_n(&g_javaShowScreenControls, (!menuactive && gamestate == GS_LEVEL && !demoplayback) ? 1 : 0, __ATOMIC_RELAXED);
+    __atomic_store_n(&g_javaInvokeMouseButtonsEvents,
+                     (menuactive || gamestate == GS_NONE || gamestate == GS_SKIPPABLE || demoplayback) ? 1 : 0, __ATOMIC_RELAXED);
+    __atomic_store_n(&g_javaMouseCursorCanBeDrawn, menuactive ? 1 : 0, __ATOMIC_RELAXED);
+}
+
+// The queries return an int: JNA reads a java 'boolean' result as a 32 bit int, and of a returned C 'bool' only the low
+// byte is defined on arm64 (AAPCS64 leaves the rest of the register unspecified).
 __attribute__((used)) __attribute__((visibility("default")))
-bool needToShowScreenControls() {
-    return !menuactive && gamestate == GS_LEVEL && !demoplayback;
+int needToShowScreenControls() {
+    return __atomic_load_n(&g_javaShowScreenControls, __ATOMIC_RELAXED);
 }
 __attribute__((used)) __attribute__((visibility("default")))
-bool needToInvokeMouseButtonsEvents(){
-    return menuactive || gamestate == GS_NONE || gamestate == GS_SKIPPABLE || demoplayback;
+int needToInvokeMouseButtonsEvents(){
+    return __atomic_load_n(&g_javaInvokeMouseButtonsEvents, __ATOMIC_RELAXED);
 }
 __attribute__((used)) __attribute__((visibility("default")))
-bool MouseCursorCanBeDrawn() {
-    return menuactive;
+int MouseCursorCanBeDrawn() {
+    return __atomic_load_n(&g_javaMouseCursorCanBeDrawn, __ATOMIC_RELAXED);
 }
 
 __attribute__((used)) __attribute__((visibility("default")))
-bool needToReInitGameControllers (){
-    return false;
+int needToReInitGameControllers (){
+    return 0;
 }
 __attribute__((used)) __attribute__((visibility("default")))
 void setPathsToResources (const char *pathToWadsFolder, const char *pathToUserFolder) {
-    freeChars(&g_pathToDoom64UserFolder);
-    freeChars(&g_pathToDoom64MainWadsFolder);
-    g_pathToDoom64UserFolder = strdup(pathToUserFolder);
-    g_pathToDoom64MainWadsFolder = strdup(pathToWadsFolder);
+    publishChars(&g_pathToDoom64UserFolder, pathToUserFolder);
+    publishChars(&g_pathToDoom64MainWadsFolder, pathToWadsFolder);
 }
 
 __attribute__((used)) __attribute__((visibility("default")))
 void setPathToSDLControllerDB (const char *pathToSDLControllerDB){
-    freeChars(&g_pathToSDLControllerDB);
-    g_pathToSDLControllerDB = strdup(pathToSDLControllerDB);
+    publishChars(&g_pathToSDLControllerDB, pathToSDLControllerDB);
 }
 #endif

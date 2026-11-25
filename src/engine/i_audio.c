@@ -1977,17 +1977,14 @@ static void PauseOrResumeMasterChannels(bool pause){
     }
 }
 
+// Called on the java side's thread (the lifecycle event watch). Only the two master channel groups, made at initialisation,
+// are paused: every channel plays through them. The loops' and the music's channel handles belong to the game's thread
+// (it replaces them as it plays and stops), and resuming each of them also undid a pause the game had made itself.
 void FMOD_PauseAll(){
-    FMOD_PauseSFXLoop();
-    FMOD_PausePlasmaLoop();
-    FMOD_PauseMusic();
     PauseOrResumeMasterChannels(true);
 }
 
 void FMOD_ResumeAll(){
-    FMOD_ResumeSFXLoop();
-    FMOD_ResumeMusic();
-    FMOD_ResumePlasmaLoop();
     PauseOrResumeMasterChannels(false);
 }
 
