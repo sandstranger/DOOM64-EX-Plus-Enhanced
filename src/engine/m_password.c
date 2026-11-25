@@ -30,6 +30,17 @@
 //
 
 byte passwordData[16];
+
+// big endian 16 bit values in the byte arrays, byte by byte: they were read and written as shorts through
+// the arrays (misaligned, and breaking aliasing rules)
+static short M_PassGetBE16(const byte* p) {
+	return (short)(unsigned short)((p[0] << 8) | p[1]);
+}
+
+static void M_PassPutBE16(byte* p, int value) {
+	p[0] = (byte)((unsigned int)value >> 8);
+	p[1] = (byte)value;
+}
 boolean doPassword = false;
 const char* passwordChar = "bcdfghjklmnpqrstvwxyz0123456789?";
 static const int passwordTable[10] = { 1, 8, 9, 5, 6, 2, 7, 0, 4, 3 };
@@ -159,12 +170,12 @@ void M_EncodePassword(void) {
 
 	encode[5] |= (player->artifacts << 2);
 
-	decodebit[0] = I_SwapBE16(*(short*)&encode[0]);
-	decodebit[1] = I_SwapBE16(*(short*)&encode[2]);
-	decodebit[2] = I_SwapBE16(*(short*)&encode[4]);
+	decodebit[0] = M_PassGetBE16(&encode[0]);
+	decodebit[1] = M_PassGetBE16(&encode[2]);
+	decodebit[2] = M_PassGetBE16(&encode[4]);
 
-	*(short*)&encode[6] = I_SwapBE16(~(decodebit[0] + decodebit[1] + decodebit[2]));
-	*(short*)&encode[8] = I_SwapBE16(~(decodebit[0] ^ decodebit[1] ^ decodebit[2]));
+	M_PassPutBE16(&encode[6], ~(decodebit[0] + decodebit[1] + decodebit[2]));
+	M_PassPutBE16(&encode[8], ~(decodebit[0] ^ decodebit[1] ^ decodebit[2]));
 
 	for (i = 0; i < 10; i++) {
 		bit = *(byte*)(encode + passwordTable[i]);
@@ -277,19 +288,19 @@ boolean M_DecodePassword(boolean checkOnly) {
 	//
 	// verify decoded password
 	//
-	xbit1 = I_SwapBE16(*(short*)&decode[0]);
-	xbit2 = I_SwapBE16(*(short*)&decode[2]);
-	xbit3 = I_SwapBE16(*(short*)&decode[4]);
+	xbit1 = M_PassGetBE16(&decode[0]);
+	xbit2 = M_PassGetBE16(&decode[2]);
+	xbit3 = M_PassGetBE16(&decode[4]);
 
-	x = ((~((xbit1 + xbit2) + xbit3) << 16) >> 16);
-	y = I_SwapBE16(*(short*)&decode[6]);
+	x = (short)~((xbit1 + xbit2) + xbit3);	// (its low 16 bits: it shifted a negative number left 16 for that)
+	y = M_PassGetBE16(&decode[6]);
 
 	if (x != y) {
 		return false;
 	}
 
-	x = ((~(xbit1 ^ (xbit2 ^ xbit3)) << 16) >> 16);
-	y = I_SwapBE16(*(short*)&decode[8]);
+	x = (short)~(xbit1 ^ (xbit2 ^ xbit3));
+	y = M_PassGetBE16(&decode[8]);
 
 	if (x != y) {
 		return false;

@@ -51,6 +51,7 @@ static FILE* save_stream;
 static byte* savebuffer;
 
 static uint64_t save_offset = 0;
+static uint64_t save_length = 0;	// savebuffer's, being read: past it reads as zeroes (a truncated or foreign file)
 
 //
 // P_GetSaveGameName
@@ -72,6 +73,11 @@ char* P_GetSaveGameName(int num) {
 
 static byte saveg_read8(void) {
     byte result;
+
+    if (save_offset >= save_length) {
+        save_offset++;
+        return 0;
+    }
 
     result = savebuffer[save_offset++];
 
@@ -98,14 +104,14 @@ static void saveg_write16(short value) {
 }
 
 static int saveg_read32(void) {
-    int result;
+    unsigned int result;	// (a byte of 128 or more shifted 24 up overflowed an int)
 
     result = saveg_read8();
     result |= saveg_read8() << 8;
     result |= saveg_read8() << 16;
-    result |= saveg_read8() << 24;
+    result |= (unsigned int)saveg_read8() << 24;
 
-    return result;
+    return (int)result;
 }
 
 static void saveg_write32(int value) {
@@ -1238,7 +1244,12 @@ boolean P_WriteSaveGame(char* description, int slot) {
 //
 
 boolean P_ReadSaveGame(char* name) {
-    M_ReadFile(name, &savebuffer);
+    int len = M_ReadFile(name, &savebuffer);
+
+    if (len < 0) {	// (it went on with whatever savebuffer was left pointing at)
+        return false;
+    }
+    save_length = len;
     save_offset = 0;
 
     saveg_read_header();
@@ -1270,11 +1281,14 @@ boolean P_QuickReadSaveHeader(char* name, char* date,
     int* thumbnail, int* skill, int* map) {
     int i;
     int size;
+    int len;
 
-    if (M_ReadFile(name, &savebuffer) == -1) {
+    len = M_ReadFile(name, &savebuffer);
+    if (len == -1) {
         return 0;
     }
 
+    save_length = len;
     save_offset = 0;
 
     // skip the description field
@@ -1286,7 +1300,13 @@ boolean P_QuickReadSaveHeader(char* name, char* date,
         date[i] = saveg_read8();
     }
 
-    size = saveg_read32() / sizeof(int);
+    // the thumbnail's as long as the file says, into SAVEGAMETBSIZE: no longer
+    size = saveg_read32();
+    if (size < 0 || size > SAVEGAMETBSIZE || save_offset + (uint64_t)size + 18 > save_length) {
+        Z_Free(savebuffer);
+        return 0;
+    }
+    size /= (int)sizeof(int);
 
     for (i = 0; i < size; i++) {
         thumbnail[i] = saveg_read32();

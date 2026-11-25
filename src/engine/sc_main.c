@@ -204,7 +204,7 @@ static int SC_SetData(void* data, const scdatatable_t* table) {
 				sc_parser.find(false);
 				rgb[2] = SC_ParseColorValue(sc_parser.token);
 
-				*(rcolor*)pointer = rgb[0] | (rgb[1] << 8) | (rgb[2] << 16) | (0xFF << 24);
+				*(rcolor*)pointer = rgb[0] | (rgb[1] << 8) | (rgb[2] << 16) | (0xFFu << 24);
 				break;
 			}
 			break;

@@ -92,7 +92,7 @@ static rcolor PostProcessSkyColor(rcolor original_color, boolean is_cloud) {
     if (b < 0) b = 0;
     if (b > 255) b = 255;
 
-    return r | (g << 8) | (b << 16) | (a << 24);
+    return r | (g << 8) | (b << 16) | ((unsigned int)a << 24);
 }
 
 //
@@ -1058,7 +1058,7 @@ static void R_DrawSkyboxCloud(void) {
 
 #define SKYBOX_SETALPHA(c, x)           \
     c ^= (((c >> 24) & 0xff) << 24);    \
-    c |= (x << 24)
+    c |= ((rcolor)(x) << 24)
 
     R_NeutralizeShaders();
     GL_SetDefaultCombiner();

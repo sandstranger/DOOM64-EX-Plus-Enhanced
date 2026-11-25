@@ -1584,7 +1584,7 @@ static void ST_DisplayName(int playernum) {
 
 	// reset alpha and set new value
 	color ^= (((color >> 24) & 0xff) << 24);
-	color |= ((255 - (int)((float)distance * 0.19921875f)) << 24);
+	color |= ((rcolor)(255 - (int)((float)distance * 0.19921875f)) << 24);
 
 	// display player name
 	SDL_snprintf(name, MAXPLAYERNAME, "%s", player_names[playernum]);

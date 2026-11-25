@@ -134,8 +134,8 @@ int PNG_ReadDimensions(unsigned char* data, size_t size, int* out_w, int* out_h)
     if (SDL_memcmp(data + 12, "IHDR", 4) != 0) 
         return 0;
 
-    unsigned w = (data[16] << 24) | (data[17] << 16) | (data[18] << 8) | data[19];
-    unsigned h = (data[20] << 24) | (data[21] << 16) | (data[22] << 8) | data[23];
+    unsigned w = ((unsigned)data[16] << 24) | (data[17] << 16) | (data[18] << 8) | data[19];
+    unsigned h = ((unsigned)data[20] << 24) | (data[21] << 16) | (data[22] << 8) | data[23];
     if (w == 0 || h == 0) 
         return 0;
     *out_w = (int)w; *out_h = (int)h;

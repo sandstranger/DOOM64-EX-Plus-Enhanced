@@ -1106,22 +1106,21 @@ void A_TroopMelee(mobj_t* actor) {
 	}
 
 	if (P_CheckMeleeRange(actor)) {
+		// vanilla sounds, unless reworked ones are on and it's one of the monsters that has them (any other
+		// monster, or any other value, played a sound numbered by whatever was on the stack)
+		sound = sfx_scratch;
 		if (m_reworkedvanillasounds.value == 1)
 		{
 			// reworked vanilla sounds
+			int variant = P_Random(pr_troopattack) % 4; // four different melee attack sounds (drawn for any monster, as before)
 			switch (actor->type) {
 			case MT_IMP1:
 			case MT_IMP2:
-				sound = sfx_scratch1;
+				sound = sfx_scratch1 + variant;
+				break;
+			default:
 				break;
 			}
-			sound += P_Random(pr_troopattack) % 4; // four different melee attack sounds
-
-		}
-		else if (m_reworkedvanillasounds.value == 0)
-		{
-			// vanilla sounds
-			sound = sfx_scratch;
 		}
 		S_StartSound(actor, sound);
 		hitdice = (P_Random(pr_troopattack) & 7);
@@ -1180,22 +1179,21 @@ void A_HeadAttack(mobj_t* actor) {
 
 	A_FaceTarget(actor);
 	if (P_CheckMeleeRange(actor)) {
+		// vanilla sounds, unless reworked ones are on and it's one of the monsters that has them (any other
+		// monster, or any other value, played a sound numbered by whatever was on the stack)
+		sound = sfx_scratch;
 		if (m_reworkedvanillasounds.value == 1)
 		{
 			// reworked vanilla sounds
+			int variant = P_Random(pr_headattack) % 4; // four different melee attack sounds (drawn for any monster, as before)
 			switch (actor->type) {
 			case MT_CACODEMON:
 			case MT_NIGHTMARECACODEMON:
-				sound = sfx_scratch1;
+				sound = sfx_scratch1 + variant;
+				break;
+			default:
 				break;
 			}
-			sound += P_Random(pr_headattack) % 4; // four different melee attack sounds
-
-		}
-		else if (m_reworkedvanillasounds.value == 0)
-		{
-			// vanilla sounds
-			sound = sfx_scratch;
 		}
 		S_StartSound(actor, sound);
 		hitdice = (P_Random(pr_headattack) & 7);
@@ -1258,22 +1256,21 @@ void A_BruisAttack(mobj_t* actor) {
 
 	if (P_CheckMeleeRange(actor))
 	{
+		// vanilla sounds, unless reworked ones are on and it's one of the monsters that has them (any other
+		// monster, or any other value, played a sound numbered by whatever was on the stack)
+		sound = sfx_scratch;
 		if (m_reworkedvanillasounds.value == 1)
 		{
 			// reworked vanilla sounds
+			int variant = P_Random(pr_bruisattack) % 4; // four different melee attack sounds (drawn for any monster, as before)
 			switch (actor->type) {
 			case MT_BRUISER1:
 			case MT_BRUISER2:
-				sound = sfx_scratch1;
+				sound = sfx_scratch1 + variant;
+				break;
+			default:
 				break;
 			}
-			sound += P_Random(pr_bruisattack) % 4; // four different melee attack sounds
-
-		}
-		else if (m_reworkedvanillasounds.value == 0)
-		{
-			// vanilla sounds
-			sound = sfx_scratch;
 		}
 		S_StartSound(actor, sound);
 		hitdice = (P_Random(pr_bruisattack) & 7);
@@ -2397,17 +2394,17 @@ void A_AnnihilatorAttack(mobj_t* actor) {
 //
 
 void A_TriteChase(mobj_t* actor) {
-	int    sound;
+	int    sound = sfx_tritestp1;	// (anything else chasing with this: it was uninitialised)
 	int    dist;
 
-	switch (actor->type) {
-	case MT_TRITE:
-		sound = sfx_tritestp1;
-		break;
-	}
 	sound += P_Random(pr_tritejump) % 2; // plays two different step sounds
 
 	S_StartSound(actor, sound);
+
+	if (!actor->target) {
+		A_Chase(actor);	// (no target to jump at: it read a null one's position; A_Chase looks for one)
+		return;
+	}
 
 	dist = P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y);
 
