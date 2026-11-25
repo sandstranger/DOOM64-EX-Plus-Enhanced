@@ -26,9 +26,55 @@
 #include "doomstat.h"
 #include "dgl.h"
 #include "m_menu.h"
+#include "i_shaders.h"
 
 static dtexture wipeMeltTexture = 0;
+static dtexture wipeStartTexture = 0;	// WIPE_CaptureScreen's, for the next wipe
 static int wipeFadeAlpha = 0;
+
+//
+// WIPE_CaptureScreen
+//
+
+void WIPE_CaptureScreen(void) {
+	GL_UnloadTexture(&wipeStartTexture);
+	wipeStartTexture = GL_ScreenToTexture();
+	curtexture = cursprite = curgfx = -1;	// (it's bound now, not whatever those say)
+}
+
+//
+// WIPE_CaptureDrawer
+//
+
+void WIPE_CaptureDrawer(void (*draw)(void)) {
+	if (!draw) {
+		return;
+	}
+	I_ShaderBind();
+	draw();
+	I_ShaderUnBind();
+	WIPE_CaptureScreen();
+}
+
+//
+// WIPE_DiscardCapture
+//
+
+void WIPE_DiscardCapture(void) {
+	GL_UnloadTexture(&wipeStartTexture);
+}
+
+// the captured screen if there's one, else what's in the back buffer now (as it always was)
+static dtexture WIPE_StartTexture(void) {
+	dtexture texture = wipeStartTexture;
+
+	wipeStartTexture = 0;
+	if (!texture) {
+		texture = GL_ScreenToTexture();
+	}
+	curtexture = cursprite = curgfx = -1;
+	return texture;
+}
 
 //
 // WIPE_DisplayScreen
@@ -51,17 +97,12 @@ static void WIPE_RefreshDelay(void) {
 // WIPE_FadeScreen
 //
 
-void WIPE_FadeScreen(int fadetics) {
+static void WIPE_FadeTexture(int fadetics) {
 	int padw, padh;
 	vtx_t v[4];
 	float left, right, top, bottom;
 
-	I_ShaderUnBind();
-
-	allowmenu = false;
-
 	wipeFadeAlpha = 0xff;
-	wipeMeltTexture = GL_ScreenToTexture();
 
 	padw = GL_PadTextureDims(video_width);
 	padh = GL_PadTextureDims(video_height);
@@ -123,6 +164,15 @@ void WIPE_FadeScreen(int fadetics) {
 
 	GL_SetState(GLSTATE_BLEND, 0);
 	GL_UnloadTexture(&wipeMeltTexture);
+}
+
+void WIPE_FadeScreen(int fadetics) {
+	I_ShaderUnBind();
+
+	allowmenu = false;
+
+	wipeMeltTexture = WIPE_StartTexture();
+	WIPE_FadeTexture(fadetics);
 
 	allowmenu = true;
 
@@ -145,7 +195,7 @@ void WIPE_MeltScreen(void) {
 	M_ClearMenus();
 	allowmenu = false;
 
-	wipeMeltTexture = GL_ScreenToTexture();
+	wipeMeltTexture = WIPE_StartTexture();
 
 	padw = GL_PadTextureDims(video_width);
 	padh = GL_PadTextureDims(video_height);
@@ -222,12 +272,14 @@ void WIPE_MeltScreen(void) {
 	GL_SetTextureMode(GL_MODULATE);
 	GL_SetDefaultCombiner();
 	GL_SetState(GLSTATE_BLEND, 0);
-	GL_UnloadTexture(&wipeMeltTexture);
 
 	//
-	// fade screen out
+	// fade screen out: from the melt's last frame, which the texture holds (it was read back again after the
+	// swap)
 	//
-	WIPE_FadeScreen(6);
+	WIPE_FadeTexture(6);
+
+	allowmenu = true;
 
 	I_ShaderBind();
 }

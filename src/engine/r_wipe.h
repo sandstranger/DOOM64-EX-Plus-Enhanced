@@ -21,4 +21,12 @@
 void WIPE_FadeScreen(int fadetics);
 void WIPE_MeltScreen(void);
 
+// The screen the next wipe starts from, taken from the back buffer before the swap (it reads it back after,
+// otherwise: by then what's there is the driver's business, black under ANGLE's vulkan)
+void WIPE_CaptureScreen(void);
+// The same, drawing the screen with this drawer first (outside the frame loop's frames)
+void WIPE_CaptureDrawer(void (*draw)(void));
+// The captured screen goes unused (no wipe came of it)
+void WIPE_DiscardCapture(void);
+
 #endif

@@ -428,10 +428,17 @@ void GL_Set2DQuad(vtx_t *v, float x, float y, int width, int height,
                   float u1, float u2, float v1, float v2, rcolor c) {
     float left, right, top, bottom;
 
-    left = ViewWindowX + x * ViewWidth / video_width;
-    right = left + (width * ViewWidth / video_width);
-    top = ViewWindowY + y * ViewHeight / video_height;
-    bottom = top + (height * ViewHeight / video_height);
+    //
+    // in the ortho projection's own units, as Draw_BigText and the rest of the 2D are. It scaled them by
+    // ViewWidth / video_width (the window's pixels over the size the window was asked for), which moved and
+    // grew everything drawn through here (the menus' skull, the title and legal screens, the weapon, the HUD's
+    // pictures, the mouse pointer) wherever those differ: HiDPI, a window fullscreened or resized, android's
+    // system bars and cutouts
+    //
+    left = x;
+    right = left + width;
+    top = y;
+    bottom = top + height;
 
     v[0].x = v[2].x = left;
     v[1].x = v[3].x = right;

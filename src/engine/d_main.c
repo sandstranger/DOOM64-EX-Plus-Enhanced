@@ -204,13 +204,19 @@ static void D_FinishDraw(void) {
 
 }
 
+static void (*d_minidraw)(void);	// the running D_MiniLoop's drawer (for a wipe from its ticker)
+
 int D_MiniLoop(void (*start)(void), void (*stop)(void),
 	void (*draw)(void), int(*tick)(void)) {
 	int action = gameaction = ga_nothing;
+	void (*olddraw)(void) = d_minidraw;
 
 	if (start) {
 		start();
 	}
+
+	WIPE_DiscardCapture();	// (the last loop's screen, if no wipe used it)
+	d_minidraw = draw;
 
 	while (!action) {
 		int i = 0;
@@ -424,11 +430,22 @@ int D_MiniLoop(void (*start)(void), void (*stop)(void),
 		Z_FreeAlloca();
 	}
 
+	//
+	// the screen the wipes (stop's) start from, drawn again now, while what it shows is still there (the
+	// level's stop frees it before its melt): they read the back buffer after the swap, which left there
+	// whatever the driver liked (black under ANGLE's vulkan)
+	//
+	if (stop && draw) {
+		WIPE_CaptureDrawer(draw);
+	}
+
 	gamestate = GS_NONE;
 
 	if (stop) {
 		stop();
 	}
+
+	d_minidraw = olddraw;
 
 	return action;
 }
@@ -507,6 +524,7 @@ static void PhotoSensWarning_Drawer(void) {
 static int Splash_Ticker(void) {
 	if ((gametic - pagetic) >= (TICRATE * 5)) {
 		if (fadesplash) {
+			WIPE_CaptureDrawer(d_minidraw);	// (its screen, before the swap: see D_MiniLoop)
 			WIPE_FadeScreen(6);
 		}
 		return 1;
