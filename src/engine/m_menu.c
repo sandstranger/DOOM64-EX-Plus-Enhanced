@@ -101,6 +101,34 @@ float cursor_x;
 float cursor_y;
 
 //
+// M_MenuMouse
+// The pointer (in the window's coordinates, as SDL has it) in the video units the menus' hit tests and pointer take,
+// from the left of the 4:3 area the menus are drawn in on a wide screen (GL_SetOrtho's). They took the window's
+// coordinates for video units (they aren't wherever the window isn't the size video_width asks: a desktop window
+// fullscreened or HiDPI), and the window's left for the menus' (the pointer was drawn a side bar's width right of
+// where it was)
+//
+
+static void M_MenuMouse(float* mx, float* my) {
+	int ww = 0, wh = 0;
+	float s, left = 0.0f;
+
+	if (!window || !SDL_GetWindowSize(window, &ww, &wh) || ww <= 0 || wh <= 0) {
+		ww = video_width;
+		wh = video_height;
+	}
+	if (wh <= 0) {
+		return;
+	}
+	if (widescreen) {
+		left = ((float)ww - (float)wh * 4.0f / 3.0f) / 2.0f;
+	}
+	s = (float)video_height / (float)wh;
+	*mx = (*mx - left) * s;
+	*my = *my * s;
+}
+
+//
 // fade-in/out stuff
 //
 
@@ -4189,6 +4217,7 @@ static void M_CheckDragThermoBar(event_t* ev, menu_t* menu) {
     mx = cursor_x;
 	my = cursor_y;
 #endif
+	M_MenuMouse(&mx, &my);
     scalex = ((float)video_width /
 		((float)SCREENHEIGHT * video_ratio)) * menu->scale;
 	scaley = ((float)video_height /
@@ -4265,6 +4294,7 @@ static boolean M_CursorHighlightItem(menu_t* menu) {
     mx = cursor_x;
 	my = cursor_y;
 #endif
+	M_MenuMouse(&mx, &my);
 	scalex = ((float)video_width /
 		((float)SCREENHEIGHT * video_ratio)) * menu->scale;
 	scaley = ((float)video_height /
@@ -5177,9 +5207,6 @@ static void M_DrawMenuSkull(int x, int y) {
 
 static void M_DrawCursor()
 {
-#ifdef ANDROID
-	return;
-#endif
 	int gfxIdx = -1;
 	float factor;
 	float scale;
@@ -5230,11 +5257,14 @@ static void M_DrawCursor()
 
 		dglColor4ub(255, 255, 255, 255);
 
-		GL_SetupAndDraw2DQuad((float)cursor_x * factor, (float)cursor_y * factor,
-			gfxwidth[gfxIdx], gfxheight[gfxIdx], 0, 1.0f, 0, 1.0f, WHITE, 0);
+		{
+			float px = cursor_x, py = cursor_y;
+			M_MenuMouse(&px, &py);
+			GL_SetupAndDraw2DQuad(px * factor, py * factor,
+				gfxwidth[gfxIdx], gfxheight[gfxIdx], 0, 1.0f, 0, 1.0f, WHITE, 0);
+		}
 	}
-    GL_SetupAndDraw2DQuad((float)cursor_x * factor, (float)cursor_y * factor,
-		gfxwidth[gfxIdx], gfxheight[gfxIdx], 0, 1.0f, 0, 1.0f, WHITE, 0);
+	// (it drew it a second time here, also with no pointer at all: gfxwidth[-1] and an unset factor)
 	GL_SetState(GLSTATE_BLEND, 0);
 	dglDepthMask(GL_TRUE);
 	GL_SetOrthoScale(1.0f);
