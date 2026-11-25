@@ -237,6 +237,7 @@ int D_MiniLoop(void (*start)(void), void (*stop)(void),
 				I_ShaderBind();
 				if (draw && !action) {
 					draw();
+					M_ThumbnailFrame();
 				}
 				D_DrawInterface();
 				I_ShaderUnBind();
@@ -333,6 +334,7 @@ int D_MiniLoop(void (*start)(void), void (*stop)(void),
 					I_ShaderBind();
 					if (draw && !action) {
 						draw();
+						M_ThumbnailFrame();
 					}
 					D_DrawInterface();
 					I_ShaderUnBind();
@@ -411,6 +413,7 @@ int D_MiniLoop(void (*start)(void), void (*stop)(void),
 		I_ShaderBind();
 		if (draw && !action) {
 			draw();
+			M_ThumbnailFrame();	// (the view before the menus go over it, for the saves)
 		}
 		D_DrawInterface();
 		I_ShaderUnBind();

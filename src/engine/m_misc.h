@@ -58,6 +58,7 @@ boolean M_MoveFile(char* filename, char* src_dirpath, char* dst_dirpath);
 boolean M_WriteTextFile(char* filepath, char* source, int length);
 
 void M_ScreenShot(void);
+void M_CaptureThumbnail(void);
 int M_CacheThumbNail(byte** data);
 void M_LoadDefaults(void);
 void M_SaveDefaults(void);

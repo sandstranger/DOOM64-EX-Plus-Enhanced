@@ -27,6 +27,14 @@
 #endif
 #include "gl_main.h"
 
+// GL_TEXTURE_2D's enable is the bound shader's too (i_shaders.c): a GLSL program takes no notice of the fixed
+// function's, so untextured drawing (the menus' panels, the console, the automap, sky gradients...) multiplied
+// its colours by whatever texture was left bound
+// (only texture unit 0's: the combiners turn units 1 to 3 on and off around it)
+void I_ShaderTexture2DEnabled(int on);
+extern int dgl_active_texture_unit;	// as dglActiveTextureARB last set it
+#define dglCapChanged(cap, on) do { if ((cap) == GL_TEXTURE_2D && dgl_active_texture_unit == 0) I_ShaderTexture2DEnabled(on); } while (0)
+
 //#define LOG_GLFUNC_CALLS
 //#define USE_DEBUG_GLFUNCS
 
@@ -122,7 +130,7 @@ void dglTexCombReplaceAlpha(int t);
 #define dglDepthFunc(func) glDepthFunc(func)
 #define dglDepthMask(flag) glDepthMask(flag)
 #define dglDepthRange(zNear, zFar) glDepthRange(zNear, zFar)
-#define dglDisable(cap) glDisable(cap)
+#define dglDisable(cap) do { GLenum dgl_cap_ = (cap); glDisable(dgl_cap_); dglCapChanged(dgl_cap_, 0); } while (0)
 #define dglDisableClientState(array) glDisableClientState(array)
 #define dglDrawArrays(mode, first, count) glDrawArrays(mode, first, count)
 #define dglDrawBuffer(mode) glDrawBuffer(mode)
@@ -131,7 +139,7 @@ void dglTexCombReplaceAlpha(int t);
 #define dglEdgeFlag(flag) glEdgeFlag(flag)
 #define dglEdgeFlagPointer(stride, pointer) glEdgeFlagPointer(stride, pointer)
 #define dglEdgeFlagv(flag) glEdgeFlagv(flag)
-#define dglEnable(cap) glEnable(cap)
+#define dglEnable(cap) do { GLenum dgl_cap_ = (cap); glEnable(dgl_cap_); dglCapChanged(dgl_cap_, 1); } while (0)
 #define dglEnableClientState(array) glEnableClientState(array)
 #define dglEnd() glEnd()
 #define dglEndList() glEndList()
@@ -905,6 +913,7 @@ SDL_INLINE static void glDisable_DEBUG(GLenum cap, const char* file, int line) {
 	I_Printf("file = %s, line = %i, glDisable(cap=0x%x)\n", file, line, cap);
 #endif
 	glDisable(cap);
+	dglCapChanged(cap, 0);
 	dglLogError("glDisable", file, line);
 }
 
@@ -977,6 +986,7 @@ SDL_INLINE static void glEnable_DEBUG(GLenum cap, const char* file, int line) {
 	I_Printf("file = %s, line = %i, glEnable(cap=0x%x)\n", file, line, cap);
 #endif
 	glEnable(cap);
+	dglCapChanged(cap, 1);
 	dglLogError("glEnable", file, line);
 }
 
@@ -3529,7 +3539,7 @@ _glMultiTexCoord4svARB = GL_RegisterProc("glMultiTexCoord4svARB")
 
 #ifndef USE_DEBUG_GLFUNCS
 
-#define dglActiveTextureARB(texture) _glActiveTextureARB(texture)
+#define dglActiveTextureARB(texture) do { GLenum dgl_unit_ = (texture); _glActiveTextureARB(dgl_unit_); dgl_active_texture_unit = (int)(dgl_unit_ - GL_TEXTURE0_ARB); } while (0)
 #define dglClientActiveTextureARB(texture) _glClientActiveTextureARB(texture)
 #define dglMultiTexCoord1dARB(target, s) _glMultiTexCoord1dARB(target, s)
 #define dglMultiTexCoord1dvARB(target, v) _glMultiTexCoord1dvARB(target, v)
@@ -3571,6 +3581,7 @@ SDL_INLINE static void glActiveTextureARB_DEBUG(GLenum texture, const char* file
 	I_Printf("file = %s, line = %i, glActiveTextureARB(texture=0x%x)\n", file, line, texture);
 #endif
 	_glActiveTextureARB(texture);
+	dgl_active_texture_unit = (int)(texture - GL_TEXTURE0_ARB);
 	dglLogError("glActiveTextureARB", file, line);
 }
 

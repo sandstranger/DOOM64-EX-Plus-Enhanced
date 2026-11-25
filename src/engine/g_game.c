@@ -1790,6 +1790,7 @@ void G_DoSaveGame(void) {
 
 	savedescription[0] = 0;
 	players[consoleplayer].message = GGSAVED;
+	M_InvalidateThumbnail();
 }
 
 //

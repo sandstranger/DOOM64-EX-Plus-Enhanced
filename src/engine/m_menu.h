@@ -38,6 +38,11 @@ void M_Ticker(void);
 // draws the menus directly into the screen buffer.
 void M_Drawer(void);
 
+// Called by the main loop between drawing the game and the menus: the view for the saves' thumbnails
+void M_ThumbnailFrame(void);
+// The saves' thumbnails shown in the menus are read again (a save was written)
+void M_InvalidateThumbnail(void);
+
 // Called by D_DoomMain,
 // loads the config file.
 void M_Init(void);

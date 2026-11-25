@@ -33,6 +33,8 @@
 
 word statindice = 0;
 
+int dgl_active_texture_unit = 0;
+
 static word indicecnt = 0;
 static word drawIndices[MAXINDICES];
 

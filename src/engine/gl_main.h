@@ -87,6 +87,7 @@ boolean GL_GetBool(int x);
 void GL_CheckFillMode(void);
 void GL_SwapBuffers(void);
 byte* GL_GetScreenBuffer(int x, int y, int width, int height);
+boolean GL_GetThumbnail(byte* out, int size);
 void GL_SetTextureFilter(void);
 void GL_SetOrtho(boolean stretch);
 void GL_ResetViewport(void);

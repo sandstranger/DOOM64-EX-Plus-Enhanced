@@ -86,6 +86,9 @@ static void (APIENTRY* pglUniform4f)(GLint, float, float, float, float);
 
 static int is_glsl_loaded = 0;
 static GLuint is_current_prog = 0;
+static int shader_use_tex = 1;		// what the drawing code last asked (I_ShaderSetUseTexture)
+static int shader_tex2d_enabled = 1;	// GL_TEXTURE_2D's enable, as dglEnable/dglDisable last left it
+static int shader_use_tex_set = -1;	// uUseTex as the program has it (-1: not known)
 
 static void I_ShaderLoad(void) {
 	if (is_glsl_loaded) 
@@ -478,6 +481,17 @@ void I_ShaderFullscreenTint(float r, float g, float b, float a) {
 ============================================
 */
 
+// uUseTex: textured only if the drawing code wants it and GL_TEXTURE_2D's enabled (as the fixed function would)
+static void I_ShaderApplyUseTexture(void) {
+	int want = shader_use_tex && shader_tex2d_enabled;
+	if (!shader_struct.initialised || sLocUseTex < 0 || is_current_prog != shader_struct.prog)
+		return;
+	if (want != shader_use_tex_set) {
+		pglUniform1i(sLocUseTex, want);
+		shader_use_tex_set = want;
+	}
+}
+
 void I_ShaderBind(void) {
 	I_3PointShaderInit();
 	I_OverlayTintShaderInit();
@@ -487,8 +501,9 @@ void I_ShaderBind(void) {
 	}
 	if (shader_struct.locTex >= 0)
 		pglUniform1i(shader_struct.locTex, 0);
-	if (sLocUseTex >= 0)
-		pglUniform1i(sLocUseTex, 1);
+	shader_use_tex = 1;
+	shader_use_tex_set = -1;
+	I_ShaderApplyUseTexture();
 	if (sLocTexel >= 0)
 		pglUniform2f(sLocTexel, 0.0f, 0.0f);
 	I_SectorCombiner_Commit();
@@ -504,8 +519,8 @@ void I_ShaderUnBind(void) {
 }
 
 void I_ShaderSetTextureSize(int w, int h) {
-	if (!shader_struct.initialised || sLocTexel < 0)
-		return;
+	if (!shader_struct.initialised || sLocTexel < 0 || is_current_prog != shader_struct.prog)
+		return;	// (not bound: a uniform then is an error, or another program's)
 	if (w > 0 && h > 0)
 		pglUniform2f(sLocTexel, 1.0f / (float)w, 1.0f / (float)h);
 	else
@@ -513,7 +528,11 @@ void I_ShaderSetTextureSize(int w, int h) {
 }
 
 void I_ShaderSetUseTexture(int on) {
-	if (!shader_struct.initialised || sLocUseTex < 0)
-		return;
-	pglUniform1i(sLocUseTex, on ? 1 : 0);
+	shader_use_tex = on ? 1 : 0;
+	I_ShaderApplyUseTexture();
+}
+
+void I_ShaderTexture2DEnabled(int on) {
+	shader_tex2d_enabled = on ? 1 : 0;
+	I_ShaderApplyUseTexture();
 }

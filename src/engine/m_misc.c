@@ -378,19 +378,35 @@ void M_ScreenShot(void) {
 }
 
 //
+// M_CaptureThumbnail
+// The view as the frame being drawn has it, before the menus and console go over it (the frame loop calls this
+// between them): the next save's thumbnail. Saving itself happens between frames, after the swap, where reading
+// the screen back gets nothing worth having (and gluScaleImage, which scaled it, went with GLU: the thumbnails were
+// left all zeroes).
+//
+
+static byte thumbnail_capture[SAVEGAMETBSIZE];
+static boolean thumbnail_captured = false;
+
+void M_CaptureThumbnail(void) {
+	if (GL_GetThumbnail(thumbnail_capture, SAVEGAMETBTEXSIZE)) {
+		thumbnail_captured = true;
+	}
+}
+
+//
 // M_CacheThumbNail
 // Thumbnails are assumed they are
 // uncompressed 128x128 RGB textures
 //
 
 int M_CacheThumbNail(byte** data) {
-	byte* buff;
 	byte* tbn;
 
-	buff = GL_GetScreenBuffer(0, 0, video_width, video_height);
 	tbn = Z_Calloc(SAVEGAMETBSIZE, PU_STATIC, 0);
-
-	Z_Free(buff);
+	if (thumbnail_captured) {
+		SDL_memcpy(tbn, thumbnail_capture, SAVEGAMETBSIZE);
+	}
 
 	*data = tbn;
 	return SAVEGAMETBSIZE;

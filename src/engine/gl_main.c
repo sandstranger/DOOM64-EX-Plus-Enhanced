@@ -280,6 +280,75 @@ byte* GL_GetScreenBuffer(int x, int y, int width, int height) {
 }
 
 //
+// GL_GetThumbnail
+// What's in the back buffer now (call it before the swap: after it, what's left there is the driver's business,
+// black on many), as a size x size RGB image, top row first, box-filtered down. Read as RGBA, the one format every
+// GL, GLES and gl4es reads back.
+//
+
+boolean GL_GetThumbnail(byte* out, int size) {
+    byte* rgba;
+    int w = video_width;
+    int h = video_height;
+    int x, y, xx, yy;
+    int pack;
+
+    if(w <= 0 || h <= 0 || size <= 0) {
+        return false;
+    }
+
+    rgba = (byte*)Z_Malloc(w * h * 4, PU_STATIC, 0);
+
+    dglGetIntegerv(GL_PACK_ALIGNMENT, &pack);
+    dglPixelStorei(GL_PACK_ALIGNMENT, 4);
+    dglReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+    dglPixelStorei(GL_PACK_ALIGNMENT, pack);
+
+    for(y = 0; y < size; y++) {
+        // gl's rows are bottom up
+        int y0 = (size - 1 - y) * h / size;
+        int y1 = (size - y) * h / size;
+
+        if(y1 <= y0) {
+            y1 = y0 + 1;
+        }
+
+        for(x = 0; x < size; x++) {
+            int x0 = x * w / size;
+            int x1 = (x + 1) * w / size;
+            unsigned int r = 0, g = 0, b = 0, n = 0;
+            byte* o = out + (y * size + x) * 3;
+
+            if(x1 <= x0) {
+                x1 = x0 + 1;
+            }
+
+            for(yy = y0; yy < y1 && yy < h; yy++) {
+                const byte* p = rgba + ((size_t)yy * w + x0) * 4;
+
+                for(xx = x0; xx < x1 && xx < w; xx++, p += 4) {
+                    r += p[0];
+                    g += p[1];
+                    b += p[2];
+                    n++;
+                }
+            }
+
+            if(!n) {
+                n = 1;
+            }
+
+            o[0] = (byte)(r / n);
+            o[1] = (byte)(g / n);
+            o[2] = (byte)(b / n);
+        }
+    }
+
+    Z_Free(rgba);
+    return true;
+}
+
+//
 // GL_SetTextureFilter
 //
 

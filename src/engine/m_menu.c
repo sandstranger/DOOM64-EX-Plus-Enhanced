@@ -3807,6 +3807,8 @@ void M_ReadSaveStrings(void) {
 	int     i;
 	// char    name[256];
 
+	M_InvalidateThumbnail();	// (the save and load menus open: their saves may have changed)
+
 	for (i = 0; i < load_end; i++) {
 		// sprintf(name, SAVEGAMENAME"%d.dsg", i);
 
@@ -4336,11 +4338,10 @@ static boolean M_CursorHighlightItem(menu_t* menu) {
 
 //
 // M_QuickSave
+// Saved once the next frame has given the view for its thumbnail (M_ThumbnailFrame)
 //
 
-//
-// M_QuickSave
-//
+static boolean quicksave_pending = false;
 
 void M_QuickSave(void)
 {
@@ -4352,7 +4353,38 @@ void M_QuickSave(void)
 	if (gamestate != GS_LEVEL)
 		return;
 
-	G_SaveGame(QUICKSAVESLOT, "quicksave");
+	quicksave_pending = true;
+}
+
+//
+// M_ThumbnailFrame
+// The frame loop's, between drawing the game and drawing the menus and console over it: the view's taken for the
+// next save's thumbnail as a menu opens over a level (the save menu saves from there), and for a quick save
+//
+
+void M_ThumbnailFrame(void) {
+	static boolean menutaken = false;
+
+	if (!menuactive) {
+		menutaken = false;
+	}
+
+	if (gamestate != GS_LEVEL) {
+		quicksave_pending = false;
+		return;
+	}
+
+	if (quicksave_pending || (menuactive && !menutaken)) {
+		M_CaptureThumbnail();
+		if (menuactive) {
+			menutaken = true;
+		}
+	}
+
+	if (quicksave_pending) {
+		quicksave_pending = false;
+		G_SaveGame(QUICKSAVESLOT, "quicksave");
+	}
 }
 
 void M_QuickLoad(void)
@@ -4381,26 +4413,63 @@ static void M_DrawThermo(int x, int y, int thermWidth, float thermDot) {
 // M_SetThumbnail
 //
 
-static char thumbnail_date[32];
+static char thumbnail_date[33];
 static int thumbnail_skill = -1;
 static int thumbnail_map = -1;
+static GLuint thumbnail_tex = 0;
+static int thumbnail_slot = -1;			// whose the above are (-1: nobody's yet)
+static boolean thumbnail_valid = false;
+
+//
+// M_InvalidateThumbnail
+// The saves' thumbnails are read once per slot shown, so again after a save, or when the menus open
+//
+
+void M_InvalidateThumbnail(void) {
+	thumbnail_slot = -1;
+}
 
 static boolean M_SetThumbnail(int which) {
 	byte* data;
+	char* filename;
 
-	data = Z_Malloc(SAVEGAMETBSIZE, PU_STATIC, 0);
+	if (which == thumbnail_slot) {
+		return thumbnail_valid;		// (it read the file each frame, the save menu's whole time open)
+	}
+	thumbnail_slot = which;
+
+	data = Z_Calloc(SAVEGAMETBSIZE, PU_STATIC, 0);
 
 	//
 	// poke into savegame file and fetch
 	// date and stats
 	//
-	char* filename = P_GetSaveGameName(which);
-	boolean ret = P_QuickReadSaveHeader(filename, thumbnail_date, (int*)data,
+	filename = P_GetSaveGameName(which);
+	thumbnail_valid = P_QuickReadSaveHeader(filename, thumbnail_date, (int*)data,
 		&thumbnail_skill, &thumbnail_map);
 	free(filename);
+	thumbnail_date[32] = 0;
+
+	if (thumbnail_valid) {
+		//
+		// its picture, which nothing drew (or uploaded) since it lost gluScaleImage
+		//
+		if (!thumbnail_tex) {
+			dglGenTextures(1, &thumbnail_tex);
+		}
+		dglBindTexture(GL_TEXTURE_2D, thumbnail_tex);
+		dglTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SAVEGAMETBTEXSIZE, SAVEGAMETBTEXSIZE, 0,
+			GL_RGB, GL_UNSIGNED_BYTE, data);
+		dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		dglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		curtexture = cursprite = curgfx = -1;
+	}
+
 	Z_Free(data);
 
-	return ret;
+	return thumbnail_valid;
 }
 
 //
@@ -4467,18 +4536,60 @@ static void M_DrawSaveGameFrontend(menu_t* def) {
 	//
 	if (M_SetThumbnail(itemOn)) {
 		char string[128];
+		mapdef_t* mapdef;
+		vtx_t v[4];
+		float aspect = (video_width > 0 && video_height > 0) ? (float)video_width / video_height : 4.0f / 3.0f;
+		float tw, th, tx, ty;
 
-		curgfx = -1;
+		//
+		// the picture: across the top of the stats panel, as wide as the screen it was taken on is
+		//
+		th = 66.0f;
+		tw = th * aspect;
+		if (tw > 180.0f) {
+			tw = 180.0f;
+			th = tw / aspect;
+		}
+		tx = def->x + 368 - tw / 2;
+		ty = def->y - 8;
 
-		GL_SetOrthoScale(0.35f);
+		dglBindTexture(GL_TEXTURE_2D, thumbnail_tex);
+		v[0].x = v[2].x = tx;
+		v[1].x = v[3].x = tx + tw;
+		v[0].y = v[1].y = ty;
+		v[2].y = v[3].y = ty + th;
+		v[0].z = v[1].z = v[2].z = v[3].z = 0.0f;
+		v[0].tu = v[2].tu = 0.0f;
+		v[1].tu = v[3].tu = 1.0f;
+		v[0].tv = v[1].tv = 0.0f;
+		v[2].tv = v[3].tv = 1.0f;
+		dglSetVertexColor(v, WHITEALPHA(menualphacolor), 4);
+		dglSetVertex(v);
+		dglTriangle(0, 1, 2);
+		dglTriangle(3, 2, 1);
+		dglDrawGeometry(4, v);
 
-		Draw_BigText(def->x + 440, def->y + 60, MENUCOLORYELLOW, thumbnail_date);
+		curtexture = cursprite = curgfx = -1;
 
-		sprintf(string, "Skill: %s", NewGameMenu[thumbnail_skill].name);
-		Draw_BigText(def->x + 440, def->y + 168, MENUCOLORYELLOW, string);
+		//
+		// the stats under it, smaller text placed in the panel's units (the date's smaller still: it was wider
+		// than the panel)
+		//
+#define THUMBTEXT(s, px, py, str) \
+		GL_SetOrthoScale(s); \
+		Draw_BigText((int)((px) * def->scale / (s)), (int)((py) * def->scale / (s)), MENUCOLORYELLOW, str)
 
-		sprintf(string, "Map: %s", P_GetMapInfo(thumbnail_map)->mapname);
-		Draw_BigText(def->x + 440, def->y + 196, MENUCOLORYELLOW, string);
+		THUMBTEXT(0.3f, def->x + 276, ty + th + 3, thumbnail_date);
+
+		// (a save from another build can have a skill or map this one hasn't)
+		SDL_snprintf(string, sizeof(string), "Skill: %s", (thumbnail_skill >= 0 && thumbnail_skill < newg_end) ?
+			NewGameMenu[thumbnail_skill].name : "?");
+		THUMBTEXT(0.35f, def->x + 276, ty + th + 15, string);
+
+		mapdef = P_GetMapInfo(thumbnail_map);
+		SDL_snprintf(string, sizeof(string), "Map: %s", (mapdef && mapdef->mapname[0]) ? mapdef->mapname : "?");
+		THUMBTEXT(0.35f, def->x + 276, ty + th + 28, string);
+#undef THUMBTEXT
 
 		GL_SetOrthoScale(def->scale);
 	}

@@ -24,6 +24,7 @@
 
 #define SAVEGAMESIZE    0x60000
 #define SAVEGAMETBSIZE  0xC000
+#define SAVEGAMETBTEXSIZE 128   // its thumbnail's width and height: 128x128 RGB, SAVEGAMETBSIZE
 #define SAVESTRINGSIZE  16
 
 char* P_GetSaveGameName(int num);
