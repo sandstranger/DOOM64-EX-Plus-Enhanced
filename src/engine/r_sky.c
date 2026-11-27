@@ -138,6 +138,22 @@ static int R_SkyFillHeight(float top) {
 }
 
 //
+// R_SkyFillBelow
+// The band below a flat sky that looking down uncovers: its first line, SCREENHEIGHT if none
+// (the line under the sky's last one is included, so that no gap shows between them)
+//
+
+static int R_SkyFillBelow(float bottom) {
+    if (bottom >= (float)SCREENHEIGHT) {
+        return SCREENHEIGHT;
+    }
+    if (bottom <= 0.0f) {
+        return 0;
+    }
+    return (int)floorf(bottom);
+}
+
+//
 // R_AverageRows
 // Average color of the rows first .. first + count - 1 of an RGBA image
 //
@@ -861,6 +877,18 @@ static void R_DrawSimpleSky(int lump, int offset, boolean fillTop) {
     GL_SetupAndDraw2DQuad(0, top, SCREENWIDTH, lumpheight,
         pos1, width + pos1, 0.006f, row, WHITE, 1);
 
+    // Looking down shows the space below the picture: the average color of its bottom rows
+    fill = fillTop ? R_SkyFillBelow(top + lumpheight) : SCREENHEIGHT;
+    if (fill < SCREENHEIGHT) {
+        rcolor edgeTop;
+        rcolor edgeBottom;
+
+        R_GetSkyEdgeColors(lump, &edgeTop, &edgeBottom);
+        dglDisable(GL_TEXTURE_2D);
+        GL_SetupAndDraw2DQuad(0, fill, SCREENWIDTH, SCREENHEIGHT - fill, 0, 0, 0, 0, edgeBottom, 1);
+        dglEnable(GL_TEXTURE_2D);
+    }
+
     GL_SetState(GLSTATE_BLEND, 0);
 
     glDisable(GL_ALPHA_TEST);
@@ -951,6 +979,15 @@ static void R_DrawClouds(void) {
     dglSetVertexColor(&v[0], PostProcessSkyColor(sky->skycolor[1], true), 4);
     dglSetVertexColor(&v[2], PostProcessSkyColor(sky->skycolor[0], false), 2); // bottom
     GL_Draw2DQuad(v, true);
+    {
+        // looking down: the horizon's color continues below the gradient
+        const int below = R_SkyFillBelow(shift + 120.0f);
+        if (below < SCREENHEIGHT) {
+            GL_Set2DQuad(v, 0, below, SCREENWIDTH, SCREENHEIGHT - below, 0, 0, 0, 0, 0);
+            dglSetVertexColor(&v[0], PostProcessSkyColor(sky->skycolor[0], false), 4);
+            GL_Draw2DQuad(v, true);
+        }
+    }
     dglEnable(GL_TEXTURE_2D);
 
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE);
@@ -982,16 +1019,25 @@ static void R_DrawClouds(void) {
     dglSetVertexColor(&v[0], sky->skycolor[2], 4);
     v[0].a = v[1].a = v[2].a = v[3].a = 0x60;
 
+    //
+    // The cloud layer: a plane sloping down from above the viewer to the horizon. Laid out for a level view its
+    // near edge (y 0.4315 at distance 1) was just over the top of the screen, so looking up showed that edge as a
+    // straight line with the bare gradient above it. The same plane goes on towards the viewer now, to distance
+    // 1 - CLOUD_EXTEND (the texture with it), which keeps the screen covered up to ~85 degrees of pitch; the part
+    // a level view shows is unchanged.
+    //
+#define CLOUD_EXTEND 0.875f
     v[3].x = v[1].x = 1.1025f;
     v[0].x = v[2].x = -1.1025f;
     v[2].y = v[3].y = 0;
-    v[0].y = v[1].y = 0.4315f;
-    v[0].z = v[1].z = 0;
+    v[0].y = v[1].y = 0.4315f * (1.0f + CLOUD_EXTEND);
+    v[0].z = v[1].z = CLOUD_EXTEND;
     v[2].z = v[3].z = -1.0f;
     v[0].tu = v[2].tu = F2D3D(CloudOffsetX) - pos;
     v[1].tu = v[3].tu = (F2D3D(CloudOffsetX) + 1.5f) - pos;
-    v[0].tv = v[1].tv = F2D3D(CloudOffsetY);
+    v[0].tv = v[1].tv = F2D3D(CloudOffsetY) - 2.0f * CLOUD_EXTEND;
     v[2].tv = v[3].tv = F2D3D(CloudOffsetY) + 2.0f;
+#undef CLOUD_EXTEND
 
     GL_SetOrthoScale(1.0f);
 
@@ -1124,6 +1170,30 @@ static void R_DrawSkyboxCloud(void) {
 
     dglTriangle(0, 1, 2);
     dglTriangle(3, 0, 2);
+    dglDrawGeometry(4, v);
+
+    //
+    // below the horizon (looking down): the horizon's color goes on, a wall down
+    // from the bottom of the one above and a floor under the viewer, as the
+    // ceiling is above it (nothing was drawn there)
+    //
+    v[0].x = -MAX_COORD; v[0].y = 512; v[0].z = -512;
+    v[1].x = -MAX_COORD; v[1].y = 512; v[1].z = 12;
+    v[2].x = MAX_COORD;  v[2].y = 512; v[2].z = 12;
+    v[3].x = MAX_COORD;  v[3].y = 512; v[3].z = -512;
+    dglSetVertexColor(&v[0], sky->skycolor[1], 4);
+
+    dglTriangle(0, 1, 2);
+    dglTriangle(3, 0, 2);
+    dglDrawGeometry(4, v);
+
+    v[0].x = -MAX_COORD; v[0].y = -MAX_COORD; v[0].z = -512;
+    v[1].x = MAX_COORD;  v[1].y = -MAX_COORD; v[1].z = -512;
+    v[2].x = MAX_COORD;  v[2].y = MAX_COORD;  v[2].z = -512;
+    v[3].x = -MAX_COORD; v[3].y = MAX_COORD;  v[3].z = -512;
+
+    dglTriangle(0, 1, 3);
+    dglTriangle(2, 3, 1);
     dglDrawGeometry(4, v);
     dglEnable(GL_TEXTURE_2D);
 
@@ -1429,6 +1499,19 @@ static void R_DrawFire(void) {
         dglSetVertexColor(&v[2], PostProcessSkyColor(sky->skycolor[1], false), 2);
 
         GL_Draw2DQuad(v, 1);
+
+        {
+            // looking down: the average color of the bottom of the fire continues below it
+            const int below = R_SkyFillBelow(shift + 120.0f);
+            if (below < SCREENHEIGHT) {
+                GL_Set2DQuad(v, 0, below, SCREENWIDTH, SCREENHEIGHT - below, 0, 0, 0, 0,
+                    R_ModulateColor(R_AverageRows((const byte*)firetexture, FIRESKY_WIDTH, FIRESKY_HEIGHT - 4, 4),
+                        PostProcessSkyColor(sky->skycolor[1], false)));
+                dglDisable(GL_TEXTURE_2D);
+                GL_Draw2DQuad(v, 1);
+                dglEnable(GL_TEXTURE_2D);
+            }
+        }
     }
     else {
         R_DrawSkyDome(16, 1, 1024, 4096, -896, 0.0075f,
