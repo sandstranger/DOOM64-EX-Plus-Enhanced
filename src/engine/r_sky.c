@@ -1020,57 +1020,82 @@ static void R_DrawClouds(void) {
     v[0].a = v[1].a = v[2].a = v[3].a = 0x60;
 
     //
-    // The cloud layer: a plane sloping down from above the viewer to the horizon. Laid out for a level view its
-    // near edge (y 0.4315 at distance 1) was just over the top of the screen, so looking up showed that edge as a
-    // straight line with the bare gradient above it. The same plane goes on towards the viewer now, to distance
-    // 1 - CLOUD_EXTEND (the texture with it), which keeps the screen covered up to ~85 degrees of pitch; the part
-    // a level view shows is unchanged.
+    // The cloud layer: a plane sloping down from above the viewer to the horizon (in the eye space of a level view,
+    // y 0.4315 at distance 1, 0 at distance 2, drawn with a 45 degree field of view). It used to be moved with the
+    // horizon by shifting the picture, which looking up near the vertical cannot follow: the plane's near edge came
+    // down the screen and the dark top of the gradient filled the rest. Now it turns with the view pitch for real,
+    // in the world's field of view (x and y scaled by tan(fov/2) / tan(22.5): a level view is the same picture),
+    // and goes on to straight above the viewer, then on as a ceiling behind it, the texture with it.
     //
-#define CLOUD_EXTEND 0.875f
-    v[3].x = v[1].x = 1.1025f;
-    v[0].x = v[2].x = -1.1025f;
-    v[2].y = v[3].y = 0;
-    v[0].y = v[1].y = 0.4315f * (1.0f + CLOUD_EXTEND);
-    v[0].z = v[1].z = CLOUD_EXTEND;
-    v[2].z = v[3].z = -1.0f;
-    v[0].tu = v[2].tu = F2D3D(CloudOffsetX) - pos;
-    v[1].tu = v[3].tu = (F2D3D(CloudOffsetX) + 1.5f) - pos;
-    v[0].tv = v[1].tv = F2D3D(CloudOffsetY) - 2.0f * CLOUD_EXTEND;
-    v[2].tv = v[3].tv = F2D3D(CloudOffsetY) + 2.0f;
-#undef CLOUD_EXTEND
+    {
+        const float halfFov = r_fov.value * (float)(M_PI / 360.0);
+        const float fov = (halfFov > 0.0f && halfFov < (float)(M_PI / 2.0)) ? r_fov.value : 45.0f;
+        const float k = tanf(fov * (float)(M_PI / 360.0)) / tanf(22.5f * (float)(M_PI / 180.0));
+        const float wide = 8.0f;                    // the original 2.205 wide strip, eight times: the sides looking up
+        const float zenith = 2.0f * 0.4315f * k;    // the plane's height straight above the viewer
+        const float tu0 = F2D3D(CloudOffsetX) - pos;
+        const float tv0 = F2D3D(CloudOffsetY);
+        float pitch = TRUEANGLES(viewpitch) - 90.0f;
+        int seg;
 
-    GL_SetOrthoScale(1.0f);
+        if (pitch > 90.0f) {
+            pitch = 90.0f;
+        }
+        else if (pitch < -90.0f) {
+            pitch = -90.0f;
+        }
 
-    dglMatrixMode(GL_PROJECTION);
-    dglLoadIdentity();
-    if (shift != 0.0f) {
-        // move the cloud layer with the horizon, like the gradient behind it
-        dglTranslatef(0.0f, -shift / ((float)SCREENHEIGHT * 0.5f), 0.0f);
-    }
-    dglViewFrustum(SCREENWIDTH, SCREENHEIGHT, 45.0f, 0.1f);
-    dglMatrixMode(GL_MODELVIEW);
-    dglEnable(GL_BLEND);
-    dglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        GL_SetOrthoScale(1.0f);
 
-    // Draw the 3D overlay without touching depth, then restore.
-    GLboolean hadDepth = glIsEnabled(GL_DEPTH_TEST);
-    GLboolean previousDepth = GL_TRUE;
-    glGetBooleanv(GL_DEPTH_WRITEMASK, &previousDepth);
-    dglDisable(GL_DEPTH_TEST);
-    dglDepthMask(GL_FALSE);
+        dglMatrixMode(GL_PROJECTION);
+        dglLoadIdentity();
+        dglViewFrustum(SCREENWIDTH, SCREENHEIGHT, fov, 0.1f);
+        dglMatrixMode(GL_MODELVIEW);
+        dglEnable(GL_BLEND);
+        dglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    dglPushMatrix();
-    dglTranslated(0.0f, 0.0f, -1.0f);
-    dglTriangle(0, 1, 2);
-    dglTriangle(3, 2, 1);
-    dglDrawGeometry(4, v);
-    dglPopMatrix();
-
-    dglDepthMask(previousDepth);
-    if (hadDepth)
-        dglEnable(GL_DEPTH_TEST);
-    else
+        // Draw the 3D overlay without touching depth, then restore.
+        GLboolean hadDepth = glIsEnabled(GL_DEPTH_TEST);
+        GLboolean previousDepth = GL_TRUE;
+        glGetBooleanv(GL_DEPTH_WRITEMASK, &previousDepth);
         dglDisable(GL_DEPTH_TEST);
+        dglDepthMask(GL_FALSE);
+
+        dglPushMatrix();
+        dglLoadIdentity();
+        dglRotatef(-pitch, 1.0f, 0.0f, 0.0f);
+
+        // two quads: the slope from straight above to the horizon (eye z 0 .. -2), then the ceiling behind (0 .. 3)
+        for (seg = 0; seg < 2; seg++) {
+            const float zNear = seg == 0 ? 0.0f : 3.0f;
+            const float zFar = seg == 0 ? -2.0f : 0.0f;
+            const float yNear = zenith;
+            const float yFar = seg == 0 ? 0.0f : zenith;
+
+            // tu across x as before (1.5 over the strip), tv 2 per unit of eye z (0 at distance 1, 2 at the horizon)
+            v[0].x = v[2].x = -1.1025f * wide * k;
+            v[1].x = v[3].x = 1.1025f * wide * k;
+            v[0].y = v[1].y = yNear;
+            v[2].y = v[3].y = yFar;
+            v[0].z = v[1].z = zNear;
+            v[2].z = v[3].z = zFar;
+            v[0].tu = v[2].tu = tu0 + (1.0f - wide) * 0.75f;
+            v[1].tu = v[3].tu = tu0 + (1.0f + wide) * 0.75f;
+            v[0].tv = v[1].tv = tv0 - 2.0f - 2.0f * zNear;
+            v[2].tv = v[3].tv = tv0 - 2.0f - 2.0f * zFar;
+
+            dglTriangle(0, 1, 2);
+            dglTriangle(3, 2, 1);
+            dglDrawGeometry(4, v);
+        }
+        dglPopMatrix();
+
+        dglDepthMask(previousDepth);
+        if (hadDepth)
+            dglEnable(GL_DEPTH_TEST);
+        else
+            dglDisable(GL_DEPTH_TEST);
+    }
 
     glBlendFunc(previousBlendSrc, previousBlendDst);
     if (wasAlphaTest)
